@@ -33,17 +33,29 @@ namespace lsp
     {
         typedef struct matcher
         {
-            static constexpr float  SAMPLES_MIN         = 0.0f;
-            static constexpr float  SAMPLES_MAX         = 10000.0f;
-            static constexpr float  SAMPLES_DFL         = 0.0f;
-            static constexpr float  SAMPLES_STEP        = 1.0f;
+            static constexpr size_t         FFT_RANK_MIN                = 8;
+            static constexpr size_t         FFT_RANK_MAX                = 14;
+            static constexpr size_t         FFT_RANK_IDX_DFL            = 4;
 
-            static constexpr float  TIME_MIN            = 0.0f;
-            static constexpr float  TIME_MAX            = 1000.0f;
-            static constexpr float  TIME_DFL            = 0.0f;
-            static constexpr float  TIME_STEP           = 0.01f;
+            static constexpr float          PROFILE_REACT_TIME_MIN      = 0.100f;
+            static constexpr float          PROFILE_REACT_TIME_MAX      = 10.000f;
+            static constexpr float          PROFILE_REACT_TIME_DFL      = 1.000f;
+            static constexpr float          PROFILE_REACT_TIME_STEP     = 0.01f;
 
-            static constexpr float  DELAY_OUT_MAX_TIME  = 10000.0f;
+            static constexpr float          BAND_AMP_GAIN_MIN           = 0.0f;
+            static constexpr float          BAND_AMP_GAIN_MAX           = 36.0f;
+            static constexpr float          BAND_AMP_GAIN_DFL           = 12.0f;
+            static constexpr float          BAND_AMP_GAIN_STEP          = 0.05f;
+
+            static constexpr float          BAND_RED_GAIN_MIN           = 0.0f;
+            static constexpr float          BAND_RED_GAIN_MAX           = 36.0f;
+            static constexpr float          BAND_RED_GAIN_DFL           = 12.0f;
+            static constexpr float          BAND_RED_GAIN_STEP          = 0.05f;
+
+            static constexpr float          BAND_REACT_MIN              = 0.5f;
+            static constexpr float          BAND_REACT_MAX              = 10.0f;
+            static constexpr float          BAND_REACT_DFL              = 1.0f;
+            static constexpr float          BAND_REACT_STEP             = 0.05f;
         } matcher;
 
         // Plugin type metadata

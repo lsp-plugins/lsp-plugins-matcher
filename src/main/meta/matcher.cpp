@@ -40,11 +40,96 @@ namespace lsp
     {
         //-------------------------------------------------------------------------
         // Plugin metadata
+        static const port_item_t matcher_fft_ranks[] =
+        {
+            { "256",                NULL },
+            { "512",                NULL },
+            { "1024",               NULL },
+            { "2048",               NULL },
+            { "4096",               NULL },
+            { "8192",               NULL },
+            { "16384",              NULL },
+            { NULL, NULL }
+        };
+
+        static const port_item_t matcher_references[] =
+        {
+            { "Capture",            "matcher.ref.capture"           },
+            { "File",               "matcher.ref.file"              },
+            { "Sidechain",          "matcher.ref.sidechain"         },
+            { "Link",               "matcher.ref.link"              },
+            { NULL, NULL }
+        };
+
+        static const port_item_t sc_matcher_references[] =
+        {
+            { "Capture",            "matcher.ref.capture"           },
+            { "File",               "matcher.ref.file"              },
+            { "Sidechain",          "matcher.ref.sidechain"         },
+            { "Link",               "matcher.ref.link"              },
+            { NULL, NULL }
+        };
+
+        static const port_item_t matcher_capture_source[] =
+        {
+            { "In",                 "matcher.capture.in"            },
+            { "Link",               "matcher.capture.link"          },
+            { NULL, NULL }
+        };
+
+        static const port_item_t sc_matcher_capture_source[] =
+        {
+            { "In",                 "matcher.capture.in"            },
+            { "Sidehcain",          "matcher.capture.sidechain"     },
+            { "Link",               "matcher.capture.link"          },
+            { NULL, NULL }
+        };
+
+
+        #define MATCHER_COMMON(sources, captures, cap_default) \
+            BYPASS, \
+            AMP_GAIN100("input", "Input gain", "Input gain", 1.0f), \
+            COMBO("fft", "FFT size", "FFT size", matcher::FFT_RANK_IDX_DFL, matcher_fft_ranks), \
+            SWITCH("profile", "Profile", "Profile", 1.0f), \
+            LOG_CONTROL("p_react", "Profile reactivity", "Prof react", U_SEC, matcher::PROFILE_REACT_TIME), \
+            PERCENTS("slink", "Stereo link", "Stereo link", 100.0f, 0.1f), \
+            COMBO("refer", "Reference source", "Reference", 0, sources), \
+            SWITCH("capture", "Capture", "Capture", 0.0f), \
+            SWITCH("listen", "Listen Capture", "Listen", 1.0f), \
+            COMBO("cap_src", "Capture source", "Capture Src", cap_default, captures)
+
+        #define MATCHER_EQ_BAND(id, freq) \
+            CONTROL("amp_" #id, "Amplification " freq "Hz", "Amp " freq "Hz", U_DB, matcher::BAND_AMP_GAIN), \
+            CONTROL("rej_" #id, "Reduction " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_RED_GAIN), \
+            CONTROL("spd_" #id, "Reactivity " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_REACT)
+
+        #define MATCHER_EQ \
+            TRIGGER("match", "Perform immediate match", "Match"), \
+            MATCHER_EQ_BAND(0, "25"), \
+            MATCHER_EQ_BAND(1, "50"), \
+            MATCHER_EQ_BAND(2, "107"), \
+            MATCHER_EQ_BAND(3, "227"), \
+            MATCHER_EQ_BAND(4, "484"), \
+            MATCHER_EQ_BAND(5, "1 k"), \
+            MATCHER_EQ_BAND(6, "2.2 k"), \
+            MATCHER_EQ_BAND(7, "4.7 k"), \
+            MATCHER_EQ_BAND(8, "9 k"), \
+            MATCHER_EQ_BAND(9, "16 k")
 
         static const port_t matcher_mono_ports[] =
         {
             PORTS_MONO_PLUGIN,
-            BYPASS,
+            MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
+            MATCHER_EQ,
+
+            PORTS_END
+        };
+
+        static const port_t matcher_stereo_ports[] =
+        {
+            PORTS_STEREO_PLUGIN,
+            MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
+            MATCHER_EQ,
 
             PORTS_END
         };
@@ -53,15 +138,8 @@ namespace lsp
         {
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
-            BYPASS,
-
-            PORTS_END
-        };
-
-        static const port_t matcher_stereo_ports[] =
-        {
-            PORTS_STEREO_PLUGIN,
-            BYPASS,
+            MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
+            MATCHER_EQ,
 
             PORTS_END
         };
@@ -70,7 +148,8 @@ namespace lsp
         {
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
-            BYPASS,
+            MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
+            MATCHER_EQ,
 
             PORTS_END
         };
