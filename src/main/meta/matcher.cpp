@@ -56,7 +56,6 @@ namespace lsp
         {
             { "Capture",            "matcher.ref.capture"           },
             { "File",               "matcher.ref.file"              },
-            { "Sidechain",          "matcher.ref.sidechain"         },
             { "Link",               "matcher.ref.link"              },
             { NULL, NULL }
         };
@@ -85,9 +84,17 @@ namespace lsp
             { NULL, NULL }
         };
 
+        static const port_item_t matcher_modes[] =
+        {
+            { "Static",             "matcher.mode.static"           },
+            { "Dynamic",            "matcher.mode.dynamic"          },
+            { NULL, NULL }
+        };
 
         #define MATCHER_COMMON(sources, captures, cap_default) \
             BYPASS, \
+            IN_GAIN, \
+            OUT_GAIN, \
             AMP_GAIN100("input", "Input gain", "Input gain", 1.0f), \
             COMBO("fft", "FFT size", "FFT size", matcher::FFT_RANK_IDX_DFL, matcher_fft_ranks), \
             SWITCH("profile", "Profile", "Profile", 1.0f), \
@@ -100,10 +107,12 @@ namespace lsp
 
         #define MATCHER_EQ_BAND(id, freq) \
             CONTROL("amp_" #id, "Amplification " freq "Hz", "Amp " freq "Hz", U_DB, matcher::BAND_AMP_GAIN), \
-            CONTROL("rej_" #id, "Reduction " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_RED_GAIN), \
+            CONTROL("red_" #id, "Reduction " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_RED_GAIN), \
             CONTROL("spd_" #id, "Reactivity " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_REACT)
 
-        #define MATCHER_EQ \
+        #define MATCHER_EQ(channels) \
+            COMBO("mode", "Operating mode", "Mode", 0, matcher_modes), \
+            TRIGGER("reset", "Reset match curves", "Reset"), \
             TRIGGER("match", "Perform immediate match", "Match"), \
             MATCHER_EQ_BAND(0, "25"), \
             MATCHER_EQ_BAND(1, "50"), \
@@ -114,13 +123,32 @@ namespace lsp
             MATCHER_EQ_BAND(6, "2.2 k"), \
             MATCHER_EQ_BAND(7, "4.7 k"), \
             MATCHER_EQ_BAND(8, "9 k"), \
-            MATCHER_EQ_BAND(9, "16 k")
+            MATCHER_EQ_BAND(9, "16 k"), \
+            MESH("pmesh", "Match profile mesh characteristics", 3 + 2 * channels, matcher::FFT_MESH_SIZE)
+
+        #define MATCHER_METERS(id, label, alias) \
+            SWITCH("ifft" id, "Input FFT enabled", "FFT In" alias, 1), \
+            SWITCH("offt" id, "Output FFT enabled", "FFT Out" alias, 1), \
+            SWITCH("cfft" id, "Capture FFT enabled", "FFT Cap" alias, 1), \
+            METER_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_P_24_DB), \
+            METER_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB), \
+            METER_GAIN("clm" id, "Capture level meter" label, GAIN_AMP_P_24_DB)
+
+        #define MATCHER_METERS_MONO \
+            MATCHER_METERS("", "", ""), \
+            MESH("fft", "Signal metering mesh", 1 + 3*1, matcher::FFT_MESH_SIZE + 4)
+
+        #define MATCHER_METERS_STEREO \
+            MATCHER_METERS("_l", " Left", "L"), \
+            MATCHER_METERS("_r", " Right", "R"), \
+            MESH("fft", "Signal metering mesh", 1 + 3*2, matcher::FFT_MESH_SIZE + 4)
 
         static const port_t matcher_mono_ports[] =
         {
             PORTS_MONO_PLUGIN,
             MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
-            MATCHER_EQ,
+            MATCHER_EQ(1),
+            MATCHER_METERS_MONO,
 
             PORTS_END
         };
@@ -129,7 +157,8 @@ namespace lsp
         {
             PORTS_STEREO_PLUGIN,
             MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
-            MATCHER_EQ,
+            MATCHER_EQ(2),
+            MATCHER_METERS_STEREO,
 
             PORTS_END
         };
@@ -139,7 +168,8 @@ namespace lsp
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
             MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
-            MATCHER_EQ,
+            MATCHER_EQ(1),
+            MATCHER_METERS_MONO,
 
             PORTS_END
         };
@@ -149,7 +179,8 @@ namespace lsp
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
             MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
-            MATCHER_EQ,
+            MATCHER_EQ(2),
+            MATCHER_METERS_STEREO,
 
             PORTS_END
         };

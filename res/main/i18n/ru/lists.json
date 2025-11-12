@@ -1,0 +1,20 @@
+{
+	"matcher": {
+		"capture": {
+			"in": "Input",
+			"link": "Link",
+			"sidechain": "Sidechain"
+		},
+		"mode": {
+			"dynamic": "Dynamic",
+			"static": "Static"
+		},
+		"ref": {
+			"capture": "Captrue",
+			"file": "File",
+			"link": "Link",
+			"sidechain": "Sidechain"
+		}
+	}
+}
+
