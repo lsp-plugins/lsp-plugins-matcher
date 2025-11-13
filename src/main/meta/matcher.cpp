@@ -56,6 +56,7 @@ namespace lsp
         {
             { "Capture",            "matcher.ref.capture"           },
             { "File",               "matcher.ref.file"              },
+            { "Equalizer",          "matcher.ref.equalizer"         },
             { "Link",               "matcher.ref.link"              },
             { NULL, NULL }
         };
@@ -64,6 +65,7 @@ namespace lsp
         {
             { "Capture",            "matcher.ref.capture"           },
             { "File",               "matcher.ref.file"              },
+            { "Equalizer",          "matcher.ref.equalizer"         },
             { "Sidechain",          "matcher.ref.sidechain"         },
             { "Link",               "matcher.ref.link"              },
             { NULL, NULL }
@@ -95,15 +97,20 @@ namespace lsp
             BYPASS, \
             IN_GAIN, \
             OUT_GAIN, \
-            AMP_GAIN100("input", "Input gain", "Input gain", 1.0f), \
             COMBO("fft", "FFT size", "FFT size", matcher::FFT_RANK_IDX_DFL, matcher_fft_ranks), \
+            SWITCH("rst_in", "Reset input signal profile", "Reset In", 1.0f), \
+            SWITCH("rst_ref", "Reset reference signal profile", "Reset Ref", 1.0f), \
+            SWITCH("rst_cap", "Reset captured signal profile", "Reset Cap", 1.0f), \
+            LOG_CONTROL("rct_in", "Input profile reactivity", "React In", U_SEC, matcher::PROFILE_REACT_TIME), \
+            LOG_CONTROL("rct_ref", "Reference profile reactivity", "React Ref", U_SEC, matcher::PROFILE_REACT_TIME), \
+            COMBO("ref_src", "Reference source", "Reference", 0, sources), \
+            COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \
             SWITCH("profile", "Profile", "Profile", 1.0f), \
-            LOG_CONTROL("p_react", "Profile reactivity", "Prof react", U_SEC, matcher::PROFILE_REACT_TIME), \
-            PERCENTS("slink", "Stereo link", "Stereo link", 100.0f, 0.1f), \
-            COMBO("refer", "Reference source", "Reference", 0, sources), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
-            SWITCH("listen", "Listen Capture", "Listen", 1.0f), \
-            COMBO("cap_src", "Capture source", "Capture Src", cap_default, captures)
+            SWITCH("listen", "Listen capture", "Listen", 1.0f)
+
+        #define MATCHER_COMMON_STEREO \
+            PERCENTS("slink", "Stereo link", "Stereo link", 100.0f, 0.1f)
 
         #define MATCHER_EQ_BAND(id, freq) \
             CONTROL("amp_" #id, "Amplification " freq "Hz", "Amp " freq "Hz", U_DB, matcher::BAND_AMP_GAIN), \
@@ -143,9 +150,16 @@ namespace lsp
             MATCHER_METERS("_r", " Right", "R"), \
             MESH("fft", "Signal metering mesh", 1 + 3*2, matcher::FFT_MESH_SIZE + 4)
 
+        #define MATCHER_SHM_LINK_MONO \
+            OPT_RETURN_MONO("link", "shml", "Side-chain shared memory link")
+
+        #define MATCHER_SHM_LINK_STEREO \
+            OPT_RETURN_STEREO("link", "shml_", "Side-chain shared memory link")
+
         static const port_t matcher_mono_ports[] =
         {
             PORTS_MONO_PLUGIN,
+            MATCHER_SHM_LINK_MONO,
             MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
             MATCHER_EQ(1),
             MATCHER_METERS_MONO,
@@ -156,7 +170,9 @@ namespace lsp
         static const port_t matcher_stereo_ports[] =
         {
             PORTS_STEREO_PLUGIN,
+            MATCHER_SHM_LINK_STEREO,
             MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
+            MATCHER_COMMON_STEREO,
             MATCHER_EQ(2),
             MATCHER_METERS_STEREO,
 
@@ -167,6 +183,7 @@ namespace lsp
         {
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
+            MATCHER_SHM_LINK_MONO,
             MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
             MATCHER_EQ(1),
             MATCHER_METERS_MONO,
@@ -178,7 +195,9 @@ namespace lsp
         {
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
+            MATCHER_SHM_LINK_STEREO,
             MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
+            MATCHER_COMMON_STEREO,
             MATCHER_EQ(2),
             MATCHER_METERS_STEREO,
 

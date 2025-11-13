@@ -36,7 +36,7 @@ namespace lsp
             static constexpr size_t         FFT_RANK_MIN                = 8;
             static constexpr size_t         FFT_RANK_MAX                = 14;
             static constexpr size_t         FFT_RANK_IDX_DFL            = 4;
-            static constexpr size_t         FFT_MESH_SIZE               = 512;
+            static constexpr size_t         FFT_MESH_SIZE               = 640;
 
             static constexpr float          PROFILE_REACT_TIME_MIN      = 0.100f;
             static constexpr float          PROFILE_REACT_TIME_MAX      = 10.000f;

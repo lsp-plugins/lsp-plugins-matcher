@@ -23,6 +23,7 @@
 #include <lsp-plug.in/common/debug.h>
 #include <lsp-plug.in/dsp/dsp.h>
 #include <lsp-plug.in/dsp-units/units.h>
+#include <lsp-plug.in/plug-fw/core/AudioBuffer.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
 #include <lsp-plug.in/shared/debug.h>
 
@@ -70,7 +71,24 @@ namespace lsp
             // Initialize other parameters
             vChannels       = NULL;
 
+            nRefSource      = REF_CAPTURE;
+            nCapSource      = CAP_NONE;
+
             pBypass         = NULL;
+            pGainIn         = NULL;
+            pGainOut        = NULL;
+            pFftSize        = NULL;
+            pResetIn        = NULL;
+            pResetRef       = NULL;
+            pResetCap       = NULL;
+            pInReactivity   = NULL;
+            pRefReactivity  = NULL;
+            pRefSource      = NULL;
+            pCapSource      = NULL;
+            pProfile        = NULL;
+            pCapture        = NULL;
+            pListen         = NULL;
+            pStereoLink     = NULL;
 
             pData           = NULL;
         }
@@ -108,11 +126,18 @@ namespace lsp
                 c->vIn                  = NULL;
                 c->vOut                 = NULL;
                 c->vSc                  = NULL;
+                c->vShmIn               = NULL;
 
                 c->pIn                  = NULL;
                 c->pOut                 = NULL;
                 c->pSc                  = NULL;
+                c->pShmIn               = NULL;
             }
+
+            // Initialize processor
+            if (!sProcessor.init(3 * nChannels, meta::matcher::FFT_RANK_MAX))
+                return;
+            sProcessor.bind_handler(process_block, this, NULL);
 
             // Bind ports
             lsp_trace("Binding ports");
@@ -133,8 +158,30 @@ namespace lsp
                     BIND_PORT(vChannels[i].pSc);
             }
 
+            lsp_trace("Binding shared memory link");
+            SKIP_PORT("Shared memory link name");
+            for (size_t i=0; i<nChannels; ++i)
+                BIND_PORT(vChannels[i].pShmIn);
+
             // Bind bypass
             BIND_PORT(pBypass);
+            BIND_PORT(pGainIn);
+            BIND_PORT(pGainOut);
+            BIND_PORT(pFftSize);
+            BIND_PORT(pResetIn);
+            BIND_PORT(pResetRef);
+            BIND_PORT(pResetCap);
+            BIND_PORT(pInReactivity);
+            BIND_PORT(pRefReactivity);
+            BIND_PORT(pRefSource);
+            BIND_PORT(pCapSource);
+            BIND_PORT(pProfile);
+            BIND_PORT(pCapture);
+            BIND_PORT(pListen);
+            if (nChannels > 1)
+            {
+                BIND_PORT(pStereoLink);
+            }
         }
 
         void matcher::destroy()
@@ -174,15 +221,78 @@ namespace lsp
             }
         }
 
+        uint32_t matcher::decode_reference_source(size_t ref) const
+        {
+            if (bSidechain)
+            {
+                switch (ref)
+                {
+                    case 0: return REF_CAPTURE;
+                    case 1: return REF_FILE;
+                    case 2: return REF_EQUALIZER;
+                    case 3: return REF_SIDECHAIN;
+                    case 4: return REF_LINK;
+                    default: break;
+                }
+            }
+            else
+            {
+                switch (ref)
+                {
+                    case 0: return REF_CAPTURE;
+                    case 1: return REF_FILE;
+                    case 2: return REF_EQUALIZER;
+                    case 3: return REF_LINK;
+                    default: break;
+                }
+            }
+
+            return REF_CAPTURE;
+        }
+
+        uint32_t matcher::decode_capture_source(size_t cap, bool capture, size_t ref) const
+        {
+            if (!capture)
+                return CAP_NONE;
+
+            if (bSidechain)
+            {
+                switch (cap)
+                {
+                    case 0: return CAP_INPUT;
+                    case 1: return (ref == REF_SIDECHAIN) ? CAP_REFERENCE : CAP_SIDECHAIN;
+                    case 2: return (ref == REF_LINK) ? CAP_REFERENCE : CAP_LINK;
+                    default: break;
+                }
+            }
+            else
+            {
+                switch (ref)
+                {
+                    case 0: return CAP_INPUT;
+                    case 1: return (ref == REF_LINK) ? CAP_REFERENCE : CAP_LINK;
+                    default: break;
+                }
+            }
+
+            return CAP_NONE;
+        }
+
         void matcher::update_settings()
         {
             const bool bypass       = pBypass->value() >= 0.5f;
+            const uint32_t rank     = lsp_limit(meta::matcher::FFT_RANK_MIN + ssize_t(pFftSize->value()), meta::matcher::FFT_RANK_MIN, meta::matcher::FFT_RANK_MAX);
+
+            nRefSource              = decode_reference_source(pRefSource->value());
+            nCapSource              = decode_capture_source(pCapSource->value(), pCapture->value() >= 0.5f, nRefSource);
 
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c            = &vChannels[i];
                 c->sBypass.set_bypass(bypass);
             }
+
+            sProcessor.set_rank(rank);
         }
 
         void matcher::bind_buffers()
@@ -196,6 +306,47 @@ namespace lsp
                 c->vIn                  = c->pIn->buffer<float>();
                 c->vOut                 = c->pOut->buffer<float>();
                 c->vSc                  = (c->pSc != NULL) ? c->pSc->buffer<float>() : NULL;
+                core::AudioBuffer *buf  = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
+                if ((buf != NULL) && (buf->active()))
+                    c->vShmIn               = buf->buffer();
+
+                // Bind processor buffers
+                const size_t base       = i * PC_TOTAL;
+
+                // Route input
+                sProcessor.bind(base + PC_INPUT, c->vOut, c->vIn);
+
+                // Route reference input signal
+                switch (nRefSource)
+                {
+                    case REF_SIDECHAIN:
+                        sProcessor.bind(base + PC_REFERENCE, NULL, c->vSc);
+                        break;
+                    case REF_LINK:
+                        sProcessor.bind(base + PC_REFERENCE, NULL, c->vShmIn);
+                        break;
+
+                    case REF_CAPTURE:
+                    case REF_FILE:
+                    case REF_EQUALIZER:
+                    default:
+                        sProcessor.bind(base + PC_REFERENCE, NULL, NULL);
+                        break;
+                }
+
+                // Route capture input signal
+                switch (nCapSource)
+                {
+                    case CAP_SIDECHAIN:
+                        sProcessor.bind(base + PC_CAPTURE, NULL, c->vSc);
+                        break;
+                    case CAP_LINK:
+                        sProcessor.bind(base + PC_CAPTURE, NULL, c->vShmIn);
+                        break;
+                    default:
+                        sProcessor.bind(base + PC_CAPTURE, NULL, NULL);
+                        break;
+                }
             }
         }
 
@@ -208,15 +359,22 @@ namespace lsp
             }
         }
 
+        void matcher::process_block(void *object, void *subject, float * const * spectrum, size_t rank)
+        {
+//            matcher *self = static_cast<matcher *>(object);
+            // TODO
+        }
+
         void matcher::process(size_t samples)
         {
             bind_buffers();
 
             for (size_t offset=0; offset<samples; )
             {
-                const size_t to_do  = lsp_min(samples - offset, BUFFER_SIZE);
+                const size_t to_do  = lsp_min(samples - offset, BUFFER_SIZE, sProcessor.remaining());
 
-                process_signal(to_do);
+                // Perform processing
+                sProcessor.process(to_do);
 
                 // Update position
                 offset             += to_do;
@@ -225,7 +383,10 @@ namespace lsp
                     channel_t *c        = &vChannels[i];
                     c->vIn             += to_do;
                     c->vOut            += to_do;
-                    c->vSc             += to_do;
+                    if (c->vSc != NULL)
+                        c->vSc             += to_do;
+                    if (c->vShmIn != NULL)
+                        c->vShmIn          += to_do;
                 }
             }
         }

@@ -10,8 +10,9 @@
 			"static": "Static"
 		},
 		"ref": {
-			"capture": "Captrue",
+			"capture": "Capture",
 			"file": "File",
+			"eq": "Equalizer",
 			"link": "Link",
 			"sidechain": "Sidechain"
 		}
