@@ -65,6 +65,16 @@ namespace lsp
                     CAP_REFERENCE       // Take spectral data from reference channel
                 };
 
+                enum sig_meters_t
+                {
+                    SM_IN,
+                    SM_REFERENCE,
+                    SM_CAPTURE,
+                    SM_OUT,
+
+                    SM_TOTAL
+                };
+
                 typedef struct channel_t
                 {
                     // DSP processing modules
@@ -74,21 +84,47 @@ namespace lsp
                     float                  *vOut;               // Output buffer
                     float                  *vSc;                // Sidechain buffer
                     float                  *vShmIn;             // Shared memory link
+                    float                  *vFft[SM_TOTAL];     // FFT data
+
+                    bool                    bFft[SM_TOTAL];     // Perform FFT processing
 
                     plug::IPort            *pIn;                // Input buffer
                     plug::IPort            *pOut;               // Output buffer
                     plug::IPort            *pSc;                // Sidechain buffer
                     plug::IPort            *pShmIn;             // Shared memory link
+
+                    plug::IPort            *pFft[SM_TOTAL];     // Show FFT of signal
+                    plug::IPort            *pMeter[SM_TOTAL];   // Level meter of signal
                 } channel_t;
+
+                typedef struct match_band_t
+                {
+                    float                   fMaxAmp;            // Maximum amplification
+                    float                   fMaxRed;            // Maximum reduction
+                    float                   fReact;             // Reactivity
+
+                    plug::IPort            *pMaxAmp;            // Maximum amplification
+                    plug::IPort            *pMaxRed;            // Maximum reduction
+                    plug::IPort            *pReact;             // Reactvity
+                } match_band_t;
 
             protected:
                 uint32_t            nChannels;          // Number of channels
                 channel_t          *vChannels;          // Delay channels
                 uint32_t            nRefSource;         // Reference source
                 uint32_t            nCapSource;         // Capture source
+                uint32_t            nRank;              // FFT rank
+                float               fFftTau;            // FFT time constant
+                float               fFftShift;          // FFT shift
                 bool                bSidechain;         // Sidechain flag
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
+                match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];     // Match bands
+
+                uint16_t           *vIndices;           // FFT indices
+                float              *vFreqs;             // FFT frequencies
+                float              *vEnvelope;          // FFT envelope
+                float              *vBuffer;            // Temporary buffer
 
                 plug::IPort        *pBypass;            // Bypass
                 plug::IPort        *pGainIn;            // Input gain
@@ -106,6 +142,15 @@ namespace lsp
                 plug::IPort        *pListen;            // Listen capture
                 plug::IPort        *pStereoLink;        // Stereo link
 
+                plug::IPort        *pMatchMode;         // Operating mode
+                plug::IPort        *pMatchReset;        // Reset match curves
+                plug::IPort        *pMatchImmediate;    // Perform immediate match
+                plug::IPort        *pMatchMesh;         // Match mesh
+
+                plug::IPort        *pFftReact;          // FFT reactivity for analysis
+                plug::IPort        *pFftShift;          // FFT shift
+                plug::IPort        *pFftMesh;           // Mesh for FFT analysis
+
                 uint8_t            *pData;              // Allocated data
 
             protected:
@@ -115,6 +160,10 @@ namespace lsp
                 void                do_destroy();
                 void                bind_buffers();
                 void                process_signal(size_t to_do);
+                void                update_frequency_mapping();
+                void                output_fft_mesh_data();
+                void                process_block(float * const * spectrum, size_t rank);
+                void                analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft);
                 uint32_t            decode_reference_source(size_t ref) const;
                 uint32_t            decode_capture_source(size_t cap, bool capture, size_t ref) const;
 

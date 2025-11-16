@@ -37,6 +37,7 @@ namespace lsp
             static constexpr size_t         FFT_RANK_MAX                = 14;
             static constexpr size_t         FFT_RANK_IDX_DFL            = 4;
             static constexpr size_t         FFT_MESH_SIZE               = 640;
+            static constexpr size_t         MATCH_BANDS                 = 10;
 
             static constexpr float          PROFILE_REACT_TIME_MIN      = 0.100f;
             static constexpr float          PROFILE_REACT_TIME_MAX      = 10.000f;
@@ -57,6 +58,11 @@ namespace lsp
             static constexpr float          BAND_REACT_MAX              = 10.0f;
             static constexpr float          BAND_REACT_DFL              = 1.0f;
             static constexpr float          BAND_REACT_STEP             = 0.05f;
+
+            static constexpr float          REACT_TIME_MIN              = 0.000f;
+            static constexpr float          REACT_TIME_MAX              = 1.000f;
+            static constexpr float          REACT_TIME_DFL              = 0.200f;
+            static constexpr float          REACT_TIME_STEP             = 0.001f;
         } matcher;
 
         // Plugin type metadata

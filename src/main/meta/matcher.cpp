@@ -97,7 +97,7 @@ namespace lsp
             BYPASS, \
             IN_GAIN, \
             OUT_GAIN, \
-            COMBO("fft", "FFT size", "FFT size", matcher::FFT_RANK_IDX_DFL, matcher_fft_ranks), \
+            COMBO("fft_sz", "FFT size", "FFT size", matcher::FFT_RANK_IDX_DFL, matcher_fft_ranks), \
             SWITCH("rst_in", "Reset input signal profile", "Reset In", 1.0f), \
             SWITCH("rst_ref", "Reset reference signal profile", "Reset Ref", 1.0f), \
             SWITCH("rst_cap", "Reset captured signal profile", "Reset Cap", 1.0f), \
@@ -133,22 +133,29 @@ namespace lsp
             MATCHER_EQ_BAND(9, "16 k"), \
             MESH("pmesh", "Match profile mesh characteristics", 3 + 2 * channels, matcher::FFT_MESH_SIZE)
 
+        #define MATCHER_METERS_COMMON(channels) \
+            LOG_CONTROL("react", "FFT reactivity", "Reactivity", U_MSEC, matcher::REACT_TIME), \
+            AMP_GAIN("shift", "FFT Shift gain", "Shift gain", 1.0f, 100.0f), \
+            MESH("fft", "Signal metering mesh", 1 + 4*channels, matcher::FFT_MESH_SIZE + 4)
+
         #define MATCHER_METERS(id, label, alias) \
-            SWITCH("ifft" id, "Input FFT enabled", "FFT In" alias, 1), \
-            SWITCH("offt" id, "Output FFT enabled", "FFT Out" alias, 1), \
-            SWITCH("cfft" id, "Capture FFT enabled", "FFT Cap" alias, 1), \
+            SWITCH("ife" id, "Input FFT enabled", "FFT In" alias, 1), \
+            SWITCH("rfe" id, "Reference FFT enabled", "FFT Ref" alias, 1), \
+            SWITCH("cfe" id, "Capture FFT enabled", "FFT Cap" alias, 1), \
+            SWITCH("ofe" id, "Output FFT enabled", "FFT Out" alias, 1), \
             METER_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_P_24_DB), \
-            METER_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB), \
-            METER_GAIN("clm" id, "Capture level meter" label, GAIN_AMP_P_24_DB)
+            METER_GAIN("rlm" id, "Reference level meter" label, GAIN_AMP_P_24_DB), \
+            METER_GAIN("clm" id, "Capture level meter" label, GAIN_AMP_P_24_DB), \
+            METER_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB)
 
         #define MATCHER_METERS_MONO \
-            MATCHER_METERS("", "", ""), \
-            MESH("fft", "Signal metering mesh", 1 + 3*1, matcher::FFT_MESH_SIZE + 4)
+            MATCHER_METERS_COMMON(1), \
+            MATCHER_METERS("", "", "")
 
         #define MATCHER_METERS_STEREO \
+            MATCHER_METERS_COMMON(2), \
             MATCHER_METERS("_l", " Left", "L"), \
-            MATCHER_METERS("_r", " Right", "R"), \
-            MESH("fft", "Signal metering mesh", 1 + 3*2, matcher::FFT_MESH_SIZE + 4)
+            MATCHER_METERS("_r", " Right", "R")
 
         #define MATCHER_SHM_LINK_MONO \
             OPT_RETURN_MONO("link", "shml", "Side-chain shared memory link")
