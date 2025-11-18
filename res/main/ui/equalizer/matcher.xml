@@ -2,7 +2,7 @@
 	<grid rows="2" cols="1">
 		<hbox>
 			<label text="labels.fft.frame" />
-			<combo id="fft" />
+			<combo id="fft_sz" />
 			<label text="labels.signal.reference" />
 			<combo id="ref_src" />
 			<label text="labels.capture" />

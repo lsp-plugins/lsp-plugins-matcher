@@ -74,6 +74,7 @@ namespace lsp
             vChannels       = NULL;
             vFreqs          = NULL;
             vEnvelope       = NULL;
+            pEqProfile      = NULL;
             vIndices        = NULL;
             vBuffer         = NULL;
 
@@ -139,11 +140,11 @@ namespace lsp
             const size_t szof_tmp_buf   = lsp_max(szof_fft_buf, sizeof(float) * BUFFER_SIZE);
             const size_t alloc          =
                 szof_channels +     // vChannels
-                szof_freqs + // vFreqs
-                szof_fft_buf + // vEnvelope
-                szof_idx + // vIndices
-                szof_tmp_buf + // vBuffer
-                nChannels * ( // channel_t
+                szof_freqs +        // vFreqs
+                szof_fft_buf +      // vEnvelope
+                szof_idx +          // vIndices
+                szof_tmp_buf +      // vBuffer
+                nChannels * (       // channel_t
                     szof_fft_buf * SM_TOTAL     // vFft
                 );
 
@@ -151,12 +152,13 @@ namespace lsp
             uint8_t *ptr            = alloc_aligned<uint8_t>(pData, alloc, OPTIMAL_ALIGN);
             if (ptr == NULL)
                 return;
+            lsp_guard_assert(const uint8_t *base = ptr);
 
             // Initialize pointers to channels and temporary buffer
             vChannels               = advance_ptr_bytes<channel_t>(ptr, szof_channels);
             vFreqs                  = advance_ptr_bytes<float>(ptr, szof_freqs);
             vEnvelope               = advance_ptr_bytes<float>(ptr, szof_fft_buf);
-            vIndices                = advance_ptr_bytes<uint16_t>(ptr, szof_freqs);
+            vIndices                = advance_ptr_bytes<uint16_t>(ptr, szof_idx);
             vBuffer                 = advance_ptr_bytes<float>(ptr, szof_tmp_buf);
 
             for (size_t i=0; i < nChannels; ++i)
@@ -186,6 +188,8 @@ namespace lsp
                     c->pMeter[j]            = NULL;
                 }
             }
+
+            lsp_assert(ptr <= &base[alloc]);
 
             // Initialize processor
             if (!sProcessor.init(3 * nChannels, meta::matcher::FFT_RANK_MAX))
@@ -270,6 +274,22 @@ namespace lsp
                 BIND_PORT(c->pMeter[SM_CAPTURE]);
                 BIND_PORT(c->pMeter[SM_REFERENCE]);
             }
+
+            // Create empty profiles with highest resolution
+            profile_data_t *prof    = create_default_profile();
+            if (prof == NULL)
+                return;
+            pEqProfile           = prof;
+
+            for (size_t i=0; i<PROF_TOTAL; ++i)
+            {
+                prof    = create_default_profile();
+                if (prof == NULL)
+                    return;
+
+                vProfileData[i].set_deleter(free_profile_data);
+                vProfileData[i].push(prof);
+            }
         }
 
         void matcher::destroy()
@@ -290,6 +310,15 @@ namespace lsp
                 }
                 vChannels   = NULL;
             }
+
+            // Free profiles
+            if (pEqProfile != NULL)
+            {
+                free_profile_data(pEqProfile);
+                pEqProfile = NULL;
+            }
+            for (size_t i=0; i<PROF_TOTAL; ++i)
+                vProfileData[i].flush();
 
             // Free previously allocated data chunk
             if (pData != NULL)
@@ -419,7 +448,6 @@ namespace lsp
                 update_frequency_mapping();
             }
 
-
             // Update channel configuration
             const size_t fft_csize  = fft_period + 1;
             for (size_t i=0; i<nChannels; ++i)
@@ -508,6 +536,70 @@ namespace lsp
         {
             matcher *self = static_cast<matcher *>(object);
             self->process_block(spectrum, rank);
+        }
+
+        matcher::profile_data_t *matcher::allocate_profile_data()
+        {
+            const size_t channels       = nChannels;
+            const size_t fft_citems     = (1 << (meta::matcher::FFT_RANK_MAX - 1)) + 1;
+            const size_t fft_ritems     = 1 << meta::matcher::FFT_RANK_MAX;
+            const size_t table_size     = sizeof(float *) * channels;
+            const size_t szof_data_hdr  = align_size(sizeof(profile_data_t), DEFAULT_ALIGN);
+            const size_t szof_header    = align_size(szof_data_hdr + table_size * 2, OPTIMAL_ALIGN);
+            const size_t origin_size    = align_size(sizeof(float) * fft_citems, OPTIMAL_ALIGN);
+            const size_t rendered_size  = sizeof(float) * fft_ritems;
+
+            const size_t to_alloc       = szof_header + nChannels * (origin_size + rendered_size);
+
+            // Allocate memory
+            uint8_t *ptr                = static_cast<uint8_t *>(malloc(to_alloc));
+            if (ptr == NULL)
+                return NULL;
+            lsp_guard_assert(uint8_t * const base = ptr);
+
+            // Initialize profile data
+            profile_data_t *profile     = advance_ptr_bytes<profile_data_t>(ptr, szof_header);
+            profile->nOriginRate        = 0;
+            profile->nActualRate        = 0;
+            profile->nOriginRank        = 0;
+            profile->nActualRank        = 0;
+            profile->nFlags             = PFLAGS_NONE;
+            profile->vOriginData        = add_ptr_bytes<float *>(profile, szof_data_hdr);
+            profile->vActualData        = &profile->vOriginData[table_size];
+
+            for (size_t i=0; i<channels; ++i)
+            {
+                profile->vOriginData[i]     = advance_ptr_bytes<float>(ptr, origin_size);
+                dsp::fill(profile->vOriginData[i], GAIN_AMP_0_DB, fft_citems);
+            }
+
+            for (size_t i=0; i<channels; ++i)
+            {
+                profile->vActualData[i]     = advance_ptr_bytes<float>(ptr, rendered_size);
+                dsp::fill(profile->vActualData[i], GAIN_AMP_0_DB, fft_ritems);
+            }
+
+            lsp_assert(ptr <= &base[to_alloc]);
+
+            return profile;
+        }
+
+        matcher::profile_data_t *matcher::create_default_profile()
+        {
+            profile_data_t *res = allocate_profile_data();
+            if (res == NULL)
+                return res;
+
+            res->nFlags                 = PFLAGS_DEFAULT;
+            res->nOriginRate            = fSampleRate;
+            res->nOriginRank            = nRank;
+            res->nActualRank            = nRank;
+            return res;
+        }
+
+        void matcher::free_profile_data(profile_data_t *profile)
+        {
+            free(profile);
         }
 
         void matcher::analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft)

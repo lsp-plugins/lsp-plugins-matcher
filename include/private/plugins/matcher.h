@@ -26,6 +26,7 @@
 #include <lsp-plug.in/dsp-units/util/Delay.h>
 #include <lsp-plug.in/dsp-units/util/MultiSpectralProcessor.h>
 #include <lsp-plug.in/plug-fw/plug.h>
+#include <lsp-plug.in/lltl/state.h>
 #include <private/meta/matcher.h>
 
 namespace lsp
@@ -75,6 +76,24 @@ namespace lsp
                     SM_TOTAL
                 };
 
+                enum profile_type_t
+                {
+                    PROF_INPUT,         // Profile for the input audio
+                    PROF_REFERENCE,     // Profile for the reference audio
+                    PROF_CAPTURE,       // Profile for the captured audio
+                    PROF_FILE,          // Profile for the file
+                    PROF_EQUALIZER,     // Profile for the equalizer
+
+                    PROF_TOTAL
+                };
+
+                enum profile_data_flags_t
+                {
+                    PFLAGS_NONE             = 0,
+                    PFLAGS_DEFAULT          = 1 << 0,           // Default (empty) profile
+                    PFLAGS_DIRTY            = 1 << 1,           // Profile is dirty and has not been saved
+                };
+
                 typedef struct channel_t
                 {
                     // DSP processing modules
@@ -108,6 +127,17 @@ namespace lsp
                     plug::IPort            *pReact;             // Reactvity
                 } match_band_t;
 
+                typedef struct profile_data_t
+                {
+                    uint32_t                nOriginRate;        // Original sample rate of the profile
+                    uint32_t                nActualRate;        // Actual sample rate of the profile
+                    uint32_t                nOriginRank;        // Original FFT rank of the profile
+                    uint32_t                nActualRank;        // Actual FFT rank of the profile
+                    uint32_t                nFlags;             // Profile data flags
+                    float                 **vOriginData;        // Original data (without resampling)
+                    float                 **vActualData;        // Resampled data (matching processing)
+                } profile_data_t;
+
             protected:
                 uint32_t            nChannels;          // Number of channels
                 channel_t          *vChannels;          // Delay channels
@@ -119,7 +149,9 @@ namespace lsp
                 bool                bSidechain;         // Sidechain flag
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
-                match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];     // Match bands
+                match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];    // Match bands
+                profile_data_t     *pEqProfile;         // Actual equalization profile
+                lltl::state<profile_data_t> vProfileData[PROF_TOTAL];           // Profile data
 
                 uint16_t           *vIndices;           // FFT indices
                 float              *vFreqs;             // FFT frequencies
@@ -155,6 +187,9 @@ namespace lsp
 
             protected:
                 static void         process_block(void *object, void *subject, float * const * spectrum, size_t rank);
+                profile_data_t     *allocate_profile_data();
+                profile_data_t     *create_default_profile();
+                static void         free_profile_data(profile_data_t *profile);
 
             protected:
                 void                do_destroy();
