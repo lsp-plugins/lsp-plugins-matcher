@@ -131,7 +131,7 @@ namespace lsp
             MATCHER_EQ_BAND(7, "4.7 k"), \
             MATCHER_EQ_BAND(8, "9 k"), \
             MATCHER_EQ_BAND(9, "16 k"), \
-            MESH("pmesh", "Match profile mesh characteristics", 3 + 2 * channels, matcher::FFT_MESH_SIZE)
+            MESH("pmesh", "Match profile mesh characteristics", 1 + 6 * channels, matcher::FFT_MESH_SIZE + 4)
 
         #define MATCHER_METERS_COMMON(channels) \
             LOG_CONTROL("react", "FFT reactivity", "Reactivity", U_MSEC, matcher::REACT_TIME), \

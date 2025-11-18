@@ -92,6 +92,7 @@ namespace lsp
                     PFLAGS_NONE             = 0,
                     PFLAGS_DEFAULT          = 1 << 0,           // Default (empty) profile
                     PFLAGS_DIRTY            = 1 << 1,           // Profile is dirty and has not been saved
+                    PFLAGS_SYNC             = 1 << 2,           // Profile needs to be synchronized with UI
                 };
 
                 typedef struct channel_t
@@ -133,6 +134,7 @@ namespace lsp
                     uint32_t                nActualRate;        // Actual sample rate of the profile
                     uint32_t                nOriginRank;        // Original FFT rank of the profile
                     uint32_t                nActualRank;        // Actual FFT rank of the profile
+                    float                   fLoudness;          // Profile loudness
                     uint32_t                nFlags;             // Profile data flags
                     float                 **vOriginData;        // Original data (without resampling)
                     float                 **vActualData;        // Resampled data (matching processing)
@@ -146,7 +148,9 @@ namespace lsp
                 uint32_t            nRank;              // FFT rank
                 float               fFftTau;            // FFT time constant
                 float               fFftShift;          // FFT shift
+                float               fInTau;             // Input profile reactivity
                 bool                bSidechain;         // Sidechain flag
+                bool                bProfile;           // Profile capturing is enabled
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
                 match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];    // Match bands
@@ -187,20 +191,23 @@ namespace lsp
 
             protected:
                 static void         process_block(void *object, void *subject, float * const * spectrum, size_t rank);
-                profile_data_t     *allocate_profile_data();
-                profile_data_t     *create_default_profile();
                 static void         free_profile_data(profile_data_t *profile);
 
             protected:
                 void                do_destroy();
+                profile_data_t     *allocate_profile_data();
+                profile_data_t     *create_default_profile();
                 void                bind_buffers();
                 void                process_signal(size_t to_do);
                 void                update_frequency_mapping();
                 void                output_fft_mesh_data();
+                void                output_profile_mesh_data();
                 void                process_block(float * const * spectrum, size_t rank);
                 void                analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft);
                 uint32_t            decode_reference_source(size_t ref) const;
                 uint32_t            decode_capture_source(size_t cap, bool capture, size_t ref) const;
+                bool                check_need_profile_sync();
+                void                output_profile_mesh(float *dst, const profile_data_t *profile, size_t channel, bool envelope);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
@@ -218,6 +225,7 @@ namespace lsp
                 virtual void        update_sample_rate(long sr) override;
                 virtual void        update_settings() override;
                 virtual void        process(size_t samples) override;
+                virtual void        ui_activated() override;
                 virtual void        dump(dspu::IStateDumper *v) const override;
         };
 

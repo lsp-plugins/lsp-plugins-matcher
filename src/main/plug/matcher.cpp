@@ -78,11 +78,14 @@ namespace lsp
             vIndices        = NULL;
             vBuffer         = NULL;
 
+            bProfile        = false;
+
             nRefSource      = REF_CAPTURE;
             nCapSource      = CAP_NONE;
             nRank           = 0;
             fFftTau         = 1.0f;
             fFftShift       = GAIN_AMP_0_DB;
+            fInTau          = 1.0f;
 
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
@@ -428,11 +431,14 @@ namespace lsp
             const uint32_t rank     = lsp_limit(meta::matcher::FFT_RANK_MIN + ssize_t(pFftSize->value()), meta::matcher::FFT_RANK_MIN, meta::matcher::FFT_RANK_MAX);
             const float reactivity  = pFftReact->value();
             const size_t fft_period = (1 << (rank - 1));
+            const float in_react    = pInReactivity->value();
+            const size_t fft_csize  = fft_period + 1;
 
             nRefSource              = decode_reference_source(pRefSource->value());
             nCapSource              = decode_capture_source(pCapSource->value(), pCapture->value() >= 0.5f, nRefSource);
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
             fFftShift               = pFftShift->value() * 100.0f / float(1 << rank);
+            fInTau                  = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), in_react));
 
             for (size_t i=0; i<nChannels; ++i)
             {
@@ -448,8 +454,25 @@ namespace lsp
                 update_frequency_mapping();
             }
 
+            // Check that profile capture has changed
+            const bool profile_on   = pProfile->value() >= 0.5f;
+            if (profile_on != bProfile)
+            {
+                // Clear profile if profiling is enabled
+                if (profile_on)
+                {
+                    profile_data_t *profile     = vProfileData[PROF_INPUT].get();
+                    if (profile != NULL)
+                    {
+                        profile->nFlags             = PFLAGS_DIRTY | PFLAGS_SYNC;
+                        for (size_t i=0; i<nChannels; ++i)
+                            dsp::fill_zero(profile->vOriginData[i], fft_csize);
+                    }
+                }
+                bProfile    = profile_on;
+            }
+
             // Update channel configuration
-            const size_t fft_csize  = fft_period + 1;
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c            = &vChannels[i];
@@ -542,14 +565,12 @@ namespace lsp
         {
             const size_t channels       = nChannels;
             const size_t fft_citems     = (1 << (meta::matcher::FFT_RANK_MAX - 1)) + 1;
-            const size_t fft_ritems     = 1 << meta::matcher::FFT_RANK_MAX;
             const size_t table_size     = sizeof(float *) * channels;
             const size_t szof_data_hdr  = align_size(sizeof(profile_data_t), DEFAULT_ALIGN);
             const size_t szof_header    = align_size(szof_data_hdr + table_size * 2, OPTIMAL_ALIGN);
-            const size_t origin_size    = align_size(sizeof(float) * fft_citems, OPTIMAL_ALIGN);
-            const size_t rendered_size  = sizeof(float) * fft_ritems;
+            const size_t prof_data_size = align_size(sizeof(float) * fft_citems, OPTIMAL_ALIGN);
 
-            const size_t to_alloc       = szof_header + nChannels * (origin_size + rendered_size);
+            const size_t to_alloc       = szof_header + nChannels * (prof_data_size + prof_data_size);
 
             // Allocate memory
             uint8_t *ptr                = static_cast<uint8_t *>(malloc(to_alloc));
@@ -563,20 +584,21 @@ namespace lsp
             profile->nActualRate        = 0;
             profile->nOriginRank        = 0;
             profile->nActualRank        = 0;
+            profile->fLoudness          = GAIN_AMP_M_INF_DB;
             profile->nFlags             = PFLAGS_NONE;
             profile->vOriginData        = add_ptr_bytes<float *>(profile, szof_data_hdr);
-            profile->vActualData        = &profile->vOriginData[table_size];
+            profile->vActualData        = &profile->vOriginData[channels];
 
             for (size_t i=0; i<channels; ++i)
             {
-                profile->vOriginData[i]     = advance_ptr_bytes<float>(ptr, origin_size);
+                profile->vOriginData[i]     = advance_ptr_bytes<float>(ptr, prof_data_size);
                 dsp::fill(profile->vOriginData[i], GAIN_AMP_0_DB, fft_citems);
             }
 
             for (size_t i=0; i<channels; ++i)
             {
-                profile->vActualData[i]     = advance_ptr_bytes<float>(ptr, rendered_size);
-                dsp::fill(profile->vActualData[i], GAIN_AMP_0_DB, fft_ritems);
+                profile->vActualData[i]     = advance_ptr_bytes<float>(ptr, prof_data_size);
+                dsp::fill(profile->vActualData[i], GAIN_AMP_0_DB, fft_citems);
             }
 
             lsp_assert(ptr <= &base[to_alloc]);
@@ -617,6 +639,8 @@ namespace lsp
         void matcher::process_block(float * const * spectrum, size_t rank)
         {
             // Analyze input signal
+            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c = &vChannels[i];
@@ -640,6 +664,20 @@ namespace lsp
                         break;
                     default:
                         break;
+                }
+            }
+
+            // Record input profile
+            profile_data_t * const in_profile  = vProfileData[PROF_INPUT].get();
+            if ((bProfile) && (in_profile != NULL))
+            {
+                in_profile->nFlags         |= PFLAGS_DIRTY | PFLAGS_SYNC;
+
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    dsp::pcomplex_mod(vBuffer, spectrum[i * PC_TOTAL + PC_INPUT], fft_csize);
+                    dsp::mix2(in_profile->vOriginData[i], vBuffer, 1.0f - fInTau, fInTau, fft_csize);
+                    dsp::copy(in_profile->vActualData[i], in_profile->vOriginData[i], fft_csize);
                 }
             }
 
@@ -676,6 +714,20 @@ namespace lsp
             }
 
             output_fft_mesh_data();
+            output_profile_mesh_data();
+        }
+
+        bool matcher::check_need_profile_sync()
+        {
+            if ((pEqProfile != NULL) && (pEqProfile->nFlags & PFLAGS_SYNC))
+                return true;
+            for (size_t i=0; i<PROF_TOTAL; ++i)
+            {
+                profile_data_t * const profile = vProfileData[i].current();
+                if ((profile != NULL) && (profile->nFlags & PFLAGS_SYNC))
+                    return true;
+            }
+            return false;
         }
 
         void matcher::output_fft_mesh_data()
@@ -688,12 +740,12 @@ namespace lsp
 
             // Frequencies
             float *ptr          = mesh->pvData[index++];
-            dsp::copy(&ptr[2], vFreqs, meta::matcher::FFT_MESH_SIZE);
             ptr[0]              = SPEC_FREQ_MIN * 0.5f;
-            ptr[1]              = ptr[2];
+            ptr[1]              = ptr[0];
+            dsp::copy(&ptr[2], vFreqs, meta::matcher::FFT_MESH_SIZE);
             ptr                += meta::matcher::FFT_MESH_SIZE + 2;
-            ptr[0]              = ptr[-1];
-            ptr[1]              = SPEC_FREQ_MAX * 2.0f;
+            ptr[0]              = SPEC_FREQ_MAX * 2.0f;
+            ptr[1]              = ptr[0];
 
             // Mesh data
             for (size_t i=0; i<nChannels; ++i)
@@ -729,6 +781,97 @@ namespace lsp
 
             // Report mesh size
             mesh->data(index, meta::matcher::FFT_MESH_SIZE + 4);
+        }
+
+        void matcher::output_profile_mesh_data()
+        {
+            if (!check_need_profile_sync())
+                return;
+
+            plug::mesh_t * mesh = (pMatchMesh != NULL) ? pMatchMesh->buffer<plug::mesh_t>() : NULL;
+            if ((mesh == NULL) || (!mesh->isEmpty()))
+                return;
+
+            size_t index        = 0;
+
+            // Frequencies
+            float *ptr          = mesh->pvData[index++];
+            dsp::copy(&ptr[2], vFreqs, meta::matcher::FFT_MESH_SIZE);
+            ptr[0]              = SPEC_FREQ_MIN * 0.5f;
+            ptr[1]              = ptr[0];
+            ptr                += meta::matcher::FFT_MESH_SIZE + 2;
+            ptr[0]              = SPEC_FREQ_MAX * 2.0f;
+            ptr[1]              = ptr[0];
+
+            // Mesh data
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                output_profile_mesh(mesh->pvData[index++], pEqProfile, i, false);
+                for (size_t j=0; j<PROF_TOTAL; ++j)
+                    output_profile_mesh(mesh->pvData[index++], vProfileData[j].current(), i, j != PROF_EQUALIZER);
+            }
+
+            // Reset sync flags
+            if (pEqProfile != NULL)
+                pEqProfile->nFlags     &= ~PFLAGS_SYNC;
+            for (size_t i=0; i<PROF_TOTAL; ++i)
+            {
+                profile_data_t * const profile = vProfileData[i].current();
+                if (profile != NULL)
+                    profile->nFlags        &= ~PFLAGS_SYNC;
+            }
+
+            // Report mesh size
+            mesh->data(index, meta::matcher::FFT_MESH_SIZE + 4);
+        }
+
+        void matcher::output_profile_mesh(float *dst, const profile_data_t *profile, size_t channel, bool envelope)
+        {
+            // Is profile present?
+            if (profile == NULL)
+            {
+                dsp::fill(dst, GAIN_AMP_0_DB, meta::matcher::FFT_MESH_SIZE + 4);
+                return;
+            }
+
+            const float * const fft = profile->vActualData[channel];
+
+            dst                += 2;
+
+            if (envelope)
+            {
+                for (size_t i=0; i<meta::matcher::FFT_MESH_SIZE; ++i)
+                {
+                    const size_t idx    = vIndices[i];
+                    dst[i]              = fft[idx] * vEnvelope[idx];
+                }
+            }
+            else
+            {
+                for (size_t i=0; i<meta::matcher::FFT_MESH_SIZE; ++i)
+                {
+                    const size_t idx    = vIndices[i];
+                    dst[i]              = fft[idx];
+                }
+            }
+
+            dst[-2]             = 0.0f;
+            dst[-1]             = dst[0];
+            dst                += meta::matcher::FFT_MESH_SIZE;
+            dst[0]              = dst[-1];
+            dst[1]              = 0.0f;
+        }
+
+        void matcher::ui_activated()
+        {
+            if (pEqProfile != NULL)
+                pEqProfile->nFlags |= PFLAGS_SYNC;
+            for (size_t i=0; i<PROF_TOTAL; ++i)
+            {
+                profile_data_t * const profile = vProfileData[i].current();
+                if (profile != NULL)
+                    profile->nFlags    |= PFLAGS_SYNC;
+            }
         }
 
         void matcher::dump(dspu::IStateDumper *v) const
