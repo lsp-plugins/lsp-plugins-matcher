@@ -105,7 +105,7 @@ namespace lsp
             LOG_CONTROL("rct_ref", "Reference profile reactivity", "React Ref", U_SEC, matcher::PROFILE_REACT_TIME), \
             COMBO("ref_src", "Reference source", "Reference", 0, sources), \
             COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \
-            SWITCH("profile", "Profile", "Profile", 1.0f), \
+            SWITCH("profile", "Profile", "Profile", 0.0f), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
             SWITCH("listen", "Listen capture", "Listen", 1.0f)
 

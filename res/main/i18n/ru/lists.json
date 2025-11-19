@@ -1,19 +1,20 @@
 {
 	"matcher": {
 		"capture": {
-			"in": "Input",
-			"link": "Link",
-			"sidechain": "Sidechain"
+			"in": "Вход",
+			"link": "Связь",
+			"sidechain": "Боковая цепь"
 		},
 		"mode": {
-			"dynamic": "Dynamic",
-			"static": "Static"
+			"dynamic": "Динамический",
+			"static": "Статический"
 		},
 		"ref": {
-			"capture": "Captrue",
-			"file": "File",
-			"link": "Link",
-			"sidechain": "Sidechain"
+			"capture": "Захват",
+			"equalizer": "Эквалазйер",
+			"file": "Файл",
+			"link": "Связь",
+			"sidechain": "Боковая цепь"
 		}
 	}
 }

@@ -91,8 +91,9 @@ namespace lsp
                 {
                     PFLAGS_NONE             = 0,
                     PFLAGS_DEFAULT          = 1 << 0,           // Default (empty) profile
-                    PFLAGS_DIRTY            = 1 << 1,           // Profile is dirty and has not been saved
-                    PFLAGS_SYNC             = 1 << 2,           // Profile needs to be synchronized with UI
+                    PFLAGS_READY            = 1 << 1,           // Profile is ready for processing
+                    PFLAGS_DIRTY            = 1 << 2,           // Profile is dirty and has not been saved
+                    PFLAGS_SYNC             = 1 << 3,           // Profile needs to be synchronized with UI
                 };
 
                 typedef struct channel_t
@@ -136,6 +137,7 @@ namespace lsp
                     uint32_t                nActualRank;        // Actual FFT rank of the profile
                     float                   fLoudness;          // Profile loudness
                     uint32_t                nFlags;             // Profile data flags
+                    uint32_t                nFrames;            // Number of frames collected
                     float                 **vOriginData;        // Original data (without resampling)
                     float                 **vActualData;        // Resampled data (matching processing)
                 } profile_data_t;
@@ -151,6 +153,7 @@ namespace lsp
                 float               fInTau;             // Input profile reactivity
                 bool                bSidechain;         // Sidechain flag
                 bool                bProfile;           // Profile capturing is enabled
+                bool                bCapture;           // Capture side signal
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
                 match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];    // Match bands
@@ -205,9 +208,11 @@ namespace lsp
                 void                process_block(float * const * spectrum, size_t rank);
                 void                analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft);
                 uint32_t            decode_reference_source(size_t ref) const;
-                uint32_t            decode_capture_source(size_t cap, bool capture, size_t ref) const;
+                uint32_t            decode_capture_source(size_t cap, size_t ref) const;
                 bool                check_need_profile_sync();
                 void                output_profile_mesh(float *dst, const profile_data_t *profile, size_t channel, bool envelope);
+                void                capture_profile(profile_data_t *profile, float * const * spectrum, size_t channel);
+                void                clear_profile_data(profile_data_t *profile);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

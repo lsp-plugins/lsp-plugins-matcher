@@ -79,6 +79,7 @@ namespace lsp
             vBuffer         = NULL;
 
             bProfile        = false;
+            bCapture        = false;
 
             nRefSource      = REF_CAPTURE;
             nCapSource      = CAP_NONE;
@@ -397,11 +398,8 @@ namespace lsp
             return REF_CAPTURE;
         }
 
-        uint32_t matcher::decode_capture_source(size_t cap, bool capture, size_t ref) const
+        uint32_t matcher::decode_capture_source(size_t cap, size_t ref) const
         {
-            if (!capture)
-                return CAP_NONE;
-
             if (bSidechain)
             {
                 switch (cap)
@@ -435,7 +433,7 @@ namespace lsp
             const size_t fft_csize  = fft_period + 1;
 
             nRefSource              = decode_reference_source(pRefSource->value());
-            nCapSource              = decode_capture_source(pCapSource->value(), pCapture->value() >= 0.5f, nRefSource);
+            nCapSource              = decode_capture_source(pCapSource->value(), nRefSource);
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
             fFftShift               = pFftShift->value() * 100.0f / float(1 << rank);
             fInTau                  = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), in_react));
@@ -454,22 +452,20 @@ namespace lsp
                 update_frequency_mapping();
             }
 
-            // Check that profile capture has changed
-            const bool profile_on   = pProfile->value() >= 0.5f;
+            // Trigger profile recordings
+            const float profile_on = pProfile->value() >= 0.5f;
             if (profile_on != bProfile)
             {
-                // Clear profile if profiling is enabled
+                bProfile                = profile_on;
                 if (profile_on)
-                {
-                    profile_data_t *profile     = vProfileData[PROF_INPUT].get();
-                    if (profile != NULL)
-                    {
-                        profile->nFlags             = PFLAGS_DIRTY | PFLAGS_SYNC;
-                        for (size_t i=0; i<nChannels; ++i)
-                            dsp::fill_zero(profile->vOriginData[i], fft_csize);
-                    }
-                }
-                bProfile    = profile_on;
+                    clear_profile_data(vProfileData[PROF_INPUT].get());
+            }
+            const float capture_on = pCapture->value() >= 0.5f;
+            if (capture_on != bCapture)
+            {
+                bCapture                = capture_on;
+                if (capture_on)
+                    clear_profile_data(vProfileData[PROF_CAPTURE].get());
             }
 
             // Update channel configuration
@@ -489,6 +485,18 @@ namespace lsp
                     }
                 }
             }
+        }
+
+        void matcher::clear_profile_data(profile_data_t *profile)
+        {
+            if (profile == NULL)
+                return;
+
+            const size_t fft_csize      = (1 << (nRank - 1)) + 1;
+            profile->nFlags             = PFLAGS_DIRTY | PFLAGS_SYNC;
+            profile->nFrames            = 0;
+            for (size_t i=0; i<nChannels; ++i)
+                dsp::fill_zero(profile->vOriginData[i], fft_csize);
         }
 
         void matcher::bind_buffers()
@@ -586,6 +594,7 @@ namespace lsp
             profile->nActualRank        = 0;
             profile->fLoudness          = GAIN_AMP_M_INF_DB;
             profile->nFlags             = PFLAGS_NONE;
+            profile->nFrames            = 0;
             profile->vOriginData        = add_ptr_bytes<float *>(profile, szof_data_hdr);
             profile->vActualData        = &profile->vOriginData[channels];
 
@@ -628,19 +637,81 @@ namespace lsp
         {
             if (!c->bFft[meter])
                 return;
-            if (fft == NULL)
-                return;
 
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
-            dsp::pcomplex_mod(vBuffer, fft, fft_csize);
-            dsp::mix2(c->vFft[meter], vBuffer, 1.0f - fFftTau, fFftTau, fft_csize);
+            float * const dst       = c->vFft[meter];
+
+            if (fft != NULL)
+            {
+                dsp::pcomplex_mod(vBuffer, fft, fft_csize);
+                dsp::mix2(dst, vBuffer, 1.0f - fFftTau, fFftTau, fft_csize);
+            }
+            else
+                dsp::mul_k2(dst, 1.0f - fFftTau, fft_csize);
+        }
+
+        void matcher::capture_profile(profile_data_t *profile, float * const * spectrum, size_t channel)
+        {
+            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+            const size_t frames     = profile->nFrames + 1;
+            const float k           = 1.0f / float(frames);
+            const float kp          = float(frames - 1) * k;
+
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                const float *src        = spectrum[i * PC_TOTAL + channel];
+                float *dst              = profile->vOriginData[i];
+
+                // Decide the strategy
+                if (frames > 0)
+                {
+                    // Append new frame to the profile
+                    if (src != NULL)
+                    {
+                        dsp::pcomplex_mod(vBuffer, src, fft_csize);
+                        dsp::mix2(dst, vBuffer, kp, k, fft_csize);
+                    }
+                    else
+                        dsp::mul_k2(dst, kp, fft_csize);
+                }
+                else if (src != NULL)
+                {
+                    // Fill empty profile
+                    dsp::pcomplex_mod(dst, src, fft_csize);
+                }
+
+                // Actualize profile
+                dsp::copy(profile->vActualData[i], dst, fft_csize);
+            }
+
+            // Check that profile has enough frames for processing
+            profile->nFrames        = lsp_min(frames, size_t(0x100));
+            profile->nFlags        |= (profile->nFrames >= 8) ?
+                PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_SYNC :
+                PFLAGS_DIRTY | PFLAGS_SYNC;
         }
 
         void matcher::process_block(float * const * spectrum, size_t rank)
         {
-            // Analyze input signal
-            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+            // Analyze capture signal channel
+            ssize_t cap_channel = -1;
+            switch (nCapSource)
+            {
+                case CAP_SIDECHAIN:
+                case CAP_LINK:
+                    cap_channel = PC_CAPTURE;
+                    break;
+                case CAP_INPUT:
+                    cap_channel = PC_INPUT;
+                    break;
+                case CAP_REFERENCE:
+                    cap_channel = PC_REFERENCE;
+                    break;
+                default:
+                    break;
+            }
 
+            // Analyze input signal
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c = &vChannels[i];
@@ -648,40 +719,18 @@ namespace lsp
 
                 analyze_spectrum(c, SM_IN, spectrum[base + PC_INPUT]);
                 analyze_spectrum(c, SM_REFERENCE, spectrum[base + PC_REFERENCE]);
-
-                // Analyze capture signal (if present)
-                switch (nCapSource)
-                {
-                    case CAP_SIDECHAIN:
-                    case CAP_LINK:
-                        analyze_spectrum(c, SM_CAPTURE, spectrum[base + PC_CAPTURE]);
-                        break;
-                    case CAP_INPUT:
-                        analyze_spectrum(c, SM_CAPTURE, spectrum[base + PC_INPUT]);
-                        break;
-                    case CAP_REFERENCE:
-                        analyze_spectrum(c, SM_CAPTURE, spectrum[base + PC_REFERENCE]);
-                        break;
-                    default:
-                        break;
-                }
+                analyze_spectrum(c, SM_CAPTURE, (cap_channel >= 0) ? spectrum[base + cap_channel] : NULL);
             }
 
-            // Record input profile
-            profile_data_t * const in_profile  = vProfileData[PROF_INPUT].get();
+            // Record input profile if enabled
+            profile_data_t * const in_profile  = vProfileData[PROF_INPUT].current();
             if ((bProfile) && (in_profile != NULL))
-            {
-                in_profile->nFlags         |= PFLAGS_DIRTY | PFLAGS_SYNC;
+                capture_profile(in_profile, spectrum, PC_INPUT);
 
-                for (size_t i=0; i<nChannels; ++i)
-                {
-                    dsp::pcomplex_mod(vBuffer, spectrum[i * PC_TOTAL + PC_INPUT], fft_csize);
-                    dsp::mix2(in_profile->vOriginData[i], vBuffer, 1.0f - fInTau, fInTau, fft_csize);
-                    dsp::copy(in_profile->vActualData[i], in_profile->vOriginData[i], fft_csize);
-                }
-            }
-
-            // TODO: perform processing
+            // Record capture if enabled
+            profile_data_t * const cap_profile  = vProfileData[PROF_CAPTURE].current();
+            if ((bCapture) && (cap_channel >= 0) && (cap_profile != NULL))
+                capture_profile(cap_profile, spectrum, cap_channel);
 
             // Analyze output signal
             for (size_t i=0; i<nChannels; ++i)

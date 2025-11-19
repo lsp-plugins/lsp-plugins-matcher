@@ -11,8 +11,8 @@
 		},
 		"ref": {
 			"capture": "Capture",
+			"equalizer": "Equalizer",
 			"file": "File",
-			"eq": "Equalizer",
 			"link": "Link",
 			"sidechain": "Sidechain"
 		}
