@@ -458,7 +458,7 @@ namespace lsp
             {
                 bProfile                = profile_on;
                 if (profile_on)
-                    clear_profile_data(vProfileData[PROF_INPUT].get());
+                    clear_profile_data(vProfileData[PROF_STATIC].get());
             }
             const float capture_on = pCapture->value() >= 0.5f;
             if (capture_on != bCapture)
@@ -650,7 +650,7 @@ namespace lsp
                 dsp::mul_k2(dst, 1.0f - fFftTau, fft_csize);
         }
 
-        void matcher::capture_profile(profile_data_t *profile, float * const * spectrum, size_t channel)
+        void matcher::record_profile(profile_data_t *profile, float * const * spectrum, size_t channel)
         {
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
             const size_t frames     = profile->nFrames + 1;
@@ -723,14 +723,14 @@ namespace lsp
             }
 
             // Record input profile if enabled
-            profile_data_t * const in_profile  = vProfileData[PROF_INPUT].current();
-            if ((bProfile) && (in_profile != NULL))
-                capture_profile(in_profile, spectrum, PC_INPUT);
+            profile_data_t * const static_profile  = vProfileData[PROF_STATIC].current();
+            if ((bProfile) && (static_profile != NULL))
+                record_profile(static_profile, spectrum, PC_INPUT);
 
             // Record capture if enabled
-            profile_data_t * const cap_profile  = vProfileData[PROF_CAPTURE].current();
-            if ((bCapture) && (cap_channel >= 0) && (cap_profile != NULL))
-                capture_profile(cap_profile, spectrum, cap_channel);
+            profile_data_t * const capture_profile  = vProfileData[PROF_CAPTURE].current();
+            if ((bCapture) && (cap_channel >= 0) && (capture_profile != NULL))
+                record_profile(capture_profile, spectrum, cap_channel);
 
             // Analyze output signal
             for (size_t i=0; i<nChannels; ++i)

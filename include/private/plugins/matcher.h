@@ -78,9 +78,10 @@ namespace lsp
 
                 enum profile_type_t
                 {
-                    PROF_INPUT,         // Profile for the input audio
-                    PROF_REFERENCE,     // Profile for the reference audio
-                    PROF_CAPTURE,       // Profile for the captured audio
+                    PROF_INPUT,         // Profile for the dynamic input audio
+                    PROF_REFERENCE,     // Profile for the dynamic reference audio
+                    PROF_STATIC,        // Profile for the static input audio
+                    PROF_CAPTURE,       // Profile for the static captured audio
                     PROF_FILE,          // Profile for the file
                     PROF_EQUALIZER,     // Profile for the equalizer
 
@@ -211,7 +212,7 @@ namespace lsp
                 uint32_t            decode_capture_source(size_t cap, size_t ref) const;
                 bool                check_need_profile_sync();
                 void                output_profile_mesh(float *dst, const profile_data_t *profile, size_t channel, bool envelope);
-                void                capture_profile(profile_data_t *profile, float * const * spectrum, size_t channel);
+                void                record_profile(profile_data_t *profile, float * const * spectrum, size_t channel);
                 void                clear_profile_data(profile_data_t *profile);
 
             public:

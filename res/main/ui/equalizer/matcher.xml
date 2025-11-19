@@ -76,19 +76,21 @@
 					<mesh id="fft" xi="0" yi="9" width="2" color="right" visibility=":ofe_r"/>
 					
 					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="8" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" />
 					<mesh id="pmesh" xi="0" yi="9" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" />
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" />
 					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" />
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" />
 					<mesh id="pmesh" xi="0" yi="11" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" />
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" />
 					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" />
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" />
 					<mesh id="pmesh" xi="0" yi="13" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" />
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" />
 					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" />
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" />
+					<mesh id="pmesh" xi="0" yi="15" width="2" color="right" />
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="left" />
+					<mesh id="pmesh" xi="0" yi="16" width="2" color="right" />
 				</ui:if>
 				
 				<!-- Text -->
