@@ -38,6 +38,7 @@ namespace lsp
             static constexpr size_t         FFT_RANK_IDX_DFL            = 4;
             static constexpr size_t         FFT_MESH_SIZE               = 640;
             static constexpr size_t         MATCH_BANDS                 = 10;
+            static constexpr size_t         SAMPLE_MESH_SIZE            = 600;          // Maximum mesh size for sample file
 
             static constexpr float          PROFILE_REACT_TIME_MIN      = 0.100f;
             static constexpr float          PROFILE_REACT_TIME_MAX      = 10.000f;
@@ -63,6 +64,22 @@ namespace lsp
             static constexpr float          REACT_TIME_MAX              = 1.000f;
             static constexpr float          REACT_TIME_DFL              = 0.200f;
             static constexpr float          REACT_TIME_STEP             = 0.001f;
+
+            static constexpr float          SAMPLE_LENGTH_MIN           = 0.0f;         // Minimum length (s)
+            static constexpr float          SAMPLE_LENGTH_MAX           = 1000.0f;      // Maximum sample length (s)
+            static constexpr float          SAMPLE_LENGTH_DFL           = 0.0f;         // Sample length (s)
+            static constexpr float          SAMPLE_LENGTH_STEP          = 0.005f;       // Sample step (s)
+
+            static constexpr float          SAMPLE_PLAYBACK_MIN         = -1.0f;        // Minimum playback position (s)
+            static constexpr float          SAMPLE_PLAYBACK_MAX         = 1000.0f;      // Maximum playback posotion (s)
+            static constexpr float          SAMPLE_PLAYBACK_DFL         = -1.0f;        // Default playback position (s)
+            static constexpr float          SAMPLE_PLAYBACK_STEP        = 0.01f;        // Playback step (s)
+
+            static constexpr float          SAMPLE_PITCH_MIN            = -24.0f;       // Minimum pitch (st)
+            static constexpr float          SAMPLE_PITCH_MAX            = 24.0f;        // Maximum pitch (st)
+            static constexpr float          SAMPLE_PITCH_DFL            = 0.0f;         // Pitch (st)
+            static constexpr float          SAMPLE_PITCH_STEP           = 0.01f;        // Pitch step (st)
+
         } matcher;
 
         // Plugin type metadata

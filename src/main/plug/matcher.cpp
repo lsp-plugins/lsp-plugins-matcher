@@ -55,10 +55,77 @@ namespace lsp
 
         static plug::Factory factory(plugin_factory, plugins, 4);
 
+        //-------------------------------------------------------------------------
+        matcher::FileLoader::FileLoader(matcher *core)
+        {
+            pCore       = core;
+        }
+
+        matcher::FileLoader::~FileLoader()
+        {
+            pCore       = NULL;
+        }
+
+        status_t matcher::FileLoader::run()
+        {
+            return pCore->load_audio_file(&pCore->sFile);
+        }
+
+        void matcher::FileLoader::dump(dspu::IStateDumper *v) const
+        {
+            v->write("pCore", pCore);
+        }
+
+        //-------------------------------------------------------------------------
+        matcher::FileProcessor::FileProcessor(matcher *core)
+        {
+            pCore       = core;
+        }
+
+        matcher::FileProcessor::~FileProcessor()
+        {
+            pCore       = NULL;
+        }
+
+        status_t matcher::FileProcessor::run()
+        {
+            return pCore->process_audio_file();
+        }
+
+        void matcher::FileProcessor::dump(dspu::IStateDumper *v) const
+        {
+            v->write("pCore", pCore);
+        }
+
+        //-------------------------------------------------------------------------
+        matcher::GCTask::GCTask(matcher *base)
+        {
+            pCore       = base;
+        }
+
+        matcher::GCTask::~GCTask()
+        {
+            pCore       = NULL;
+        }
+
+        status_t matcher::GCTask::run()
+        {
+            pCore->perform_gc();
+            return STATUS_OK;
+        }
+
+        void matcher::GCTask::dump(dspu::IStateDumper *v) const
+        {
+            v->write("pCore", pCore);
+        }
+
         //---------------------------------------------------------------------
         // Implementation
         matcher::matcher(const meta::plugin_t *meta):
-            Module(meta)
+            Module(meta),
+            sFileLoader(this),
+            sFileProcessor(this),
+            sGCTask(this)
         {
             // Compute the number of audio channels by the number of inputs
             nChannels       = 0;
@@ -74,12 +141,11 @@ namespace lsp
             vChannels       = NULL;
             vFreqs          = NULL;
             vEnvelope       = NULL;
+            pExecutor       = NULL;
+            pGCList         = NULL;
             pEqProfile      = NULL;
             vIndices        = NULL;
             vBuffer         = NULL;
-
-            bProfile        = false;
-            bCapture        = false;
 
             nRefSource      = REF_CAPTURE;
             nCapSource      = CAP_NONE;
@@ -87,6 +153,12 @@ namespace lsp
             fFftTau         = 1.0f;
             fFftShift       = GAIN_AMP_0_DB;
             fInTau          = 1.0f;
+
+            nFileProcessReq = 0;
+            nFileProcessResp= 0;
+
+            bProfile        = false;
+            bCapture        = false;
 
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
@@ -134,6 +206,10 @@ namespace lsp
             // Call parent class for initialization
             Module::init(wrapper, ports);
 
+            // Remember executor service
+            pExecutor       = wrapper->executor();
+            lsp_trace("Executor = %p", pExecutor);
+
             // Estimate the number of bytes to allocate
             const size_t fft_csize      = (1 << (meta::matcher::FFT_RANK_MAX - 1)) + 1;
             const size_t szof_channels  = align_size(sizeof(channel_t) * nChannels, OPTIMAL_ALIGN);
@@ -141,15 +217,19 @@ namespace lsp
             const size_t szof_freqs     = sizeof(float) * meta::matcher::FFT_MESH_SIZE;
             const size_t szof_idx       = sizeof(uint16_t) * meta::matcher::FFT_MESH_SIZE;
             const size_t szof_fft_buf   = align_size(sizeof(float) * fft_csize, OPTIMAL_ALIGN);
-            const size_t szof_tmp_buf   = lsp_max(szof_fft_buf, sizeof(float) * BUFFER_SIZE);
+            const size_t szof_buf       = sizeof(float) * BUFFER_SIZE;
+            const size_t szof_tmp_buf   = lsp_max(szof_fft_buf, szof_buf);
+            const size_t szof_thumbs    = meta::matcher::SAMPLE_MESH_SIZE * sizeof(float);
             const size_t alloc          =
                 szof_channels +     // vChannels
                 szof_freqs +        // vFreqs
                 szof_fft_buf +      // vEnvelope
                 szof_idx +          // vIndices
                 szof_tmp_buf +      // vBuffer
+                nChannels * szof_thumbs +   // af_descriptor::vThumbs
                 nChannels * (       // channel_t
-                    szof_fft_buf * SM_TOTAL     // vFft
+                    szof_fft_buf * SM_TOTAL +   // vFft
+                    szof_buf                    // vBuffer
                 );
 
             // Allocate memory-aligned data
@@ -171,6 +251,11 @@ namespace lsp
 
                 // Construct in-place DSP processors
                 c->sBypass.construct();
+                c->sPlayer.construct();
+                c->sPlayback.construct();
+
+                if (!c->sPlayer.init(1, 32))
+                    return;
 
                 c->vIn                  = NULL;
                 c->vOut                 = NULL;
@@ -191,14 +276,46 @@ namespace lsp
                     c->pFft[j]              = NULL;
                     c->pMeter[j]            = NULL;
                 }
-            }
 
-            lsp_assert(ptr <= &base[alloc]);
+                c->vBuffer              = advance_ptr_bytes<float>(ptr, szof_buf);
+            }
 
             // Initialize processor
             if (!sProcessor.init(3 * nChannels, meta::matcher::FFT_RANK_MAX))
                 return;
             sProcessor.bind_handler(process_block, this, NULL);
+
+            // Initialize audio file descriptor
+            af_descriptor_t * const f   = &sFile;
+            f->pOriginal    = NULL;
+            f->pProcessed   = NULL;
+
+            for (size_t j=0; j<nChannels; ++j)
+                f->vThumbs[j]   = advance_ptr_bytes<float>(ptr, szof_thumbs);
+
+            f->sListen.init();
+            f->sStop.init();
+
+            f->nStatus      = STATUS_UNSPECIFIED;
+            f->bSync        = true;
+            f->fPitch       = 0.0f;
+            f->fHeadCut     = 0.0f;
+            f->fTailCut     = 0.0f;
+
+            f->fDuration    = 0.0f;
+
+            f->pFile        = NULL;
+            f->pPitch       = NULL;
+            f->pHeadCut     = NULL;
+            f->pTailCut     = NULL;
+            f->pListen      = NULL;
+            f->pStop        = NULL;
+            f->pStatus      = NULL;
+            f->pLength      = NULL;
+            f->pThumbs      = NULL;
+            f->pPlayPosition= NULL;
+
+            lsp_assert(ptr <= &base[alloc]);
 
             // Bind ports
             lsp_trace("Binding ports");
@@ -244,6 +361,19 @@ namespace lsp
             {
                 BIND_PORT(pStereoLink);
             }
+
+            // Bind audio file ports
+            lsp_trace("Binding audio file ports");
+            BIND_PORT(f->pFile);
+            BIND_PORT(f->pPitch);
+            BIND_PORT(f->pHeadCut);
+            BIND_PORT(f->pTailCut);
+            BIND_PORT(f->pListen);
+            BIND_PORT(f->pStop);
+            BIND_PORT(f->pStatus);
+            BIND_PORT(f->pLength);
+            BIND_PORT(f->pThumbs);
+            BIND_PORT(f->pPlayPosition);
 
             // Bind bypass
             lsp_trace("Binding match equalizer");
@@ -311,6 +441,9 @@ namespace lsp
                 {
                     channel_t *c    = &vChannels[i];
                     c->sBypass.destroy();
+
+                    dspu::Sample *gc_list = c->sPlayer.destroy(false);
+                    destroy_samples(gc_list);
                 }
                 vChannels   = NULL;
             }
@@ -485,6 +618,29 @@ namespace lsp
                     }
                 }
             }
+
+            // Update file configuration
+            af_descriptor_t * const af  = &sFile;
+
+            // Check that file parameters have changed
+            const float pitch       = af->pPitch->value();
+            const float head_cut    = af->pHeadCut->value();
+            const float tail_cut    = af->pTailCut->value();
+            if ((af->fPitch != pitch) ||
+                (af->fHeadCut != head_cut) ||
+                (af->fTailCut != tail_cut))
+            {
+                af->fPitch           = pitch;
+                af->fHeadCut         = head_cut;
+                af->fTailCut         = tail_cut;
+                nFileProcessReq      ++;
+            }
+
+            // Listen button pressed?
+            if (af->pListen != NULL)
+                af->sListen.submit(af->pListen->value());
+            if (af->pStop != NULL)
+                af->sStop.submit(af->pStop->value());
         }
 
         void matcher::clear_profile_data(profile_data_t *profile)
@@ -518,7 +674,7 @@ namespace lsp
                 const size_t base       = i * PC_TOTAL;
 
                 // Route input
-                sProcessor.bind(base + PC_INPUT, c->vOut, c->vIn);
+                sProcessor.bind_in(base + PC_INPUT, c->vIn);
 
                 // Route reference input signal
                 switch (nRefSource)
@@ -739,6 +895,11 @@ namespace lsp
 
         void matcher::process(size_t samples)
         {
+            process_file_loading_tasks();
+            process_file_processing_tasks();
+            process_listen_events();
+            process_gc_tasks();
+
             bind_buffers();
 
             for (size_t offset=0; offset<samples; )
@@ -746,7 +907,21 @@ namespace lsp
                 const size_t to_do  = lsp_min(samples - offset, BUFFER_SIZE, sProcessor.remaining());
 
                 // Perform processing
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    channel_t *c        = &vChannels[i];
+                    const size_t base   = i * PC_TOTAL;
+                    sProcessor.bind_out(base + PC_INPUT, c->vBuffer);
+                }
+
                 sProcessor.process(to_do);
+
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    channel_t *c        = &vChannels[i];
+                    c->sPlayer.process(c->vBuffer, c->vBuffer, to_do);
+                    c->sBypass.process(c->vOut, c->vIn, c->vBuffer, to_do);
+                }
 
                 // Update position
                 offset             += to_do;
@@ -764,6 +939,7 @@ namespace lsp
 
             output_fft_mesh_data();
             output_profile_mesh_data();
+            output_file_mesh_data();
         }
 
         bool matcher::check_need_profile_sync()
@@ -921,6 +1097,368 @@ namespace lsp
                 if (profile != NULL)
                     profile->nFlags    |= PFLAGS_SYNC;
             }
+
+            // Request for file processing (if file is present)
+            ++nFileProcessReq;
+            sFile.bSync     = true;
+        }
+
+        void matcher::destroy_samples(dspu::Sample *gc_list)
+        {
+            // Iterate over the list and destroy each sample in the list
+            while (gc_list != NULL)
+            {
+                dspu::Sample *next = gc_list->gc_next();
+                destroy_sample(gc_list);
+                gc_list = next;
+            }
+        }
+
+        void matcher::destroy_sample(dspu::Sample * &s)
+        {
+            if (s == NULL)
+                return;
+            s->destroy();
+            delete s;
+            lsp_trace("Destroyed sample %p", s);
+            s   = NULL;
+        }
+
+        status_t matcher::load_audio_file(af_descriptor_t *descr)
+        {
+            lsp_trace("descr = %p", descr);
+
+            // Check state
+            if (descr == NULL)
+                return STATUS_UNKNOWN_ERR;
+
+            // Destroy previously loaded sample
+            destroy_sample(descr->pOriginal);
+
+            // Check state
+            if (descr->pFile == NULL)
+                return STATUS_UNKNOWN_ERR;
+
+            // Get path
+            plug::path_t *path = descr->pFile->buffer<plug::path_t>();
+            if (path == NULL)
+                return STATUS_UNKNOWN_ERR;
+
+            // Get file name
+            const char *fname = path->path();
+            if (strlen(fname) <= 0)
+                return STATUS_UNSPECIFIED;
+
+            // Load audio file
+            dspu::Sample *af    = new dspu::Sample();
+            if (af == NULL)
+                return STATUS_NO_MEM;
+            lsp_trace("Allocated sample %p", af);
+            lsp_finally { destroy_sample(af); };
+
+            // Try to load file
+            const float sample_length_max_seconds = meta::matcher::SAMPLE_LENGTH_MAX;
+            status_t status = af->load(fname,  sample_length_max_seconds);
+            if (status != STATUS_OK)
+            {
+                lsp_trace("load failed: status=%d (%s)", status, get_status(status));
+                return status;
+            }
+
+            // Determine the normalizing factor
+            size_t channels         = af->channels();
+            float max = 0.0f;
+
+            for (size_t i=0; i<channels; ++i)
+            {
+                // Determine the maximum amplitude
+                float a_max = dsp::abs_max(af->channel(i), af->samples());
+                if (max < a_max)
+                    max     = a_max;
+            }
+            descr->fNorm    = (max != 0.0f) ? 1.0f / max : 1.0f;
+
+            // File was successfully loaded, pass result to the caller
+            lsp::swap(descr->pOriginal, af);
+
+            return STATUS_OK;
+        }
+
+        status_t matcher::process_audio_file()
+        {
+            // Get audio file
+            af_descriptor_t * const f   = &sFile;
+
+            // Destroy previously processed sample
+            destroy_sample(f->pProcessed);
+
+            // Get sample to process
+            const dspu::Sample *af  = f->pOriginal;
+            if (af == NULL)
+                return STATUS_UNSPECIFIED;
+
+            // Copy data of original sample to temporary sample and perform resampling if needed
+            dspu::Sample temp;
+            const size_t sample_rate_dst  = fSampleRate * dspu::semitones_to_frequency_shift(-f->fPitch);
+            if (sample_rate_dst != af->sample_rate())
+            {
+                if (temp.copy(af) != STATUS_OK)
+                {
+                    lsp_warn("Error copying source sample");
+                    return STATUS_NO_MEM;
+                }
+                if (temp.resample(sample_rate_dst) != STATUS_OK)
+                {
+                    lsp_warn("Error resampling source sample");
+                    return STATUS_NO_MEM;
+                }
+
+                af          = &temp;
+            }
+
+            // Allocate new sample
+            dspu::Sample *s     = new dspu::Sample();
+            if (s == NULL)
+                return STATUS_NO_MEM;
+            lsp_trace("Allocated sample %p", s);
+            lsp_finally { destroy_sample(s); };
+
+            // Obtain new sample parameters
+            const ssize_t flen  = af->samples();
+            size_t channels     = lsp_min(af->channels(), nChannels);
+            size_t head_cut     = dspu::seconds_to_samples(fSampleRate, f->fHeadCut);
+            size_t tail_cut     = dspu::seconds_to_samples(fSampleRate, f->fTailCut);
+            ssize_t fsamples    = flen - head_cut - tail_cut;
+            if (fsamples <= 0)
+            {
+                for (size_t j=0; j<channels; ++j)
+                    dsp::fill_zero(f->vThumbs[j], meta::matcher::SAMPLE_MESH_SIZE);
+                s->set_length(0);
+            }
+
+            // Now ensure that we have enough space for sample
+            if (!s->init(channels, flen, fsamples))
+                return STATUS_NO_MEM;
+
+            // Copy sample data and render the file thumbnail
+            for (size_t i=0; i<channels; ++i)
+            {
+                float *dst = s->channel(i);
+                const float *src = af->channel(i);
+
+                // Copy sample data
+                dsp::copy(dst, &src[head_cut], fsamples);
+
+                // Now render thumbnail
+                src                 = dst;
+                dst                 = f->vThumbs[i];
+                for (size_t k=0; k<meta::matcher::SAMPLE_MESH_SIZE; ++k)
+                {
+                    size_t first    = (k * fsamples) / meta::matcher::SAMPLE_MESH_SIZE;
+                    size_t last     = ((k + 1) * fsamples) / meta::matcher::SAMPLE_MESH_SIZE;
+                    if (first < last)
+                        dst[k]          = dsp::abs_max(&src[first], last - first);
+                    else
+                        dst[k]          = fabs(src[first]);
+                }
+
+                // Normalize graph if possible
+                if (f->fNorm != 1.0f)
+                    dsp::mul_k2(dst, f->fNorm, meta::matcher::SAMPLE_MESH_SIZE);
+            }
+
+            // TODO: build profile
+
+            // Commit sample to the processed list
+            lsp::swap(f->pProcessed, s);
+            f->fDuration        = dspu::samples_to_seconds(fSampleRate, flen);
+
+            return STATUS_OK;
+        }
+
+        void matcher::process_file_loading_tasks()
+        {
+            // Do nothing with loading while configurator is active
+            if (!sFileProcessor.idle())
+                return;
+
+            af_descriptor_t * const af     = &sFile;
+            if (af->pFile == NULL)
+                return;
+
+            // Get path and check task state
+            if (sFileLoader.idle())
+            {
+                // Get path
+                plug::path_t *path      = af->pFile->buffer<plug::path_t>();
+                if ((path != NULL) && (path->pending()))
+                {
+                    // Try to submit task
+                    if (pExecutor->submit(&sFileLoader))
+                    {
+                        lsp_trace("Successfully submitted load task for file");
+                        af->nStatus         = STATUS_LOADING;
+                        path->accept();
+                    }
+                }
+            }
+            else if (sFileLoader.completed())
+            {
+                plug::path_t *path = af->pFile->buffer<plug::path_t>();
+                if ((path != NULL) && (path->accepted()))
+                {
+                    // Update file status and set re-rendering flag
+                    af->nStatus         = sFileLoader.code();
+                    ++nFileProcessReq;
+
+                    // Now we surely can commit changes and reset task state
+                    path->commit();
+                    sFileLoader.reset();
+                }
+            }
+        }
+
+        void matcher::process_file_processing_tasks()
+        {
+            // Do nothing if file load is in progress
+            if (!sFileLoader.idle())
+                return;
+
+            // Check the status and look for a job
+            if ((nFileProcessReq != nFileProcessResp) && (sFileProcessor.idle()))
+            {
+                // Try to submit task
+                if (pExecutor->submit(&sFileProcessor))
+                {
+                    // Clear render state and reconfiguration request
+                    nFileProcessResp    = nFileProcessReq;
+                    lsp_trace("Successfully submitted file processing task");
+                }
+            }
+            else if (sFileProcessor.completed())
+            {
+                // Bind processed samples to the sampler
+                af_descriptor_t * const f   = &sFile;
+                for (size_t i=0; i<nChannels; ++i)
+                    vChannels[i].sPlayer.bind(0, f->pProcessed);
+                f->pProcessed   = NULL;
+                f->bSync        = true;
+
+                // Reset configurator task
+                sFileProcessor.reset();
+            }
+        }
+
+        void matcher::process_gc_tasks()
+        {
+            if (sGCTask.completed())
+                sGCTask.reset();
+
+            if (sGCTask.idle())
+            {
+                // Obtain the list of samples for destroy
+                if (pGCList == NULL)
+                {
+                    for (size_t i=0; i<nChannels; ++i)
+                        if ((pGCList = vChannels[i].sPlayer.gc()) != NULL)
+                            break;
+                }
+                if (pGCList != NULL)
+                    pExecutor->submit(&sGCTask);
+            }
+        }
+
+        void matcher::process_listen_events()
+        {
+            const size_t fadeout = dspu::millis_to_samples(fSampleRate, 5.0f);
+            dspu::PlaySettings ps;
+
+            af_descriptor_t * const f  = &sFile;
+
+            // Need to start audio preview playback?
+            if (f->sListen.pending())
+            {
+                lsp_trace("Submitted listen toggle");
+                dspu::Sample *s = vChannels[0].sPlayer.get(0);
+                const size_t n_c = (s != NULL) ? s->channels() : 0;
+                if (n_c > 0)
+                {
+                    for (size_t j=0; j<nChannels; ++j)
+                    {
+                        channel_t *c = &vChannels[j];
+                        ps.set_channel(0, j % n_c);
+                        ps.set_playback(0, 0, GAIN_AMP_0_DB);
+
+                        c->sPlayback.cancel(fadeout, 0);
+                        c->sPlayback = c->sPlayer.play(&ps);
+                    }
+                }
+                f->sListen.commit();
+            }
+
+            // Need to cancel audio preview playback?
+            if (f->sStop.pending())
+            {
+                for (size_t j=0; j<nChannels; ++j)
+                {
+                    channel_t *c = &vChannels[j];
+                    c->sPlayback.cancel(fadeout, 0);
+                }
+                f->sStop.commit();
+            }
+        }
+
+        void matcher::output_file_mesh_data()
+        {
+            // Do not output meshes until configuration finishes
+            if (!sFileProcessor.idle())
+                return;
+            // Do nothing if loader task is active
+            if (!sFileLoader.idle())
+                return;
+
+            af_descriptor_t * const af     = &sFile;
+
+            // Output information about the file
+            dspu::Sample *active    = vChannels[0].sPlayer.get(0);
+            size_t channels         = (active != NULL) ? active->channels() : 0;
+            channels                = lsp_min(channels, nChannels);
+
+            // Output activity indicator
+            const float duration    = (af->pOriginal != NULL) ? af->fDuration : 0.0f;
+            af->pLength->set_value(duration);
+            af->pStatus->set_value(af->nStatus);
+
+            const ssize_t ppos      = vChannels[0].sPlayback.position();
+            const float s_ppos      = (ppos >= 0) ? dspu::samples_to_seconds(fSampleRate, ppos) : -1.0f;
+            af->pPlayPosition->set_value(s_ppos);
+
+            // Store file dump to mesh if it is ready
+            if (af->bSync)
+            {
+                plug::mesh_t *mesh      = af->pThumbs->buffer<plug::mesh_t>();
+                if ((mesh != NULL) && (mesh->isEmpty()))
+                {
+                    if (channels > 0)
+                    {
+                        // Copy thumbnails
+                        for (size_t j=0; j<channels; ++j)
+                            dsp::copy(mesh->pvData[j], af->vThumbs[j], meta::matcher::SAMPLE_MESH_SIZE);
+                        mesh->data(channels, meta::matcher::SAMPLE_MESH_SIZE);
+                    }
+                    else
+                        mesh->data(0, 0);
+                }
+
+                // Reset synchronization flag
+                af->bSync           = false;
+            }
+        }
+
+        void matcher::perform_gc()
+        {
+            dspu::Sample *gc_list = lsp::atomic_swap(&pGCList, NULL);
+            destroy_samples(gc_list);
         }
 
         void matcher::dump(dspu::IStateDumper *v) const

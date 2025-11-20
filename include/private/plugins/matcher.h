@@ -23,8 +23,11 @@
 #define PRIVATE_PLUGINS_MATCHER_H_
 
 #include <lsp-plug.in/dsp-units/ctl/Bypass.h>
+#include <lsp-plug.in/dsp-units/ctl/Toggle.h>
 #include <lsp-plug.in/dsp-units/util/Delay.h>
 #include <lsp-plug.in/dsp-units/util/MultiSpectralProcessor.h>
+#include <lsp-plug.in/dsp-units/sampling/Sample.h>
+#include <lsp-plug.in/dsp-units/sampling/SamplePlayer.h>
 #include <lsp-plug.in/plug-fw/plug.h>
 #include <lsp-plug.in/lltl/state.h>
 #include <private/meta/matcher.h>
@@ -97,16 +100,47 @@ namespace lsp
                     PFLAGS_SYNC             = 1 << 3,           // Profile needs to be synchronized with UI
                 };
 
+                typedef struct af_descriptor_t
+                {
+                    dspu::Toggle        sListen;        // Listen toggle
+                    dspu::Toggle        sStop;          // Stop toggle
+                    dspu::Sample       *pOriginal;      // Original file sample
+                    dspu::Sample       *pProcessed;     // Processed file sample
+                    float              *vThumbs[2];     // Thumbnails
+                    float               fNorm;          // Norming factor
+                    status_t            nStatus;
+                    bool                bSync;          // Synchronize file
+
+                    float               fPitch;         // Pitch amount
+                    float               fHeadCut;
+                    float               fTailCut;
+                    float               fDuration;      // Actual audio file duration
+
+                    plug::IPort        *pFile;          // Port that contains file name
+                    plug::IPort        *pPitch;         // Pitching amount in semitones
+                    plug::IPort        *pHeadCut;
+                    plug::IPort        *pTailCut;
+                    plug::IPort        *pListen;
+                    plug::IPort        *pStop;
+                    plug::IPort        *pStatus;        // Status of file loading
+                    plug::IPort        *pLength;        // Length of file
+                    plug::IPort        *pThumbs;        // Thumbnails of file
+                    plug::IPort        *pPlayPosition;  // Output current playback position
+                } af_descriptor_t;
+
                 typedef struct channel_t
                 {
                     // DSP processing modules
                     dspu::Bypass            sBypass;            // Bypass
+                    dspu::SamplePlayer      sPlayer;            // Sample player
+                    dspu::Playback          sPlayback;          // Sample playback
 
                     float                  *vIn;                // Input buffer
                     float                  *vOut;               // Output buffer
                     float                  *vSc;                // Sidechain buffer
                     float                  *vShmIn;             // Shared memory link
                     float                  *vFft[SM_TOTAL];     // FFT data
+                    float                  *vBuffer;            // Temporary buffer
 
                     bool                    bFft[SM_TOTAL];     // Perform FFT processing
 
@@ -143,6 +177,50 @@ namespace lsp
                     float                 **vActualData;        // Resampled data (matching processing)
                 } profile_data_t;
 
+                class FileLoader: public ipc::ITask
+                {
+                    private:
+                        matcher                *pCore;
+
+                    public:
+                        explicit FileLoader(matcher *core);
+                        virtual ~FileLoader() override;
+
+                    public:
+                        virtual status_t run() override;
+
+                        void        dump(dspu::IStateDumper *v) const;
+                };
+
+                class FileProcessor: public ipc::ITask
+                {
+                    private:
+                        matcher                *pCore;
+
+                    public:
+                        explicit FileProcessor(matcher *core);
+                        virtual ~FileProcessor() override;
+
+                    public:
+                        virtual status_t run() override;
+                        void        dump(dspu::IStateDumper *v) const;
+                };
+
+                class GCTask: public ipc::ITask
+                {
+                    private:
+                        matcher                *pCore;
+
+                    public:
+                        explicit GCTask(matcher *base);
+                        virtual ~GCTask() override;
+
+                    public:
+                        virtual status_t run() override;
+
+                        void        dump(dspu::IStateDumper *v) const;
+                };
+
             protected:
                 uint32_t            nChannels;          // Number of channels
                 channel_t          *vChannels;          // Delay channels
@@ -152,12 +230,20 @@ namespace lsp
                 float               fFftTau;            // FFT time constant
                 float               fFftShift;          // FFT shift
                 float               fInTau;             // Input profile reactivity
+                uint32_t            nFileProcessReq;    // File processing request
+                uint32_t            nFileProcessResp;   // File processing response
                 bool                bSidechain;         // Sidechain flag
                 bool                bProfile;           // Profile capturing is enabled
                 bool                bCapture;           // Capture side signal
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
+                af_descriptor_t     sFile;              // Audio file
+                FileLoader          sFileLoader;        // Audio file loader
+                FileProcessor       sFileProcessor;     // Audio file processor task
+                GCTask              sGCTask;            // Garbage collection task
                 match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];    // Match bands
+                ipc::IExecutor     *pExecutor;          // Task executor
+                dspu::Sample       *pGCList;            // Garbage collection list
                 profile_data_t     *pEqProfile;         // Actual equalization profile
                 lltl::state<profile_data_t> vProfileData[PROF_TOTAL];           // Profile data
 
@@ -196,6 +282,8 @@ namespace lsp
             protected:
                 static void         process_block(void *object, void *subject, float * const * spectrum, size_t rank);
                 static void         free_profile_data(profile_data_t *profile);
+                static void         destroy_sample(dspu::Sample * &s);
+                static void         destroy_samples(dspu::Sample *gc_list);
 
             protected:
                 void                do_destroy();
@@ -206,6 +294,7 @@ namespace lsp
                 void                update_frequency_mapping();
                 void                output_fft_mesh_data();
                 void                output_profile_mesh_data();
+                void                output_file_mesh_data();
                 void                process_block(float * const * spectrum, size_t rank);
                 void                analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft);
                 uint32_t            decode_reference_source(size_t ref) const;
@@ -214,6 +303,13 @@ namespace lsp
                 void                output_profile_mesh(float *dst, const profile_data_t *profile, size_t channel, bool envelope);
                 void                record_profile(profile_data_t *profile, float * const * spectrum, size_t channel);
                 void                clear_profile_data(profile_data_t *profile);
+                status_t            load_audio_file(af_descriptor_t *descr);
+                status_t            process_audio_file();
+                void                process_file_loading_tasks();
+                void                process_file_processing_tasks();
+                void                process_gc_tasks();
+                void                process_listen_events();
+                void                perform_gc();
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

@@ -19,6 +19,7 @@
  * along with lsp-plugins-matcher. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <lsp-plug.in/common/status.h>
 #include <lsp-plug.in/plug-fw/meta/ports.h>
 #include <lsp-plug.in/shared/meta/developers.h>
 #include <private/meta/matcher.h>
@@ -133,6 +134,18 @@ namespace lsp
             MATCHER_EQ_BAND(9, "16 k"), \
             MESH("pmesh", "Match profile mesh characteristics", 1 + 7 * channels, matcher::FFT_MESH_SIZE + 4)
 
+        #define MATCHER_FILE_SOURCE(channels) \
+            PATH("file", "Reference file"),    \
+            CONTROL("fpitch", "File pitch", "File pitch", U_SEMITONES, matcher::SAMPLE_PITCH), \
+            CONTROL("fhcut", "Head cut", "Head cut", U_SEC, matcher::SAMPLE_LENGTH), \
+            CONTROL("ftcut", "Tail cut", "Tail cut", U_SEC, matcher::SAMPLE_LENGTH), \
+            TRIGGER("fplay", "Listen file preview", "Play"), \
+            TRIGGER("fstop", "File preview stop", "Stop"), \
+            STATUS("fstatus", "File load status"), \
+            METER("flength", "File length", U_SEC, matcher::SAMPLE_LENGTH), \
+            MESH("fmesh", "File contents", channels, matcher::SAMPLE_MESH_SIZE), \
+            METER("fppos", "Sample play position", U_SEC, matcher::SAMPLE_PLAYBACK)
+
         #define MATCHER_METERS_COMMON(channels) \
             LOG_CONTROL("react", "FFT reactivity", "Reactivity", U_MSEC, matcher::REACT_TIME), \
             AMP_GAIN("shift", "FFT Shift gain", "Shift gain", 1.0f, 100.0f), \
@@ -168,6 +181,7 @@ namespace lsp
             PORTS_MONO_PLUGIN,
             MATCHER_SHM_LINK_MONO,
             MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
+            MATCHER_FILE_SOURCE(1),
             MATCHER_EQ(1),
             MATCHER_METERS_MONO,
 
@@ -180,6 +194,7 @@ namespace lsp
             MATCHER_SHM_LINK_STEREO,
             MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
             MATCHER_COMMON_STEREO,
+            MATCHER_FILE_SOURCE(2),
             MATCHER_EQ(2),
             MATCHER_METERS_STEREO,
 
@@ -192,6 +207,7 @@ namespace lsp
             PORTS_MONO_SIDECHAIN,
             MATCHER_SHM_LINK_MONO,
             MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
+            MATCHER_FILE_SOURCE(1),
             MATCHER_EQ(1),
             MATCHER_METERS_MONO,
 
@@ -205,6 +221,7 @@ namespace lsp
             MATCHER_SHM_LINK_STEREO,
             MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
             MATCHER_COMMON_STEREO,
+            MATCHER_FILE_SOURCE(2),
             MATCHER_EQ(2),
             MATCHER_METERS_STEREO,
 

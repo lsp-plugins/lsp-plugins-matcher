@@ -152,6 +152,87 @@
 					<button id="capture" text="actions.record" />
 				</vbox>
 			</group>
+			
+			<group text="groups.file" bg.color="bg" spacing="0" ipadding="0">
+				<vbox>
+					<hbox width.min="300" height.min="192" expand="true">
+						<asample
+							expand="true"
+							id="file"
+							mesh_id="fmesh"
+							path.id="_ui_dlg_sample_path"
+							ftype.id="_ui_dlg_sample_ftype"
+							play.position=":fppos"
+							hcut=":fhcut"
+							tcut=":ftcut"
+							length=":flength"
+							status=":fstatus"
+							load.preview="true"
+							clipboard.head_cut="fhcut"
+							clipboard.tail_cut="ftcut"
+							format="audio_lspc,audio,all" />
+	
+						<void bg.color="bg_graph" pad.h="2" hreduce="true" visibility=":fstatus ine 1" />
+	
+						<vbox vexpand="true" visibility=":fstatus ine 1">
+							<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
+							<afolder id="file" expand="true" width.min="199"/>
+							<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
+	
+							<ui:with fill="true">
+								<hbox pad.h="6" pad.v="4" spacing="4" bg.color="bg_schema">
+									<ui:with height="22">
+										<anavigator id="file" text="icons.navigation_big.first_alt" action="first" />
+										<anavigator id="file" text="icons.navigation_big.last_alt" action="last" />
+										<void hexpand="true"/>
+										<anavigator id="file" text="icons.navigation_big.previous" action="previous" />
+										<anavigator id="file" text="icons.navigation_big.next" action="next" />
+										<void hexpand="true"/>
+	
+										<anavigator id="file" text="icons.random.dice_fill" action="random" />
+										<void hexpand="true"/>
+										<anavigator id="file" text="icons.actions.cancel_alt" action="clear" />
+									</ui:with>
+								</hbox>
+							</ui:with>
+						</vbox>
+					</hbox>
+					
+					<void bg.color="bg" pad.v="2" vreduce="true"/>
+
+					<grid rows="4" cols="4" bg.color="bg_schema" >
+						<ui:with pad.h="6" pad.v="4" vreduce="true">
+							<label text="labels.sedit.pitch"/>
+							<label text="labels.sedit.head_cut"/>
+							<label text="labels.sedit.tail_cut"/>
+							<label text="labels.listen"/>
+						</ui:with>
+
+						<cell cols="4"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+
+						<ui:with pad.h="6" pad.v="4">
+							<knob id="fpitch" />
+							<knob id="fhcut" />
+							<knob id="ftcut" />
+							<cell rows="2">
+								<hbox fill="false">
+									<ui:with font.name="lsp-icons" font.size="10" size="32" ui:inject="Button_cyan" toggle="false">
+										<button id="fplay" text="icons.playback_big.play"/>
+										<button id="fstop" text="icons.playback_big.stop"/>
+									</ui:with>
+								</hbox>
+							</cell>
+						</ui:with>
+
+						<ui:with pad.h="6" pad.b="4" width.min="48" sline="true">
+							<value id="fpitch"/>
+							<value id="fhcut"/>
+							<value id="ftcut"/>
+						</ui:with>
+					</grid>
+			
+				</vbox>
+			</group>
 		</hbox>
 	</grid>
 </plugin>
