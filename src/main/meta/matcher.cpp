@@ -116,7 +116,7 @@ namespace lsp
         #define MATCHER_EQ_BAND(id, freq) \
             CONTROL("amp_" #id, "Amplification " freq "Hz", "Amp " freq "Hz", U_DB, matcher::BAND_AMP_GAIN), \
             CONTROL("red_" #id, "Reduction " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_RED_GAIN), \
-            CONTROL("spd_" #id, "Reactivity " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_REACT)
+            CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_DB, matcher::BAND_REACT)
 
         #define MATCHER_EQ(channels) \
             COMBO("mode", "Operating mode", "Mode", 0, matcher_modes), \
