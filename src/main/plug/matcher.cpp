@@ -36,7 +36,7 @@ namespace lsp
     {
         /* The size of temporary buffer for audio processing */
         static constexpr size_t BUFFER_SIZE             = 0x200;
-        static constexpr float FFT_TIME_CONST           = logf(1.0f - float(M_SQRT1_2));
+        static constexpr float FFT_TIME_CONST           = -1.2279471773f; // logf(1.0f - float(M_SQRT1_2));
 
         //---------------------------------------------------------------------
         // Plugin factory
