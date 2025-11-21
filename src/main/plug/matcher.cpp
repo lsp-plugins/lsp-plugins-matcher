@@ -68,6 +68,10 @@ namespace lsp
 
         status_t matcher::FileLoader::run()
         {
+            dsp::context_t ctx;
+            dsp::start(&ctx);
+            lsp_finally { dsp::finish(&ctx); };
+
             return pCore->load_audio_file(&pCore->sFile);
         }
 
@@ -89,6 +93,10 @@ namespace lsp
 
         status_t matcher::FileProcessor::run()
         {
+            dsp::context_t ctx;
+            dsp::start(&ctx);
+            lsp_finally { dsp::finish(&ctx); };
+
             return pCore->process_audio_file();
         }
 
@@ -725,6 +733,20 @@ namespace lsp
             self->process_block(spectrum, rank);
         }
 
+        void matcher::process_sample_block(void *object, void *subject, float * const * spectrum, size_t rank)
+        {
+            profile_data_t * const profile  = static_cast<profile_data_t *>(object);
+            const size_t fft_csize          = (1 << (rank - 1)) + 1;
+
+            for (size_t i=0; i<profile->nActualRank; ++i)
+                dsp::pcomplex_mod(profile->vActualData[i], spectrum[i], fft_csize);
+
+            for (size_t i=0; i<profile->nOriginRank; ++i)
+                dsp::add2(profile->vOriginData[i], profile->vActualData[i % profile->nActualRank], fft_csize);
+
+            ++profile->nFrames;
+        }
+
         matcher::profile_data_t *matcher::allocate_profile_data()
         {
             const size_t channels       = nChannels;
@@ -757,13 +779,13 @@ namespace lsp
             for (size_t i=0; i<channels; ++i)
             {
                 profile->vOriginData[i]     = advance_ptr_bytes<float>(ptr, prof_data_size);
-                dsp::fill(profile->vOriginData[i], GAIN_AMP_0_DB, fft_citems);
+                dsp::fill_zero(profile->vOriginData[i], fft_citems);
             }
 
             for (size_t i=0; i<channels; ++i)
             {
                 profile->vActualData[i]     = advance_ptr_bytes<float>(ptr, prof_data_size);
-                dsp::fill(profile->vActualData[i], GAIN_AMP_0_DB, fft_citems);
+                dsp::fill_zero(profile->vActualData[i], fft_citems);
             }
 
             lsp_assert(ptr <= &base[to_alloc]);
@@ -893,12 +915,36 @@ namespace lsp
                 analyze_spectrum(&vChannels[i], SM_OUT, spectrum[i*PC_TOTAL + PC_INPUT]);
         }
 
+        void matcher::resample_profile(profile_data_t *profile, size_t srate)
+        {
+            // TODO
+
+            profile->nActualRate    = srate;
+        }
+
+        void matcher::update_profiles()
+        {
+            for (size_t i=0; i<PROF_TOTAL; ++i)
+            {
+                profile_data_t * const profile = vProfileData[i].get();
+
+                if (profile->nActualRate != fSampleRate)
+                {
+                    if (profile->nFlags & PFLAGS_DEFAULT)
+                        profile->nActualRate    = fSampleRate;
+                    else
+                        resample_profile(profile, fSampleRate);
+                }
+            }
+        }
+
         void matcher::process(size_t samples)
         {
             process_file_loading_tasks();
             process_file_processing_tasks();
             process_listen_events();
             process_gc_tasks();
+            update_profiles();
 
             bind_buffers();
 
@@ -1184,14 +1230,8 @@ namespace lsp
             return STATUS_OK;
         }
 
-        status_t matcher::process_audio_file()
+        status_t matcher::preprocess_sample(af_descriptor_t *f)
         {
-            // Get audio file
-            af_descriptor_t * const f   = &sFile;
-
-            // Destroy previously processed sample
-            destroy_sample(f->pProcessed);
-
             // Get sample to process
             const dspu::Sample *af  = f->pOriginal;
             if (af == NULL)
@@ -1267,11 +1307,93 @@ namespace lsp
                     dsp::mul_k2(dst, f->fNorm, meta::matcher::SAMPLE_MESH_SIZE);
             }
 
-            // TODO: build profile
-
             // Commit sample to the processed list
             lsp::swap(f->pProcessed, s);
             f->fDuration        = dspu::samples_to_seconds(fSampleRate, flen);
+
+            return STATUS_OK;
+        }
+
+        status_t matcher::profile_sample(af_descriptor_t *f)
+        {
+            const dspu::Sample * const s = f->pProcessed;
+            const size_t channels       = s->channels();
+
+            // Allocate profile
+            profile_data_t *profile     = allocate_profile_data();
+            if (profile == NULL)
+                return STATUS_NO_MEM;
+            lsp_finally { free_profile_data(profile); };
+
+            profile->nOriginRate        = fSampleRate;
+            profile->nActualRate        = fSampleRate;
+            profile->nOriginRank        = nChannels;
+            profile->nActualRank        = channels; // Store number of channels here
+            profile->fLoudness          = 0.0f;
+            profile->nFlags             = PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_SYNC;
+            profile->nFrames            = 0;
+
+            // Create and initialize spectral processor
+            dspu::MultiSpectralProcessor    processor;
+            if (!processor.init(nChannels, nRank))
+                return STATUS_NO_MEM;
+
+            processor.set_rank(nRank);
+            processor.bind_handler(process_sample_block, profile, NULL);
+            for (size_t i=0; i<nChannels; ++i)
+                processor.bind_in(i, s->channel(i % channels));
+
+            // Process the signal
+            processor.process(s->length());
+            const size_t remaining      = (profile->nFrames > 0) ? processor.remaining() : processor.frame_size();
+            if (remaining > 0)
+            {
+                const size_t to_alloc       = align_size(sizeof(float) * remaining, OPTIMAL_ALIGN);
+                float *ptr                  = static_cast<float *>(malloc(to_alloc));
+                if (ptr == NULL)
+                    return STATUS_NO_MEM;
+                lsp_finally { free(ptr); };
+                dsp::fill_zero(ptr, to_alloc / sizeof(float));
+
+                for (size_t i=0; i<channels; ++i)
+                    processor.bind_in(i, ptr);
+                processor.process(remaining);
+            }
+
+            // Destroy the processor
+            processor.destroy();
+
+            // Finalize and publish profile
+            const size_t fft_csize      = (1 << (nRank - 1)) + 1;
+            profile->nOriginRank        = nRank;
+            profile->nActualRank        = nRank;
+            const float k               = 1.0f / float(profile->nFrames);
+            for (size_t i=0; i<channels; ++i)
+            {
+                dsp::mul_k2(profile->vOriginData[i], k, fft_csize);
+                dsp::copy(profile->vActualData[i], profile->vOriginData[i], fft_csize);
+            }
+
+            vProfileData[PROF_FILE].push(profile);
+            profile     = NULL;
+
+            return STATUS_OK;
+        }
+
+        status_t matcher::process_audio_file()
+        {
+            // Destroy previously processed sample
+            destroy_sample(sFile.pProcessed);
+
+            // Pre-process sample
+            status_t res        = preprocess_sample(&sFile);
+            if (res != STATUS_OK)
+                return res;
+
+            // Make profile of the sample
+            res                 = profile_sample(&sFile);
+            if (res != STATUS_OK)
+                return res;
 
             return STATUS_OK;
         }

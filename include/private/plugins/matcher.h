@@ -100,6 +100,19 @@ namespace lsp
                     PFLAGS_SYNC             = 1 << 3,           // Profile needs to be synchronized with UI
                 };
 
+                typedef struct profile_data_t
+                {
+                    uint32_t                nOriginRate;        // Original sample rate of the profile
+                    uint32_t                nActualRate;        // Actual sample rate of the profile
+                    uint32_t                nOriginRank;        // Original FFT rank of the profile
+                    uint32_t                nActualRank;        // Actual FFT rank of the profile
+                    float                   fLoudness;          // Profile loudness
+                    uint32_t                nFlags;             // Profile data flags
+                    uint32_t                nFrames;            // Number of frames collected
+                    float                 **vOriginData;        // Original data (without resampling)
+                    float                 **vActualData;        // Resampled data (matching processing)
+                } profile_data_t;
+
                 typedef struct af_descriptor_t
                 {
                     dspu::Toggle        sListen;        // Listen toggle
@@ -163,19 +176,6 @@ namespace lsp
                     plug::IPort            *pMaxRed;            // Maximum reduction
                     plug::IPort            *pReact;             // Reactvity
                 } match_band_t;
-
-                typedef struct profile_data_t
-                {
-                    uint32_t                nOriginRate;        // Original sample rate of the profile
-                    uint32_t                nActualRate;        // Actual sample rate of the profile
-                    uint32_t                nOriginRank;        // Original FFT rank of the profile
-                    uint32_t                nActualRank;        // Actual FFT rank of the profile
-                    float                   fLoudness;          // Profile loudness
-                    uint32_t                nFlags;             // Profile data flags
-                    uint32_t                nFrames;            // Number of frames collected
-                    float                 **vOriginData;        // Original data (without resampling)
-                    float                 **vActualData;        // Resampled data (matching processing)
-                } profile_data_t;
 
                 class FileLoader: public ipc::ITask
                 {
@@ -281,9 +281,11 @@ namespace lsp
 
             protected:
                 static void         process_block(void *object, void *subject, float * const * spectrum, size_t rank);
+                static void         process_sample_block(void *object, void *subject, float * const * spectrum, size_t rank);
                 static void         free_profile_data(profile_data_t *profile);
                 static void         destroy_sample(dspu::Sample * &s);
                 static void         destroy_samples(dspu::Sample *gc_list);
+                static void         resample_profile(profile_data_t *profile, size_t srate);
 
             protected:
                 void                do_destroy();
@@ -305,11 +307,14 @@ namespace lsp
                 void                clear_profile_data(profile_data_t *profile);
                 status_t            load_audio_file(af_descriptor_t *descr);
                 status_t            process_audio_file();
+                status_t            preprocess_sample(af_descriptor_t *f);
+                status_t            profile_sample(af_descriptor_t *f);
                 void                process_file_loading_tasks();
                 void                process_file_processing_tasks();
                 void                process_gc_tasks();
                 void                process_listen_events();
                 void                perform_gc();
+                void                update_profiles();
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
