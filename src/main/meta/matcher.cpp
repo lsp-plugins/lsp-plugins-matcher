@@ -94,6 +94,11 @@ namespace lsp
             { NULL, NULL }
         };
 
+        const float matcher::eq_frequencies[] =
+        {
+            25.0f, 50.0f, 107.0f, 227.0f, 484.0f, 1000.0f, 2200.0f, 4700.0f, 9000.0f, 16000.0f
+        };
+
         #define MATCHER_COMMON(sources, captures, cap_default) \
             BYPASS, \
             IN_GAIN, \
@@ -114,25 +119,26 @@ namespace lsp
             PERCENTS("slink", "Stereo link", "Stereo link", 100.0f, 0.1f)
 
         #define MATCHER_EQ_BAND(id, freq) \
-            CONTROL("amp_" #id, "Amplification " freq "Hz", "Amp " freq "Hz", U_DB, matcher::BAND_AMP_GAIN), \
-            CONTROL("red_" #id, "Reduction " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_RED_GAIN), \
-            CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_DB, matcher::BAND_REACT)
+            CONTROL("ref_" #id, "Reference level " freq "Hz", "Ref " freq "Hz", U_DB, matcher::BAND_REF_GAIN), \
+            CONTROL("amp_" #id, "Amplification threshold " freq "Hz", "Amp " freq "Hz", U_DB, matcher::BAND_AMP_GAIN), \
+            CONTROL("red_" #id, "Reduction threshold " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_RED_GAIN), \
+            CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_MSEC, matcher::BAND_REACT)
 
         #define MATCHER_EQ(channels) \
             COMBO("mode", "Operating mode", "Mode", 0, matcher_modes), \
             TRIGGER("reset", "Reset match curves", "Reset"), \
             TRIGGER("match", "Perform immediate match", "Match"), \
-            MATCHER_EQ_BAND(0, "25"), \
-            MATCHER_EQ_BAND(1, "50"), \
-            MATCHER_EQ_BAND(2, "107"), \
-            MATCHER_EQ_BAND(3, "227"), \
-            MATCHER_EQ_BAND(4, "484"), \
-            MATCHER_EQ_BAND(5, "1 k"), \
-            MATCHER_EQ_BAND(6, "2.2 k"), \
-            MATCHER_EQ_BAND(7, "4.7 k"), \
-            MATCHER_EQ_BAND(8, "9 k"), \
-            MATCHER_EQ_BAND(9, "16 k"), \
-            MESH("pmesh", "Match profile mesh characteristics", 1 + 7 * channels, matcher::FFT_MESH_SIZE + 4)
+            MATCHER_EQ_BAND(1, "25"), \
+            MATCHER_EQ_BAND(2, "50"), \
+            MATCHER_EQ_BAND(3, "107"), \
+            MATCHER_EQ_BAND(4, "227"), \
+            MATCHER_EQ_BAND(5, "484"), \
+            MATCHER_EQ_BAND(6, "1 k"), \
+            MATCHER_EQ_BAND(7, "2.2 k"), \
+            MATCHER_EQ_BAND(8, "4.7 k"), \
+            MATCHER_EQ_BAND(9, "9 k"), \
+            MATCHER_EQ_BAND(10, "16 k"), \
+            MESH("pmesh", "Match profile mesh characteristics", 1 + 9 * channels, matcher::FFT_MESH_SIZE + 4)
 
         #define MATCHER_FILE_SOURCE(channels) \
             PATH("file", "Reference file"),    \
@@ -263,7 +269,7 @@ namespace lsp
             LSP_PLUGINS_MATCHER_VERSION,
             plugin_classes,
             clap_features_mono,
-            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY,
+            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             matcher_mono_ports,
             "equalizer/matcher.xml",
             NULL,
@@ -293,7 +299,7 @@ namespace lsp
             LSP_PLUGINS_MATCHER_VERSION,
             plugin_classes,
             clap_features_stereo,
-            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY,
+            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             matcher_stereo_ports,
             "equalizer/matcher.xml",
             NULL,
@@ -323,7 +329,7 @@ namespace lsp
             LSP_PLUGINS_MATCHER_VERSION,
             plugin_classes,
             clap_features_mono,
-            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY,
+            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             sc_matcher_mono_ports,
             "equalizer/matcher.xml",
             NULL,
@@ -353,7 +359,7 @@ namespace lsp
             LSP_PLUGINS_MATCHER_VERSION,
             plugin_classes,
             clap_features_stereo,
-            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY,
+            E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             sc_matcher_stereo_ports,
             "equalizer/matcher.xml",
             NULL,

@@ -57,13 +57,9 @@
 					<mesh id="fft" xi="0" yi="3" width="2" color="mono_in" visibility=":cfe"/>
 					<mesh id="fft" xi="0" yi="4" width="2" color="mono" visibility=":ofe"/>
 					
-					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" />
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="mono" />
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="mono" />
-					<mesh id="pmesh" xi="0" yi="4" width="2" color="mono" />
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="mono" />
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="mono" />
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="mono" />
+					<ui:for id="i" first="1" count="9">
+						<mesh id="pmesh" xi="0" yi="${i}" width="2" color="mono" />
+					</ui:for>
 				</ui:if>
 				<ui:if test="ex :out_r">
 					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife_l" />
@@ -75,22 +71,10 @@
 					<mesh id="fft" xi="0" yi="4" width="2" color="left" visibility=":ofe_l"/>
 					<mesh id="fft" xi="0" yi="9" width="2" color="right" visibility=":ofe_r"/>
 					
-					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="9" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="11" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="13" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="15" width="2" color="right" />
-					<mesh id="pmesh" xi="0" yi="8" width="2" color="left" />
-					<mesh id="pmesh" xi="0" yi="16" width="2" color="right" />
+					<ui:for id="i" first="1" count="9">
+						<mesh id="pmesh" xi="0" yi="${i}" width="2" color="left" />
+						<mesh id="pmesh" xi="0" yi="${:i+9}" width="2" color="right" />
+					</ui:for>
 				</ui:if>
 				
 				<!-- Text -->
@@ -132,26 +116,75 @@
 			<void hexpand="true" />
 		</hbox>
 		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
-			<group text="PROFILE">
-				<grid rows="3" cols="2" transpose="true">
-					<!-- Column 1 -->
-					<label text="labels.reactivity" />
-					<knob id="rct_in" />
-					<value id="rct_in" />
+			<vbox>
+				<hbox>
+					<group text="PROFILE">
+						<grid rows="3" cols="2" transpose="true">
+							<!-- Column 1 -->
+							<label text="labels.reactivity" />
+							<knob id="rct_in" />
+							<value id="rct_in" />
+							
+							<!-- Column 2 -->
+							<cell rows="3">
+								<button id="profile" text="actions.record" />
+							</cell>
+						</grid>				
+					</group>
+					<group text="CAPTURE">
+						<vbox>
+							<label text="labels.source" />
+							<combo id="cap_src" />
+							<button id="capture" text="actions.record" />
+						</vbox>
+					</group>
+				</hbox>
+				<group text="EQUALIZER">
+					<grid rows="3" cols="10" heifht.min="96">
+						<label text="25"/>
+						<label text="50"/>
+						<label text="107"/>
+						<label text="227"/>
+						<label text="484"/>
+						<label text="labels.flt.x_k" text:value="1" />
+						<label text="labels.flt.x_k" text:value="2.2" />
+						<label text="labels.flt.x_k" text:value="4.7" />
+						<label text="labels.flt.x_k" text:value="10" />
+						<label text="labels.flt.x_k" text:value="16" />
 					
-					<!-- Column 2 -->
-					<cell rows="3">
-						<button id="profile" text="actions.record" />
-					</cell>
-				</grid>				
-			</group>
-			<group text="CAPTURE">
-				<vbox>
-					<label text="labels.source" />
-					<combo id="cap_src" />
-					<button id="capture" text="actions.record" />
-				</vbox>
-			</group>
+						<ui:for id="i" first="1" count="10">
+							<fader id="ref_${i}" angle="1" />
+						</ui:for>
+						<ui:for id="i" first="1" count="10">
+							<value id="ref_${i}" angle="1" />
+						</ui:for>
+					</grid>
+				</group>
+				<group text="EQUALIZER RANGE">
+					<grid rows="4" cols="10" heifht.min="96">
+						<label text="25"/>
+						<label text="50"/>
+						<label text="107"/>
+						<label text="227"/>
+						<label text="484"/>
+						<label text="labels.flt.x_k" text:value="1" />
+						<label text="labels.flt.x_k" text:value="2.2" />
+						<label text="labels.flt.x_k" text:value="4.7" />
+						<label text="labels.flt.x_k" text:value="10" />
+						<label text="labels.flt.x_k" text:value="16" />
+
+						<ui:for id="i" first="1" count="10">
+							<value id="amp_${i}" angle="1" />
+						</ui:for>					
+						<ui:for id="i" first="1" count="10">
+							<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1" />
+						</ui:for>
+						<ui:for id="i" first="1" count="10">
+							<value id="red_${i}" angle="1" />
+						</ui:for>
+					</grid>
+				</group>
+			</vbox>
 			
 			<group text="groups.file" bg.color="bg" spacing="0" ipadding="0">
 				<vbox>

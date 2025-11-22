@@ -62,11 +62,11 @@ namespace lsp
 
                 enum cap_source_t
                 {
-                    CAP_NONE,           // No capture
-                    CAP_INPUT,          // Take spectral data from input channel
-                    CAP_SIDECHAIN,      // Take spectral data from sidechain channel
-                    CAP_LINK,           // Take spectral data from shared memory link
-                    CAP_REFERENCE       // Take spectral data from reference channel
+                    CAP_NONE,               // No capture
+                    CAP_INPUT,              // Take spectral data from input channel
+                    CAP_SIDECHAIN,          // Take spectral data from sidechain channel
+                    CAP_LINK,               // Take spectral data from shared memory link
+                    CAP_REFERENCE           // Take spectral data from reference channel
                 };
 
                 enum sig_meters_t
@@ -81,12 +81,14 @@ namespace lsp
 
                 enum profile_type_t
                 {
-                    PROF_INPUT,         // Profile for the dynamic input audio
-                    PROF_REFERENCE,     // Profile for the dynamic reference audio
-                    PROF_STATIC,        // Profile for the static input audio
-                    PROF_CAPTURE,       // Profile for the static captured audio
-                    PROF_FILE,          // Profile for the file
-                    PROF_EQUALIZER,     // Profile for the equalizer
+                    PROF_INPUT,             // Profile for the dynamic input audio
+                    PROF_REFERENCE,         // Profile for the dynamic reference audio
+                    PROF_STATIC,            // Profile for the static input audio
+                    PROF_CAPTURE,           // Profile for the static captured audio
+                    PROF_FILE,              // Profile for the file
+                    PROF_REF_EQUALIZER,     // Profile for the reference equalizer
+                    PROF_MIN_EQUALIZER,     // Profile for the minimum equalizer
+                    PROF_MAX_EQUALIZER,     // Profile for the maximum equalizer
 
                     PROF_TOTAL
                 };
@@ -98,6 +100,16 @@ namespace lsp
                     PFLAGS_READY            = 1 << 1,           // Profile is ready for processing
                     PFLAGS_DIRTY            = 1 << 2,           // Profile is dirty and has not been saved
                     PFLAGS_SYNC             = 1 << 3,           // Profile needs to be synchronized with UI
+                };
+
+                enum eq_param_t
+                {
+                    EQP_REF_LEVEL,                              // Reference level
+                    EQP_MAX_AMPLIFICATION,                      // Maximum amplification
+                    EQP_MAX_REDUCTION,                          // Maximum reduction
+                    EQP_REACTIVITY,                             // Reactvity
+
+                    EQP_TOTAL
                 };
 
                 typedef struct profile_data_t
@@ -168,13 +180,8 @@ namespace lsp
 
                 typedef struct match_band_t
                 {
-                    float                   fMaxAmp;            // Maximum amplification
-                    float                   fMaxRed;            // Maximum reduction
-                    float                   fReact;             // Reactivity
-
-                    plug::IPort            *pMaxAmp;            // Maximum amplification
-                    plug::IPort            *pMaxRed;            // Maximum reduction
-                    plug::IPort            *pReact;             // Reactvity
+                    float                   vParams[EQP_TOTAL]; // Equalizer parameters
+                    plug::IPort            *pParams[EQP_TOTAL]; // Reference level
                 } match_band_t;
 
                 class FileLoader: public ipc::ITask
@@ -245,6 +252,7 @@ namespace lsp
                 ipc::IExecutor     *pExecutor;          // Task executor
                 dspu::Sample       *pGCList;            // Garbage collection list
                 profile_data_t     *pEqProfile;         // Actual equalization profile
+                profile_data_t     *pReactivity;        // Reactivity profile
                 lltl::state<profile_data_t> vProfileData[PROF_TOTAL];           // Profile data
 
                 uint16_t           *vIndices;           // FFT indices
@@ -315,6 +323,8 @@ namespace lsp
                 void                process_listen_events();
                 void                perform_gc();
                 void                update_profiles();
+                void                build_eq_profile(profile_data_t *profile, eq_param_t param);
+                void                smooth_eq_curve(float *dst, float x1, float y1, float x2, float y2, size_t count);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

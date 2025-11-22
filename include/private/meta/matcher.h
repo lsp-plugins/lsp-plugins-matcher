@@ -50,10 +50,15 @@ namespace lsp
             static constexpr float          BAND_AMP_GAIN_DFL           = 12.0f;
             static constexpr float          BAND_AMP_GAIN_STEP          = 0.05f;
 
-            static constexpr float          BAND_RED_GAIN_MIN           = 0.0f;
-            static constexpr float          BAND_RED_GAIN_MAX           = 36.0f;
-            static constexpr float          BAND_RED_GAIN_DFL           = 12.0f;
+            static constexpr float          BAND_RED_GAIN_MIN           = -36.0f;
+            static constexpr float          BAND_RED_GAIN_MAX           = 0.0f;
+            static constexpr float          BAND_RED_GAIN_DFL           = -12.0f;
             static constexpr float          BAND_RED_GAIN_STEP          = 0.05f;
+
+            static constexpr float          BAND_REF_GAIN_MIN           = -36.0f;
+            static constexpr float          BAND_REF_GAIN_MAX           = 36.0f;
+            static constexpr float          BAND_REF_GAIN_DFL           = 0.0f;
+            static constexpr float          BAND_REF_GAIN_STEP          = 0.05f;
 
             static constexpr float          BAND_REACT_MIN              = 0.5f;
             static constexpr float          BAND_REACT_MAX              = 10.0f;
@@ -80,6 +85,7 @@ namespace lsp
             static constexpr float          SAMPLE_PITCH_DFL            = 0.0f;         // Pitch (st)
             static constexpr float          SAMPLE_PITCH_STEP           = 0.01f;        // Pitch step (st)
 
+            static const float              eq_frequencies[];
         } matcher;
 
         // Plugin type metadata

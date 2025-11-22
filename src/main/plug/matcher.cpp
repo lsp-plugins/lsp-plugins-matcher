@@ -152,6 +152,7 @@ namespace lsp
             pExecutor       = NULL;
             pGCList         = NULL;
             pEqProfile      = NULL;
+            pReactivity     = NULL;
             vIndices        = NULL;
             vBuffer         = NULL;
 
@@ -171,9 +172,11 @@ namespace lsp
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
                 match_band_t *b     = &vMatchBands[i];
-                b->pMaxAmp          = NULL;
-                b->pMaxRed          = NULL;
-                b->pReact           = NULL;
+                for (size_t j=0; j<EQP_TOTAL; ++j)
+                {
+                    b->vParams[j]       = 0.0f;
+                    b->pParams[j]       = NULL;
+                }
             }
 
             pBypass         = NULL;
@@ -391,9 +394,8 @@ namespace lsp
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
                 match_band_t *b     = &vMatchBands[i];
-                BIND_PORT(b->pMaxAmp);
-                BIND_PORT(b->pMaxRed);
-                BIND_PORT(b->pReact);
+                for (size_t j=0; j<EQP_TOTAL; ++j)
+                    BIND_PORT(b->pParams[j]);
             }
             BIND_PORT(pMatchMesh);
 
@@ -418,14 +420,16 @@ namespace lsp
             }
 
             // Create empty profiles with highest resolution
-            profile_data_t *prof    = create_default_profile();
-            if (prof == NULL)
+            pEqProfile          = create_default_profile();
+            if (pEqProfile == NULL)
                 return;
-            pEqProfile           = prof;
+            pReactivity         = create_default_profile();
+            if (pReactivity == NULL)
+                return;
 
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
-                prof    = create_default_profile();
+                profile_data_t *prof    = create_default_profile();
                 if (prof == NULL)
                     return;
 
@@ -461,6 +465,11 @@ namespace lsp
             {
                 free_profile_data(pEqProfile);
                 pEqProfile = NULL;
+            }
+            if (pReactivity != NULL)
+            {
+                free_profile_data(pReactivity);
+                pReactivity = NULL;
             }
             for (size_t i=0; i<PROF_TOTAL; ++i)
                 vProfileData[i].flush();
@@ -572,6 +581,7 @@ namespace lsp
             const size_t fft_period = (1 << (rank - 1));
             const float in_react    = pInReactivity->value();
             const size_t fft_csize  = fft_period + 1;
+            bool rebuild_eq_profiles= false;
 
             nRefSource              = decode_reference_source(pRefSource->value());
             nCapSource              = decode_capture_source(pCapSource->value(), nRefSource);
@@ -590,6 +600,7 @@ namespace lsp
             if (rank != nRank)
             {
                 nRank                   = rank;
+                rebuild_eq_profiles     = true;
                 update_frequency_mapping();
             }
 
@@ -626,6 +637,49 @@ namespace lsp
                     }
                 }
             }
+
+            // Update equalizer settings
+            bool eq_dirty[EQP_TOTAL];
+            for (size_t i=0; i<EQP_TOTAL; ++i)
+            {
+                eq_dirty[i]             = rebuild_eq_profiles;
+
+                if (i != EQP_REACTIVITY)
+                {
+                    for (size_t j=0; j<meta::matcher::MATCH_BANDS; ++j)
+                    {
+                        float *vold = &vMatchBands[j].vParams[i];
+                        float vnew = dspu::db_to_gain(vMatchBands[j].pParams[i]->value());
+                        if (*vold != vnew)
+                        {
+                            *vold           = vnew;
+                            eq_dirty[i]     = true;
+                        }
+                    }
+                }
+                else
+                {
+                    for (size_t j=0; j<meta::matcher::MATCH_BANDS; ++j)
+                    {
+                        float *vold = &vMatchBands[j].vParams[i];
+                        float react = vMatchBands[j].pParams[i]->value();
+                        float vnew = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), react));
+                        if (*vold != vnew)
+                        {
+                            *vold           = vnew;
+                            eq_dirty[i]     = true;
+                        }
+                    }
+                }
+            }
+            if (eq_dirty[EQP_REF_LEVEL])
+                build_eq_profile(vProfileData[PROF_REF_EQUALIZER].get(), EQP_REF_LEVEL);
+            if (eq_dirty[EQP_MAX_AMPLIFICATION])
+                build_eq_profile(vProfileData[PROF_MAX_EQUALIZER].get(), EQP_MAX_AMPLIFICATION);
+            if (eq_dirty[EQP_MAX_REDUCTION])
+                build_eq_profile(vProfileData[PROF_MIN_EQUALIZER].get(), EQP_MAX_REDUCTION);
+            if (eq_dirty[EQP_REACTIVITY])
+                build_eq_profile(pReactivity, EQP_REACTIVITY);
 
             // Update file configuration
             af_descriptor_t * const af  = &sFile;
@@ -938,6 +992,75 @@ namespace lsp
             }
         }
 
+        void matcher::smooth_eq_curve(float *dst, float x1, float y1, float x2, float y2, size_t count)
+        {
+            if (count < 2)
+            {
+                if (count == 1)
+                    dst[0] = y1;
+                return;
+            }
+
+            const float lx1         = logf(x1);
+            const float ldx         = 1.0f / logf(x2/x1);
+            const float ldy         = 2.0f * logf(y2/y1);
+
+            for (size_t i=0; i<count; ++i)
+            {
+                const float f           = x1 + i;
+                const float x           = (logf(f) - lx1) * ldx;
+                dst[i] = y1 * expf(ldy * x*x * (1.5f - x));
+            }
+        }
+
+        void matcher::build_eq_profile(profile_data_t *profile, eq_param_t param)
+        {
+            if (profile == NULL)
+                return;
+
+            const float fft_csize   = (1 << (nRank - 1)) + 1;
+            const float kf          = (2.0f * fft_csize) / float(fSampleRate);
+            float *dst              = profile->vOriginData[0];
+
+            // Make equalization curve
+            float f_prev    = meta::matcher::eq_frequencies[0];
+            float v_prev    = vMatchBands[0].vParams[param];
+            size_t i_prev   = lsp_min(size_t(kf * f_prev), fft_csize);
+            dsp::fill(&dst[0], v_prev, i_prev);
+
+            for (size_t i=1; i<meta::matcher::MATCH_BANDS; ++i)
+            {
+                const float f_next  = meta::matcher::eq_frequencies[i];
+                const size_t i_next = lsp_min(size_t(kf * f_next), fft_csize);
+                const float v_next  = vMatchBands[i].vParams[param];
+
+                smooth_eq_curve(&dst[i_prev], i_prev, v_prev, i_next, v_next, i_next - i_prev);
+                f_prev              = f_next;
+                i_prev              = i_next;
+                v_prev              = v_next;
+
+                if (i_next >= fft_csize)
+                    break;
+            }
+
+            // Copy equalization curve
+            dsp::fill(&dst[i_prev], v_prev, fft_csize - i_prev);
+            dsp::copy(profile->vActualData[0], profile->vOriginData[0], fft_csize);
+            for (size_t i=1; i<nChannels; ++i)
+            {
+                dsp::copy(profile->vOriginData[i], profile->vOriginData[0], fft_csize);
+                dsp::copy(profile->vActualData[i], profile->vOriginData[0], fft_csize);
+            }
+
+            profile->nOriginRate    = fSampleRate;
+            profile->nActualRate    = fSampleRate;
+            profile->nOriginRank    = nRank;
+            profile->nActualRank    = nRank;
+            profile->fLoudness      = GAIN_AMP_0_DB;
+            profile->nFlags         = PFLAGS_READY | PFLAGS_SYNC;
+            profile->nFrames        = 0;
+        }
+
         void matcher::process(size_t samples)
         {
             process_file_loading_tasks();
@@ -1079,7 +1202,10 @@ namespace lsp
             {
                 output_profile_mesh(mesh->pvData[index++], pEqProfile, i, false);
                 for (size_t j=0; j<PROF_TOTAL; ++j)
-                    output_profile_mesh(mesh->pvData[index++], vProfileData[j].current(), i, j != PROF_EQUALIZER);
+                {
+                    const bool no_envelope = (j == PROF_REF_EQUALIZER) || (j == PROF_MIN_EQUALIZER) || (j == PROF_MAX_EQUALIZER);
+                    output_profile_mesh(mesh->pvData[index++], vProfileData[j].current(), i, !no_envelope);
+                }
             }
 
             // Reset sync flags
