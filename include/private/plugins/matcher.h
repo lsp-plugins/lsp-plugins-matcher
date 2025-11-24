@@ -81,16 +81,26 @@ namespace lsp
 
                 enum profile_type_t
                 {
-                    PROF_INPUT,             // Profile for the dynamic input audio
-                    PROF_REFERENCE,         // Profile for the dynamic reference audio
-                    PROF_STATIC,            // Profile for the static input audio
-                    PROF_CAPTURE,           // Profile for the static captured audio
-                    PROF_FILE,              // Profile for the file
-                    PROF_REF_EQUALIZER,     // Profile for the reference equalizer
-                    PROF_MIN_EQUALIZER,     // Profile for the minimum equalizer
-                    PROF_MAX_EQUALIZER,     // Profile for the maximum equalizer
+                    PROF_MATCH,             // Profile for matching curve, SR -> recompute
+                    PROF_INPUT,             // Profile for the dynamic input audio, SR -> reset
+                    PROF_REFERENCE,         // Profile for the dynamic reference audio, SR -> reset
+                    PROF_STATIC,            // Profile for the static input audio, SR -> resample
+                    PROF_CAPTURE,           // Profile for the static captured audio, SR -> resample
+                    PROF_FILE,              // Profile for the file, SR -> re-render
+                    PROF_REF_EQUALIZER,     // Profile for the reference equalizer, SR -> recompute
+                    PROF_MIN_EQUALIZER,     // Profile for the minimum equalizer, SR -> recompute
+                    PROF_MAX_EQUALIZER,     // Profile for the maximum equalizer, SR -> recompute
 
                     PROF_TOTAL
+                };
+
+                enum state_profile_type_t
+                {
+                    SPROF_STATIC,
+                    SPROF_CAPTURE,
+                    SPROF_FILE,
+
+                    SPROF_TOTAL
                 };
 
                 enum profile_data_flags_t
@@ -114,15 +124,13 @@ namespace lsp
 
                 typedef struct profile_data_t
                 {
-                    uint32_t                nOriginRate;        // Original sample rate of the profile
-                    uint32_t                nActualRate;        // Actual sample rate of the profile
-                    uint32_t                nOriginRank;        // Original FFT rank of the profile
-                    uint32_t                nActualRank;        // Actual FFT rank of the profile
+                    uint32_t                nSampleRate;        // Sample rate of the profile
+                    uint32_t                nChannels;          // Number of channels
+                    uint32_t                nRank;              // FFT rank of the profile
                     float                   fLoudness;          // Profile loudness
                     uint32_t                nFlags;             // Profile data flags
                     uint32_t                nFrames;            // Number of frames collected
-                    float                 **vOriginData;        // Original data (without resampling)
-                    float                 **vActualData;        // Resampled data (matching processing)
+                    float                 **vData;              // Sample data
                 } profile_data_t;
 
                 typedef struct af_descriptor_t
@@ -251,9 +259,9 @@ namespace lsp
                 match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];    // Match bands
                 ipc::IExecutor     *pExecutor;          // Task executor
                 dspu::Sample       *pGCList;            // Garbage collection list
-                profile_data_t     *pEqProfile;         // Actual equalization profile
                 profile_data_t     *pReactivity;        // Reactivity profile
-                lltl::state<profile_data_t> vProfileData[PROF_TOTAL];           // Profile data
+                profile_data_t     *vProfileData[PROF_TOTAL];               // Profile data
+                lltl::state<profile_data_t> vProfileState[SPROF_TOTAL];     // Record of the input profile
 
                 uint16_t           *vIndices;           // FFT indices
                 float              *vFreqs;             // FFT frequencies
@@ -310,7 +318,6 @@ namespace lsp
                 uint32_t            decode_reference_source(size_t ref) const;
                 uint32_t            decode_capture_source(size_t cap, size_t ref) const;
                 bool                check_need_profile_sync();
-                void                output_profile_mesh(float *dst, const profile_data_t *profile, size_t channel, bool envelope);
                 void                record_profile(profile_data_t *profile, float * const * spectrum, size_t channel);
                 void                clear_profile_data(profile_data_t *profile);
                 status_t            load_audio_file(af_descriptor_t *descr);
@@ -325,6 +332,7 @@ namespace lsp
                 void                update_profiles();
                 void                build_eq_profile(profile_data_t *profile, eq_param_t param);
                 void                smooth_eq_curve(float *dst, float x1, float y1, float x2, float y2, size_t count);
+                void                sync_profile(profile_data_t *dst, profile_data_t *src);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
