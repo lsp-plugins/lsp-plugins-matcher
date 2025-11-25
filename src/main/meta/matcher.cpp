@@ -87,7 +87,7 @@ namespace lsp
             { NULL, NULL }
         };
 
-        static const port_item_t matcher_modes[] =
+        static const port_item_t matcher_input_source[] =
         {
             { "Static",             "matcher.mode.static"           },
             { "Dynamic",            "matcher.mode.dynamic"          },
@@ -109,7 +109,8 @@ namespace lsp
             SWITCH("rst_cap", "Reset captured signal profile", "Reset Cap", 1.0f), \
             LOG_CONTROL("rct_in", "Input profile reactivity", "React In", U_SEC, matcher::PROFILE_REACT_TIME), \
             LOG_CONTROL("rct_ref", "Reference profile reactivity", "React Ref", U_SEC, matcher::PROFILE_REACT_TIME), \
-            COMBO("ref_src", "Reference source", "Reference", 0, sources), \
+            COMBO("in_src", "Input source", "Input src", 0, matcher_input_source), \
+            COMBO("ref_src", "Reference source", "Reference src", 0, sources), \
             COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \
             SWITCH("profile", "Profile", "Profile", 0.0f), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
@@ -125,7 +126,6 @@ namespace lsp
             CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_MSEC, matcher::BAND_REACT)
 
         #define MATCHER_EQ(channels) \
-            COMBO("mode", "Operating mode", "Mode", 0, matcher_modes), \
             TRIGGER("reset", "Reset match curves", "Reset"), \
             TRIGGER("match", "Perform immediate match", "Match"), \
             MATCHER_EQ_BAND(1, "25"), \

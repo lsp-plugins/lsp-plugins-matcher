@@ -155,12 +155,14 @@ namespace lsp
             vIndices        = NULL;
             vBuffer         = NULL;
 
+            nInSource       = IN_STATIC;
             nRefSource      = REF_CAPTURE;
             nCapSource      = CAP_NONE;
             nRank           = 0;
             fFftTau         = 1.0f;
             fFftShift       = GAIN_AMP_0_DB;
             fInTau          = 1.0f;
+            fRefTau         = 1.0f;
 
             nFileProcessReq = 0;
             nFileProcessResp= 0;
@@ -190,6 +192,7 @@ namespace lsp
             pResetCap       = NULL;
             pInReactivity   = NULL;
             pRefReactivity  = NULL;
+            pInSource       = NULL;
             pRefSource      = NULL;
             pCapSource      = NULL;
             pProfile        = NULL;
@@ -197,7 +200,6 @@ namespace lsp
             pListen         = NULL;
             pStereoLink     = NULL;
 
-            pMatchMode      = NULL;
             pMatchReset     = NULL;
             pMatchImmediate = NULL;
             pMatchMesh      = NULL;
@@ -365,6 +367,7 @@ namespace lsp
             BIND_PORT(pResetCap);
             BIND_PORT(pInReactivity);
             BIND_PORT(pRefReactivity);
+            BIND_PORT(pInSource);
             BIND_PORT(pRefSource);
             BIND_PORT(pCapSource);
             BIND_PORT(pProfile);
@@ -390,7 +393,6 @@ namespace lsp
 
             // Bind bypass
             lsp_trace("Binding match equalizer");
-            BIND_PORT(pMatchMode);
             BIND_PORT(pMatchReset);
             BIND_PORT(pMatchImmediate);
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
@@ -595,6 +597,7 @@ namespace lsp
             const float reactivity  = pFftReact->value();
             const size_t fft_period = (1 << (rank - 1));
             const float in_react    = pInReactivity->value();
+            const float ref_react   = pRefReactivity->value();
             const size_t fft_csize  = fft_period + 1;
             bool rebuild_eq_profiles= false;
 
@@ -603,6 +606,7 @@ namespace lsp
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
             fFftShift               = pFftShift->value() * 100.0f / float(1 << rank);
             fInTau                  = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), in_react));
+            fRefTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), ref_react));
 
             for (size_t i=0; i<nChannels; ++i)
             {
@@ -891,9 +895,9 @@ namespace lsp
         void matcher::record_profile(profile_data_t *profile, float * const * spectrum, size_t channel)
         {
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
-            const size_t frames     = profile->nFrames + 1;
-            const float k           = 1.0f / float(frames);
-            const float kp          = float(frames - 1) * k;
+            const size_t frames     = profile->nFrames;
+            const float k           = 1.0f / (float(frames) + 1.0f);
+            const float kp          = float(frames) * k;
 
             for (size_t i=0; i<nChannels; ++i)
             {
@@ -922,8 +926,46 @@ namespace lsp
             // Check that profile has enough frames for processing
             profile->nSampleRate    = fSampleRate;
             profile->nRank          = nRank;
-            profile->nFrames        = lsp_min(frames, size_t(0x100));
+            profile->nFrames        = lsp_min(frames + 1, size_t(0x100));
             profile->nFlags        |= (profile->nFrames >= 8) ?
+                PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_SYNC :
+                PFLAGS_DIRTY | PFLAGS_SYNC;
+        }
+
+        void matcher::track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel)
+        {
+            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+            const size_t frames     = profile->nFrames;
+
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                const float *src        = spectrum[i * PC_TOTAL + channel];
+                float *dst              = profile->vData[i];
+
+                // Decide the strategy
+                if (frames > 0)
+                {
+                    // Append new frame to the profile
+                    if (src != NULL)
+                    {
+                        dsp::pcomplex_mod(vBuffer, src, fft_csize);
+                        dsp::mix2(dst, vBuffer, 1.0f - tau, tau, fft_csize);
+                    }
+                    else
+                        dsp::mul_k2(dst, tau, fft_csize);
+                }
+                else if (src != NULL)
+                {
+                    // Fill empty profile
+                    dsp::pcomplex_mod(dst, src, fft_csize);
+                }
+            }
+
+            profile->nSampleRate    = fSampleRate;
+            profile->nRank          = nRank;
+            if (profile->nFrames < ~uint32_t(0))
+                ++profile->nFrames;
+            profile->nFlags        |= (profile->nFrames >= 4) ?
                 PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_SYNC :
                 PFLAGS_DIRTY | PFLAGS_SYNC;
         }
@@ -957,6 +999,11 @@ namespace lsp
                 dsp::copy(dst->vData[i], src->vData[i % src->nChannels], fft_csize);
         }
 
+        void matcher::compute_eq_profile(profile_data_t *profile, const profile_data_t *in, const profile_data_t *ref, bool dynamic)
+        {
+            // TODO
+        }
+
         void matcher::process_block(float * const * spectrum, size_t rank)
         {
             // Analyze capture signal channel
@@ -977,6 +1024,46 @@ namespace lsp
                     break;
             }
 
+            // Analyze reference channel
+            ssize_t ref_channel = -1;
+            ssize_t ref_profile = -1;
+            bool match_dynamic  = false;
+            switch (nRefSource)
+            {
+                case REF_CAPTURE:
+                    ref_profile     = PROF_CAPTURE;
+                    break;
+                case REF_FILE:
+                    ref_profile     = PROF_FILE;
+                    break;
+                case REF_EQUALIZER:
+                    ref_profile     = PROF_REF_EQUALIZER;
+                    break;
+                case REF_SIDECHAIN:
+                case REF_LINK:
+                    ref_profile     = PROF_REFERENCE;
+                    ref_channel     = PC_REFERENCE;
+                    match_dynamic   = true;
+                    break;
+                default:
+                    break;
+            }
+
+            // Analyze input profile
+            ssize_t in_profile  = -1;
+            switch (nInSource)
+            {
+                case IN_STATIC:
+                    in_profile      = PROF_STATIC;
+                    break;
+                case IN_DYNAMIC:
+                    in_profile      = PROF_INPUT;
+                    match_dynamic   = true;
+                    break;
+                default:
+                    break;
+            }
+
             // Analyze input signal
             for (size_t i=0; i<nChannels; ++i)
             {
@@ -989,19 +1076,49 @@ namespace lsp
             }
 
             // Record input profile if enabled
-            profile_data_t * const static_profile  = vProfileState[SPROF_STATIC].current();
-            if ((bProfile) && (static_profile != NULL))
+            if (bProfile)
             {
-                record_profile(static_profile, spectrum, PC_INPUT);
-                sync_profile(vProfileData[PROF_STATIC], static_profile);
+                profile_data_t * const static_profile  = vProfileState[SPROF_STATIC].current();
+                if (static_profile != NULL)
+                {
+                    record_profile(static_profile, spectrum, PC_INPUT);
+                    sync_profile(vProfileData[PROF_STATIC], static_profile);
+                }
             }
 
+            // Track dynamic input profile
+            profile_data_t * const input_profile  = vProfileData[PROF_INPUT];
+            if (input_profile != NULL)
+                track_profile(input_profile, spectrum, fInTau, PC_INPUT);
+
             // Record capture if enabled
-            profile_data_t * const capture_profile  = vProfileState[SPROF_CAPTURE].current();
-            if ((bCapture) && (cap_channel >= 0) && (capture_profile != NULL))
+            if ((bCapture) && (cap_channel >= 0))
             {
-                record_profile(capture_profile, spectrum, cap_channel);
-                sync_profile(vProfileData[PROF_STATIC], static_profile);
+                profile_data_t * const capture_profile  = vProfileState[SPROF_CAPTURE].current();
+                if (capture_profile != NULL)
+                {
+                    record_profile(capture_profile, spectrum, cap_channel);
+                    sync_profile(vProfileData[PROF_CAPTURE], capture_profile);
+                }
+            }
+
+            // Track dynamic reference input profile
+            if (ref_channel >= 0)
+            {
+                profile_data_t * const reference_profile  = vProfileData[PROF_REFERENCE];
+                if (input_profile != NULL)
+                    track_profile(reference_profile, spectrum, fRefTau, ref_channel);
+            }
+
+            // Compute the new profile state
+            if ((ref_profile >= 0) && (in_profile >= 0))
+            {
+                const profile_data_t * const ref  = vProfileData[ref_profile];
+                const profile_data_t * const in   = vProfileData[in_profile];
+                profile_data_t * const eq   = vProfileData[PROF_MATCH];
+
+                if ((ref != NULL) && (in != NULL))
+                    compute_eq_profile(eq, in, ref, match_dynamic);
             }
 
             // Analyze output signal

@@ -109,8 +109,8 @@
 		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
 			<label text="labels.fft.frame" />
 			<combo id="fft_sz" />
-			<label text="labels.mode" />
-			<combo id="mode" />
+			<label text="labels.input" />
+			<combo id="in_src" />
 			<label text="labels.signal.reference" />
 			<combo id="ref_src" />
 			<void hexpand="true" />
@@ -133,9 +133,17 @@
 					</group>
 					<group text="CAPTURE">
 						<vbox>
+							<!-- Column 1 -->
 							<label text="labels.source" />
 							<combo id="cap_src" />
 							<button id="capture" text="actions.record" />
+						</vbox>
+					</group>
+					<group text="REFERENCE">
+						<vbox>
+							<label text="labels.reactivity" />
+							<knob id="rct_ref" />
+							<value id="rct_ref" />
 						</vbox>
 					</group>
 				</hbox>

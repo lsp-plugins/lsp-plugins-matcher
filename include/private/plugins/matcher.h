@@ -51,6 +51,12 @@ namespace lsp
                     PC_TOTAL
                 };
 
+                enum in_source_t
+                {
+                    IN_STATIC,              // Static input profile is used for matching
+                    IN_DYNAMIC              // Dynamic input profile is used for matching
+                };
+
                 enum ref_source_t
                 {
                     REF_CAPTURE,
@@ -239,12 +245,14 @@ namespace lsp
             protected:
                 uint32_t            nChannels;          // Number of channels
                 channel_t          *vChannels;          // Delay channels
+                uint32_t            nInSource;          // Input source
                 uint32_t            nRefSource;         // Reference source
                 uint32_t            nCapSource;         // Capture source
                 uint32_t            nRank;              // FFT rank
                 float               fFftTau;            // FFT time constant
                 float               fFftShift;          // FFT shift
                 float               fInTau;             // Input profile reactivity
+                float               fRefTau;            // Reference profile reactivity
                 uint32_t            nFileProcessReq;    // File processing request
                 uint32_t            nFileProcessResp;   // File processing response
                 bool                bSidechain;         // Sidechain flag
@@ -277,6 +285,7 @@ namespace lsp
                 plug::IPort        *pResetCap;          // Reset captured signal profile
                 plug::IPort        *pInReactivity;      // Input profile reactivity
                 plug::IPort        *pRefReactivity;     // Reference profile reactivity
+                plug::IPort        *pInSource;          // Input source
                 plug::IPort        *pRefSource;         // Reference source
                 plug::IPort        *pCapSource;         // Capture source
                 plug::IPort        *pProfile;           // Start profiling
@@ -284,7 +293,6 @@ namespace lsp
                 plug::IPort        *pListen;            // Listen capture
                 plug::IPort        *pStereoLink;        // Stereo link
 
-                plug::IPort        *pMatchMode;         // Operating mode
                 plug::IPort        *pMatchReset;        // Reset match curves
                 plug::IPort        *pMatchImmediate;    // Perform immediate match
                 plug::IPort        *pMatchMesh;         // Match mesh
@@ -333,6 +341,8 @@ namespace lsp
                 void                build_eq_profile(profile_data_t *profile, eq_param_t param);
                 void                smooth_eq_curve(float *dst, float x1, float y1, float x2, float y2, size_t count);
                 void                sync_profile(profile_data_t *dst, profile_data_t *src);
+                void                track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel);
+                void                compute_eq_profile(profile_data_t *profile, const profile_data_t *in, const profile_data_t *ref, bool dynamic);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
