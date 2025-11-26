@@ -136,9 +136,9 @@ namespace lsp
                     uint32_t                nSampleRate;        // Sample rate of the profile
                     uint32_t                nChannels;          // Number of channels
                     uint32_t                nRank;              // FFT rank of the profile
-                    float                   fLoudness;          // Profile loudness
                     uint32_t                nFlags;             // Profile data flags
                     uint32_t                nFrames;            // Number of frames collected
+                    float                   fRMS;               // Profile loudness
                     float                 **vData;              // Sample data
                 } profile_data_t;
 
@@ -348,7 +348,7 @@ namespace lsp
                 inline void         sync_profile_with_state(profile_data_t *profile);
                 void                post_process_profiles();
                 void                track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel);
-                void                compute_eq_profile(profile_data_t *in, profile_data_t *ref, bool dynamic);
+                void                compute_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
