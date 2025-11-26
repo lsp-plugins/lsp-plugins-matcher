@@ -152,6 +152,7 @@ namespace lsp
             pExecutor       = NULL;
             pGCList         = NULL;
             pReactivity     = NULL;
+            pTempProfile    = NULL;
             vIndices        = NULL;
             vBuffer         = NULL;
 
@@ -428,6 +429,10 @@ namespace lsp
             if (pReactivity == NULL)
                 return;
 
+            pTempProfile        = create_default_profile();
+            if (pReactivity == NULL)
+                return;
+
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
                 profile_data_t *prof    = create_default_profile();
@@ -478,6 +483,11 @@ namespace lsp
             {
                 free_profile_data(pReactivity);
                 pReactivity = NULL;
+            }
+            if (pTempProfile != NULL)
+            {
+                free_profile_data(pTempProfile);
+                pTempProfile = NULL;
             }
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
@@ -601,8 +611,17 @@ namespace lsp
             const size_t fft_csize  = fft_period + 1;
             bool rebuild_eq_profiles= false;
 
+            const size_t old_ref_source = nRefSource;
+            const size_t old_cap_source = nCapSource;
             nRefSource              = decode_reference_source(pRefSource->value());
             nCapSource              = decode_capture_source(pCapSource->value(), nRefSource);
+
+            if ((old_ref_source != nRefSource) || (old_cap_source != nCapSource))
+            {
+                profile_data_t * const profile = vProfileData[PROF_MATCH];
+                profile->nFlags        |= PFLAGS_CHANGED;
+            }
+
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
             fFftShift               = pFftShift->value() * 100.0f / float(1 << rank);
             fInTau                  = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), in_react));
@@ -730,7 +749,7 @@ namespace lsp
                 return;
 
             const size_t fft_csize      = (1 << (nRank - 1)) + 1;
-            profile->nFlags             = PFLAGS_DIRTY | PFLAGS_SYNC;
+            profile->nFlags             = PFLAGS_DIRTY | PFLAGS_CHANGED | PFLAGS_SYNC;
             profile->nFrames            = 0;
             for (size_t i=0; i<nChannels; ++i)
                 dsp::fill_zero(profile->vData[i], fft_csize);
@@ -928,8 +947,8 @@ namespace lsp
             profile->nRank          = nRank;
             profile->nFrames        = lsp_min(frames + 1, size_t(0x100));
             profile->nFlags        |= (profile->nFrames >= 8) ?
-                PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_SYNC :
-                PFLAGS_DIRTY | PFLAGS_SYNC;
+                PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_CHANGED | PFLAGS_SYNC :
+                PFLAGS_DIRTY | PFLAGS_CHANGED | PFLAGS_SYNC;
         }
 
         void matcher::track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel)
@@ -966,8 +985,8 @@ namespace lsp
             if (profile->nFrames < ~uint32_t(0))
                 ++profile->nFrames;
             profile->nFlags        |= (profile->nFrames >= 4) ?
-                PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_SYNC :
-                PFLAGS_DIRTY | PFLAGS_SYNC;
+                PFLAGS_READY | PFLAGS_CHANGED | PFLAGS_SYNC | PFLAGS_DYNAMIC :
+                PFLAGS_CHANGED | PFLAGS_SYNC | PFLAGS_DYNAMIC;
         }
 
         void matcher::sync_profile(profile_data_t *dst, profile_data_t *src)
@@ -982,7 +1001,7 @@ namespace lsp
                 src->nRank          = nRank;
             }
 
-            if (!(src->nFlags & PFLAGS_DIRTY))
+            if (!(src->nFlags & PFLAGS_CHANGED))
                 return;
 
             const size_t fft_csize  = (1 << (src->nRank - 1)) + 1;
@@ -990,18 +1009,74 @@ namespace lsp
             dst->nSampleRate        = src->nSampleRate;
             dst->nRank              = src->nRank;
             dst->fLoudness          = src->fLoudness;
-            dst->nFlags             = src->nFlags;
+            dst->nFlags             = src->nFlags & (~PFLAGS_DYNAMIC);
             dst->nFrames            = src->nFrames;
-
-            src->nFlags             = 0;
 
             for (size_t i=0; i<dst->nChannels; ++i)
                 dsp::copy(dst->vData[i], src->vData[i % src->nChannels], fft_csize);
+
+            // Reset dirty flag for the original profile
+            src->nFlags            &= ~PFLAGS_CHANGED;
         }
 
-        void matcher::compute_eq_profile(profile_data_t *profile, const profile_data_t *in, const profile_data_t *ref, bool dynamic)
+        void matcher::compute_eq_profile(profile_data_t *in, profile_data_t *ref, bool dynamic)
         {
-            // TODO
+            profile_data_t *profile = vProfileData[PROF_MATCH];
+            if (profile == NULL)
+                return;
+
+            // Check that input and reference profiles are present
+            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+            if ((in == NULL) || (ref == NULL))
+            {
+                profile->nFlags    &= ~PFLAGS_READY;
+                return;
+            }
+            if (!((in->nFlags & PFLAGS_READY) && (ref->nFlags & PFLAGS_READY)))
+            {
+                profile->nFlags    &= ~PFLAGS_READY;
+                return;
+            }
+
+            if ((in->nFlags | ref->nFlags) & PFLAGS_DYNAMIC)
+            {
+                // Check that temporary profile is present
+                profile_data_t *tmp = pTempProfile;
+                if (tmp == NULL)
+                {
+                    profile->nFlags    &= ~PFLAGS_READY;
+                    return;
+                }
+
+                // Dynamically changing profile
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    // Compute new profile value
+                    dsp::clamp_kk2(tmp->vData[i], ref->vData[i], GAIN_AMP_M_96_DB, GAIN_AMP_P_96_DB, fft_csize);
+                    dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_96_DB, GAIN_AMP_P_96_DB, fft_csize);
+                    dsp::div2(tmp->vData[i], vBuffer, fft_csize);
+
+                    // TODO: apply minimum and maximum equalizer
+
+                    // Apply reactivity to the changes
+                    dsp::pmix_v1(profile->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                }
+            }
+            else if ((in->nFlags | ref->nFlags | profile->nFlags) & PFLAGS_CHANGED)
+            {
+                // Compute new static profile value
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    dsp::clamp_kk2(profile->vData[i], ref->vData[i], GAIN_AMP_M_96_DB, GAIN_AMP_P_96_DB, fft_csize);
+                    dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_96_DB, GAIN_AMP_P_96_DB, fft_csize);
+                    dsp::div2(profile->vData[i], vBuffer, fft_csize);
+                }
+            }
+
+            in->nFlags         &= ~PFLAGS_CHANGED;
+            ref->nFlags        &= ~PFLAGS_CHANGED;
+            profile->nFlags    &= ~(PFLAGS_CHANGED | PFLAGS_DIRTY);
+            profile->nFlags    |= PFLAGS_READY | PFLAGS_SYNC;
         }
 
         void matcher::process_block(float * const * spectrum, size_t rank)
@@ -1112,14 +1187,7 @@ namespace lsp
 
             // Compute the new profile state
             if ((ref_profile >= 0) && (in_profile >= 0))
-            {
-                const profile_data_t * const ref  = vProfileData[ref_profile];
-                const profile_data_t * const in   = vProfileData[in_profile];
-                profile_data_t * const eq   = vProfileData[PROF_MATCH];
-
-                if ((ref != NULL) && (in != NULL))
-                    compute_eq_profile(eq, in, ref, match_dynamic);
-            }
+                compute_eq_profile(vProfileData[in_profile], vProfileData[ref_profile], match_dynamic);
 
             // Analyze output signal
             for (size_t i=0; i<nChannels; ++i)
@@ -1214,8 +1282,27 @@ namespace lsp
             profile->nSampleRate    = fSampleRate;
             profile->nRank          = nRank;
             profile->fLoudness      = GAIN_AMP_0_DB;
-            profile->nFlags         = PFLAGS_READY | PFLAGS_SYNC;
+            profile->nFlags         = PFLAGS_READY | PFLAGS_SYNC | PFLAGS_READY;
             profile->nFrames        = 0;
+        }
+
+        inline void matcher::sync_profile_with_state(profile_data_t * profile)
+        {
+            if (profile == NULL)
+                return;
+
+            if (profile->nFlags & PFLAGS_DIRTY)
+            {
+                profile->nFlags &= ~PFLAGS_DIRTY;
+                pWrapper->state_changed();
+                lsp_trace("state changed");
+            }
+        }
+
+        void matcher::post_process_profiles()
+        {
+            sync_profile_with_state(vProfileData[PROF_STATIC]);
+            sync_profile_with_state(vProfileData[PROF_CAPTURE]);
         }
 
         void matcher::process(size_t samples)
@@ -1263,6 +1350,7 @@ namespace lsp
                 }
             }
 
+            post_process_profiles();
             output_fft_mesh_data();
             output_profile_mesh_data();
             output_file_mesh_data();
@@ -1613,7 +1701,7 @@ namespace lsp
             profile->nSampleRate        = fSampleRate;
             profile->nRank              = channels; // Store number of channels of original file here
             profile->fLoudness          = 0.0f;
-            profile->nFlags             = PFLAGS_READY | PFLAGS_DIRTY | PFLAGS_SYNC;
+            profile->nFlags             = PFLAGS_READY | PFLAGS_CHANGED | PFLAGS_SYNC;
             profile->nFrames            = 0;
 
             // Create and initialize spectral processor
@@ -1748,6 +1836,7 @@ namespace lsp
 
                 // Reset configurator task
                 sFileProcessor.reset();
+                pWrapper->state_changed();
             }
         }
 

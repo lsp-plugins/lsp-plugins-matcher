@@ -115,7 +115,10 @@ namespace lsp
                     PFLAGS_DEFAULT          = 1 << 0,           // Default (empty) profile
                     PFLAGS_READY            = 1 << 1,           // Profile is ready for processing
                     PFLAGS_DIRTY            = 1 << 2,           // Profile is dirty and has not been saved
-                    PFLAGS_SYNC             = 1 << 3,           // Profile needs to be synchronized with UI
+                    PFLAGS_CHANGED          = 1 << 3,           // Profile has been changed
+                    PFLAGS_SYNC             = 1 << 4,           // Profile needs to be synchronized with UI
+                    PFLAGS_NORMAL           = 1 << 5,           // Profile is filled with 0 dB amplification
+                    PFLAGS_DYNAMIC          = 1 << 6,           // Profile is dynamically changing
                 };
 
                 enum eq_param_t
@@ -268,6 +271,7 @@ namespace lsp
                 ipc::IExecutor     *pExecutor;          // Task executor
                 dspu::Sample       *pGCList;            // Garbage collection list
                 profile_data_t     *pReactivity;        // Reactivity profile
+                profile_data_t     *pTempProfile;       // Temporary profile
                 profile_data_t     *vProfileData[PROF_TOTAL];               // Profile data
                 lltl::state<profile_data_t> vProfileState[SPROF_TOTAL];     // Record of the input profile
 
@@ -341,8 +345,10 @@ namespace lsp
                 void                build_eq_profile(profile_data_t *profile, eq_param_t param);
                 void                smooth_eq_curve(float *dst, float x1, float y1, float x2, float y2, size_t count);
                 void                sync_profile(profile_data_t *dst, profile_data_t *src);
+                inline void         sync_profile_with_state(profile_data_t *profile);
+                void                post_process_profiles();
                 void                track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel);
-                void                compute_eq_profile(profile_data_t *profile, const profile_data_t *in, const profile_data_t *ref, bool dynamic);
+                void                compute_eq_profile(profile_data_t *in, profile_data_t *ref, bool dynamic);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
