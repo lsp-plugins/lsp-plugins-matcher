@@ -201,6 +201,7 @@ namespace lsp
             pListen         = NULL;
             pStereoLink     = NULL;
 
+            pMatchLimit     = NULL;
             pMatchReset     = NULL;
             pMatchImmediate = NULL;
             pMatchMesh      = NULL;
@@ -381,6 +382,7 @@ namespace lsp
 
             // Bind audio file ports
             lsp_trace("Binding audio file ports");
+            SKIP_PORT("Show file loading");
             BIND_PORT(f->pFile);
             BIND_PORT(f->pPitch);
             BIND_PORT(f->pHeadCut);
@@ -394,6 +396,9 @@ namespace lsp
 
             // Bind bypass
             lsp_trace("Binding match equalizer");
+            SKIP_PORT("Show limiting");
+            SKIP_PORT("Show reactivity");
+            BIND_PORT(pMatchLimit);
             BIND_PORT(pMatchReset);
             BIND_PORT(pMatchImmediate);
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)

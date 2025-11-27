@@ -46,11 +46,11 @@ namespace lsp
             static constexpr float          PROFILE_REACT_TIME_STEP     = 0.01f;
 
             static constexpr float          BAND_AMP_GAIN_MIN           = 0.0f;
-            static constexpr float          BAND_AMP_GAIN_MAX           = 36.0f;
+            static constexpr float          BAND_AMP_GAIN_MAX           = 48.0f;
             static constexpr float          BAND_AMP_GAIN_DFL           = 12.0f;
             static constexpr float          BAND_AMP_GAIN_STEP          = 0.05f;
 
-            static constexpr float          BAND_RED_GAIN_MIN           = -36.0f;
+            static constexpr float          BAND_RED_GAIN_MIN           = -48.0f;
             static constexpr float          BAND_RED_GAIN_MAX           = 0.0f;
             static constexpr float          BAND_RED_GAIN_DFL           = -12.0f;
             static constexpr float          BAND_RED_GAIN_STEP          = 0.05f;
@@ -63,7 +63,7 @@ namespace lsp
             static constexpr float          BAND_REACT_MIN              = 0.5f;
             static constexpr float          BAND_REACT_MAX              = 10.0f;
             static constexpr float          BAND_REACT_DFL              = 1.0f;
-            static constexpr float          BAND_REACT_STEP             = 0.05f;
+            static constexpr float          BAND_REACT_STEP             = 0.0025f;
 
             static constexpr float          REACT_TIME_MIN              = 0.000f;
             static constexpr float          REACT_TIME_MAX              = 1.000f;

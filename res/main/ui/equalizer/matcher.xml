@@ -1,5 +1,5 @@
 <plugin resizable="true">
-	<grid rows="3" cols="1" spacing="4">
+	<grid rows="3" cols="2" spacing="4">
 		<group ipadding="0" expand="true" fill="true" text="labels.graphs.frequency">
 			<graph ui:id="profile_graph" width.min="640" height.min="380" expand="true">
 				<origin hpos="-1" vpos="-1" visible="false"/>
@@ -49,6 +49,7 @@
 				<axis ui:id="matcher_ox" min="10" max="24000" color="graph_prim" angle="0.0" log="true" visibility="false"/>
 				<axis ui:id="matcher_oy" min="-48 db" max="48 db" color="graph_prim" angle="0.5" log="true" visibility="false"/>
 				<axis min="0" max=":_a_scaled_height" visibility="false" angle="0.5"/>
+				<axis min="0" max="1" visibility="false" angle="0.5"/>
 				
 				<!-- Meshes -->
 				<ui:if test="!ex :out_r">
@@ -97,7 +98,7 @@
 	
 				<ui:with x="10" halign="1" pgroup="0" priority="10">
 					<text y="0 db" text="0" valign="1" priority="0"/>
-					<text y="1" ox="0" oy="2" text="graph.units.db" valign="-1" priority="0"/>
+					<text y="1" ox="0" oy="3" text="graph.units.db" valign="-1" priority="0"/>
 	
 					<ui:for id="g" counter="i" list="+36;+24;+12;-12;-24;-36">
 						<text y="${g} db" text="${g}" valign="-1"/>
@@ -106,6 +107,113 @@
 	
 			</graph>
 		</group>
+		
+		<cell rows="3">
+			<vbox>
+				<!-- Signal -->
+				<group text="groups.signal">
+					<vbox>
+						<knob id="g_in" pad.r="4"/>
+						<vbox vfill="false">
+							<label text="labels.input" halign="0"/>
+							<value id="g_in" sline="true" halign="0"/>
+						</vbox>
+		
+						<knob id="g_out" pad.r="4"/>
+						<vbox vfill="false">
+							<label text="labels.output" expand="true" halign="0"/>
+							<value id="g_out" width.min="50" sline="true" halign="0"/>
+						</vbox>
+					</vbox>
+				</group>
+				
+				<!-- Analysis -->
+				<group text="groups.analysis" expand="true" ipadding="0">
+					<vbox>
+						<label text="labels.signal" />
+						<ui:if test="!ex :out_r">
+							<button id="ife" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="rfe" text="labels.chan.reference" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="ofe" text="labels.chan.output" height="19" width="30" ui:inject="Button_mono_8"/>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="3" cols="3">
+								<label text="labels.chan.input" />
+								<button id="ife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="ife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.chan.reference" />
+								<button id="rfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="rfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.chan.output" />
+								<button id="ofe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="ofe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+							</grid>
+						</ui:if>
+	
+						<grid rows="2" cols="2" transpose="false" hspacing="4" pad.v="4">
+							<knob id="react" size="20" pad.r="4" pad.l="6"/>
+							<vbox vfill="false" pad.r="6">
+								<label text="labels.metering.reactivity" halign="0"/>
+								<value id="react" width.min="50" sline="true" halign="0"/>
+							</vbox>
+	
+							<knob id="shift" size="20" pad.r="4" pad.l="6"/>
+							<vbox vfill="false" pad.r="6">
+								<label text="labels.metering.shift" halign="0"/>
+								<value id="shift" width.min="50" sline="true" halign="0"/>
+							</vbox>
+						</grid>
+						
+						<label text="labels.static_profiles" />
+						<ui:if test="!ex :out_r">
+							<button id="psfe" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="pcfe" text="labels.capture" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="pffe" text="labels.file" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="pefe" text="labels.equalizer" height="19" width="30" ui:inject="Button_mono_8"/>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="3" cols="3">
+								<label text="labels.chan.input" />
+								<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.capture" />
+								<button id="pcfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.file" />
+								<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.equalizer" />
+								<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+							</grid>
+						</ui:if>
+						
+						<label text="labels.dynamic_profiles" />
+						<ui:if test="!ex :out_r">
+							<button id="pife" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="prfe" text="labels.chan.reference" height="19" width="30" ui:inject="Button_mono_8"/>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="3" cols="3">
+								<label text="labels.chan.input" />
+								<button id="pife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.chan.reference" />
+								<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+							</grid>
+						</ui:if>
+					</vbox>
+				</group>
+			</vbox>
+		</cell>
+		
 		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
 			<label text="labels.fft.frame" />
 			<combo id="fft_sz" />
@@ -113,167 +221,187 @@
 			<combo id="in_src" />
 			<label text="labels.signal.reference" />
 			<combo id="ref_src" />
+			
+			<vsep />
+			
 			<void hexpand="true" />
+			
+			<vsep />
+			
+			<shmlink id="slink" pad.v="4" pad.l="2"/>
 		</hbox>
 		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
-			<vbox>
-				<hbox>
-					<group text="PROFILE">
-						<grid rows="3" cols="2" transpose="true">
-							<!-- Column 1 -->
-							<label text="labels.reactivity" />
-							<knob id="rct_in" />
-							<value id="rct_in" />
-							
-							<!-- Column 2 -->
-							<cell rows="3">
-								<button id="profile" text="actions.record" />
-							</cell>
-						</grid>				
-					</group>
-					<group text="CAPTURE">
-						<vbox>
-							<!-- Column 1 -->
-							<label text="labels.source" />
-							<combo id="cap_src" />
-							<button id="capture" text="actions.record" />
-						</vbox>
-					</group>
-					<group text="REFERENCE">
-						<vbox>
-							<label text="labels.reactivity" />
-							<knob id="rct_ref" />
-							<value id="rct_ref" />
-						</vbox>
-					</group>
-				</hbox>
-				<group text="EQUALIZER">
-					<grid rows="3" cols="10" heifht.min="96">
-						<label text="25"/>
-						<label text="50"/>
-						<label text="107"/>
-						<label text="227"/>
-						<label text="484"/>
-						<label text="labels.flt.x_k" text:value="1" />
-						<label text="labels.flt.x_k" text:value="2.2" />
-						<label text="labels.flt.x_k" text:value="4.7" />
-						<label text="labels.flt.x_k" text:value="10" />
-						<label text="labels.flt.x_k" text:value="16" />
-					
-						<ui:for id="i" first="1" count="10">
-							<fader id="ref_${i}" angle="1" />
-						</ui:for>
-						<ui:for id="i" first="1" count="10">
-							<value id="ref_${i}" angle="1" />
-						</ui:for>
-					</grid>
-				</group>
-				<group text="EQUALIZER RANGE">
-					<grid rows="4" cols="10" heifht.min="96">
-						<label text="25"/>
-						<label text="50"/>
-						<label text="107"/>
-						<label text="227"/>
-						<label text="484"/>
-						<label text="labels.flt.x_k" text:value="1" />
-						<label text="labels.flt.x_k" text:value="2.2" />
-						<label text="labels.flt.x_k" text:value="4.7" />
-						<label text="labels.flt.x_k" text:value="10" />
-						<label text="labels.flt.x_k" text:value="16" />
-
-						<ui:for id="i" first="1" count="10">
-							<value id="amp_${i}" angle="1" />
-						</ui:for>					
-						<ui:for id="i" first="1" count="10">
-							<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1" />
-						</ui:for>
-						<ui:for id="i" first="1" count="10">
-							<value id="red_${i}" angle="1" />
-						</ui:for>
-					</grid>
-				</group>
-			</vbox>
+			<label text="labels.signal.input" />
+			<knob id="rct_in" />
+			<value id="rct_in" sline="true" />
+			<button id="profile" text="actions.record" />
 			
-			<group text="groups.file" bg.color="bg" spacing="0" ipadding="0">
-				<vbox>
-					<hbox width.min="300" height.min="192" expand="true">
-						<asample
-							expand="true"
-							id="file"
-							mesh_id="fmesh"
-							path.id="_ui_dlg_sample_path"
-							ftype.id="_ui_dlg_sample_ftype"
-							play.position=":fppos"
-							hcut=":fhcut"
-							tcut=":ftcut"
-							length=":flength"
-							status=":fstatus"
-							load.preview="true"
-							clipboard.head_cut="fhcut"
-							clipboard.tail_cut="ftcut"
-							format="audio_lspc,audio,all" />
-	
-						<void bg.color="bg_graph" pad.h="2" hreduce="true" visibility=":fstatus ine 1" />
-	
-						<vbox vexpand="true" visibility=":fstatus ine 1">
-							<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
-							<afolder id="file" expand="true" width.min="199"/>
-							<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
-	
-							<ui:with fill="true">
-								<hbox pad.h="6" pad.v="4" spacing="4" bg.color="bg_schema">
-									<ui:with height="22">
-										<anavigator id="file" text="icons.navigation_big.first_alt" action="first" />
-										<anavigator id="file" text="icons.navigation_big.last_alt" action="last" />
-										<void hexpand="true"/>
-										<anavigator id="file" text="icons.navigation_big.previous" action="previous" />
-										<anavigator id="file" text="icons.navigation_big.next" action="next" />
-										<void hexpand="true"/>
-	
-										<anavigator id="file" text="icons.random.dice_fill" action="random" />
-										<void hexpand="true"/>
-										<anavigator id="file" text="icons.actions.cancel_alt" action="clear" />
-									</ui:with>
-								</hbox>
-							</ui:with>
-						</vbox>
-					</hbox>
-					
-					<void bg.color="bg" pad.v="2" vreduce="true"/>
-
-					<grid rows="4" cols="4" bg.color="bg_schema" >
-						<ui:with pad.h="6" pad.v="4" vreduce="true">
-							<label text="labels.sedit.pitch"/>
-							<label text="labels.sedit.head_cut"/>
-							<label text="labels.sedit.tail_cut"/>
-							<label text="labels.listen"/>
-						</ui:with>
-
-						<cell cols="4"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
-
-						<ui:with pad.h="6" pad.v="4">
-							<knob id="fpitch" />
-							<knob id="fhcut" />
-							<knob id="ftcut" />
-							<cell rows="2">
-								<hbox fill="false">
-									<ui:with font.name="lsp-icons" font.size="10" size="32" ui:inject="Button_cyan" toggle="false">
-										<button id="fplay" text="icons.playback_big.play"/>
-										<button id="fstop" text="icons.playback_big.stop"/>
-									</ui:with>
-								</hbox>
-							</cell>
-						</ui:with>
-
-						<ui:with pad.h="6" pad.b="4" width.min="48" sline="true">
-							<value id="fpitch"/>
-							<value id="fhcut"/>
-							<value id="ftcut"/>
-						</ui:with>
-					</grid>
+			<vsep />
 			
-				</vbox>
-			</group>
+			<label text="labels.capture" />
+			<combo id="cap_src" />
+			<button id="capture" text="actions.record" />
+			
+			<vsep />
+			
+			<label text="labels.signal.reference" />
+			<knob id="rct_ref" />
+			<value id="rct_ref" sline="true" />
+			
+			<vsep />
+			
+			<button ui:id="profile_file_trigger" id="showfil" text="labels.file" />
+			
+			<vsep />
+			
+			<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" />
+			<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" />
 		</hbox>
 	</grid>
+	
+	<!-- Profile limiting overlay -->
+	<overlay id="showlim" trigger="profile_limit_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
+		<group text="groups.profile_limits">
+			<grid rows="5" cols="10" heifht.min="96">
+				<cell cols="10">
+					<hbox>
+						<void hexpand="true" />
+						<button id="limit" text="labels.enable" />
+					</hbox>
+				</cell>
+				<label text="25"/>
+				<label text="50"/>
+				<label text="107"/>
+				<label text="227"/>
+				<label text="484"/>
+				<label text="labels.flt.x_k" text:value="1" />
+				<label text="labels.flt.x_k" text:value="2.2" />
+				<label text="labels.flt.x_k" text:value="4.7" />
+				<label text="labels.flt.x_k" text:value="10" />
+				<label text="labels.flt.x_k" text:value="16" />
+
+				<ui:for id="i" first="1" count="10">
+					<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1" />
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="red_${i}" detailed="false" />
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="amp_${i}" />
+				</ui:for>
+			</grid>
+		</group>
+	</overlay>
+	
+	<!-- Profile morphing -->
+	<overlay id="showmrp" trigger="profile_morphing_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
+		<group text="groups.profile_morphing">
+			<grid rows="4" cols="10" heifht.min="96">
+				<cell cols="10">
+					<label text="labels.reactivity" />
+				</cell>
+				<label text="25"/>
+				<label text="50"/>
+				<label text="107"/>
+				<label text="227"/>
+				<label text="484"/>
+				<label text="labels.flt.x_k" text:value="1" />
+				<label text="labels.flt.x_k" text:value="2.2" />
+				<label text="labels.flt.x_k" text:value="4.7" />
+				<label text="labels.flt.x_k" text:value="10" />
+				<label text="labels.flt.x_k" text:value="16" />
+
+				<ui:for id="i" first="1" count="10">
+					<knob id="spd_${i}" />
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="spd_${i}" />
+				</ui:for>
+			</grid>
+		</group>
+	</overlay>
+	
+	<!-- File loading -->
+	<overlay id="showfil" trigger="profile_morphing_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
+		<group text="groups.file" bg.color="bg" spacing="0" ipadding="0">
+			<vbox>
+				<hbox width.min="300" height.min="192" expand="true">
+					<asample
+						expand="true"
+						id="file"
+						mesh_id="fmesh"
+						path.id="_ui_dlg_sample_path"
+						ftype.id="_ui_dlg_sample_ftype"
+						play.position=":fppos"
+						hcut=":fhcut"
+						tcut=":ftcut"
+						length=":flength"
+						status=":fstatus"
+						load.preview="true"
+						clipboard.head_cut="fhcut"
+						clipboard.tail_cut="ftcut"
+						format="audio_lspc,audio,all" />
+
+					<void bg.color="bg_graph" pad.h="2" hreduce="true" visibility=":fstatus ine 1" />
+
+					<vbox vexpand="true" visibility=":fstatus ine 1">
+						<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
+						<afolder id="file" expand="true" width.min="199"/>
+						<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
+
+						<ui:with fill="true">
+							<hbox pad.h="6" pad.v="4" spacing="4" bg.color="bg_schema">
+								<ui:with height="22">
+									<anavigator id="file" text="icons.navigation_big.first_alt" action="first" />
+									<anavigator id="file" text="icons.navigation_big.last_alt" action="last" />
+									<void hexpand="true"/>
+									<anavigator id="file" text="icons.navigation_big.previous" action="previous" />
+									<anavigator id="file" text="icons.navigation_big.next" action="next" />
+									<void hexpand="true"/>
+
+									<anavigator id="file" text="icons.random.dice_fill" action="random" />
+									<void hexpand="true"/>
+									<anavigator id="file" text="icons.actions.cancel_alt" action="clear" />
+								</ui:with>
+							</hbox>
+						</ui:with>
+					</vbox>
+				</hbox>
+				
+				<void bg.color="bg" pad.v="2" vreduce="true"/>
+
+				<grid rows="4" cols="4" bg.color="bg_schema" >
+					<ui:with pad.h="6" pad.v="4" vreduce="true">
+						<label text="labels.sedit.pitch"/>
+						<label text="labels.sedit.head_cut"/>
+						<label text="labels.sedit.tail_cut"/>
+						<label text="labels.listen"/>
+					</ui:with>
+
+					<cell cols="4"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+
+					<ui:with pad.h="6" pad.v="4">
+						<knob id="fpitch" />
+						<knob id="fhcut" />
+						<knob id="ftcut" />
+						<cell rows="2">
+							<hbox fill="false">
+								<ui:with font.name="lsp-icons" font.size="10" size="32" ui:inject="Button_cyan" toggle="false">
+									<button id="fplay" text="icons.playback_big.play"/>
+									<button id="fstop" text="icons.playback_big.stop"/>
+								</ui:with>
+							</hbox>
+						</cell>
+					</ui:with>
+
+					<ui:with pad.h="6" pad.b="4" width.min="48" sline="true">
+						<value id="fpitch"/>
+						<value id="fhcut"/>
+						<value id="ftcut"/>
+					</ui:with>
+					
+				</grid>
+			</vbox>
+		</group>
+	</overlay>
 </plugin>

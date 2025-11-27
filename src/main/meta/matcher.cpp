@@ -126,6 +126,9 @@ namespace lsp
             CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_MSEC, matcher::BAND_REACT)
 
         #define MATCHER_EQ(channels) \
+            SWITCH("showlim", "Show profile limiting", "Show limit", 0), \
+            SWITCH("showmrp", "Show profile morphing", "Show morph", 0), \
+            SWITCH("limit", "Enable profile limiting", "Limit", 0), \
             TRIGGER("reset", "Reset match curves", "Reset"), \
             TRIGGER("match", "Perform immediate match", "Match"), \
             MATCHER_EQ_BAND(1, "25"), \
@@ -141,6 +144,7 @@ namespace lsp
             MESH("pmesh", "Match profile mesh characteristics", 1 + 9 * channels, matcher::FFT_MESH_SIZE + 4)
 
         #define MATCHER_FILE_SOURCE(channels) \
+            SWITCH("showfil", "Show file loading", "Show file", 0), \
             PATH("file", "Reference file"),    \
             CONTROL("fpitch", "File pitch", "File pitch", U_SEMITONES, matcher::SAMPLE_PITCH), \
             CONTROL("fhcut", "Head cut", "Head cut", U_SEC, matcher::SAMPLE_LENGTH), \

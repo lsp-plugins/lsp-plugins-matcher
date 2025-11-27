@@ -297,6 +297,7 @@ namespace lsp
                 plug::IPort        *pListen;            // Listen capture
                 plug::IPort        *pStereoLink;        // Stereo link
 
+                plug::IPort        *pMatchLimit;        // Enable frequency limiting
                 plug::IPort        *pMatchReset;        // Reset match curves
                 plug::IPort        *pMatchImmediate;    // Perform immediate match
                 plug::IPort        *pMatchMesh;         // Match mesh
