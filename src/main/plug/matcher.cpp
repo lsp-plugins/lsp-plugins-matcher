@@ -149,6 +149,7 @@ namespace lsp
             vChannels       = NULL;
             vFreqs          = NULL;
             vEnvelope       = NULL;
+            vRevEnvelope    = NULL;
             pExecutor       = NULL;
             pGCList         = NULL;
             pReactivity     = NULL;
@@ -170,6 +171,8 @@ namespace lsp
 
             bProfile        = false;
             bCapture        = false;
+            bSyncRefFFT     = true;
+            bUpdateMatch    = true;
 
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
@@ -241,6 +244,7 @@ namespace lsp
                 szof_channels +     // vChannels
                 szof_freqs +        // vFreqs
                 szof_fft_buf +      // vEnvelope
+                szof_fft_buf +      // vRevEnvelope
                 szof_idx +          // vIndices
                 szof_tmp_buf +      // vBuffer
                 nChannels * szof_thumbs +   // af_descriptor::vThumbs
@@ -259,6 +263,7 @@ namespace lsp
             vChannels               = advance_ptr_bytes<channel_t>(ptr, szof_channels);
             vFreqs                  = advance_ptr_bytes<float>(ptr, szof_freqs);
             vEnvelope               = advance_ptr_bytes<float>(ptr, szof_fft_buf);
+            vRevEnvelope            = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vIndices                = advance_ptr_bytes<uint16_t>(ptr, szof_idx);
             vBuffer                 = advance_ptr_bytes<float>(ptr, szof_tmp_buf);
 
@@ -396,6 +401,7 @@ namespace lsp
 
             // Bind bypass
             lsp_trace("Binding match equalizer");
+            SKIP_PORT("Show equalizer");
             SKIP_PORT("Show limiting");
             SKIP_PORT("Show reactivity");
             BIND_PORT(pMatchLimit);
@@ -423,6 +429,15 @@ namespace lsp
                 BIND_PORT(c->pFft[SM_OUT]);
                 BIND_PORT(c->pFft[SM_CAPTURE]);
                 BIND_PORT(c->pFft[SM_REFERENCE]);
+
+                SKIP_PORT("Draw static input profile");
+                SKIP_PORT("Draw capture profile");
+                SKIP_PORT("Draw file profile");
+                SKIP_PORT("Draw equalizer profile");
+                SKIP_PORT("Draw dynamic input profile");
+                SKIP_PORT("Draw dynamic reference profile");
+                SKIP_PORT("Draw resulting match profile");
+
                 BIND_PORT(c->pMeter[SM_IN]);
                 BIND_PORT(c->pMeter[SM_OUT]);
                 BIND_PORT(c->pMeter[SM_CAPTURE]);
@@ -543,9 +558,14 @@ namespace lsp
                 vIndices[i]             = uint16_t(lsp_min(scale * f, fft_width));
             }
 
-            // Blue noise is reverse version of pink noise
-            dspu::envelope::reverse_noise_lin(
+            // Compute direct and inverse envelopes for pink noise
+            dspu::envelope::noise_lin(
                 vEnvelope,
+                0, fSampleRate * 0.5f, SPEC_FREQ_CENTER,
+                fft_csize,
+                dspu::envelope::PINK_NOISE);
+            dspu::envelope::reverse_noise_lin(
+                vRevEnvelope,
                 0, fSampleRate * 0.5f, SPEC_FREQ_CENTER,
                 fft_csize,
                 dspu::envelope::PINK_NOISE);
@@ -625,6 +645,10 @@ namespace lsp
             {
                 profile_data_t * const profile = vProfileData[PROF_MATCH];
                 profile->nFlags        |= PFLAGS_CHANGED;
+
+                bUpdateMatch            = true;
+                if (old_ref_source != nRefSource)
+                    bSyncRefFFT             = true;
             }
 
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
@@ -682,11 +706,9 @@ namespace lsp
             }
 
             // Update equalizer settings
-            bool eq_dirty[EQP_TOTAL];
+            uint32_t eq_dirty = (rebuild_eq_profiles) ? (1 << EQP_TOTAL) - 1 : 0;
             for (size_t i=0; i<EQP_TOTAL; ++i)
             {
-                eq_dirty[i]             = rebuild_eq_profiles;
-
                 if (i != EQP_REACTIVITY)
                 {
                     for (size_t j=0; j<meta::matcher::MATCH_BANDS; ++j)
@@ -696,7 +718,7 @@ namespace lsp
                         if (*vold != vnew)
                         {
                             *vold           = vnew;
-                            eq_dirty[i]     = true;
+                            eq_dirty       |= 1 << i;
                         }
                     }
                 }
@@ -710,19 +732,24 @@ namespace lsp
                         if (*vold != vnew)
                         {
                             *vold           = vnew;
-                            eq_dirty[i]     = true;
+                            eq_dirty       |= 1 << i;
                         }
                     }
                 }
             }
-            if (eq_dirty[EQP_REF_LEVEL])
-                build_eq_profile(vProfileData[PROF_REF_EQUALIZER], EQP_REF_LEVEL);
-            if (eq_dirty[EQP_MAX_AMPLIFICATION])
-                build_eq_profile(vProfileData[PROF_MAX_EQUALIZER], EQP_MAX_AMPLIFICATION);
-            if (eq_dirty[EQP_MAX_REDUCTION])
-                build_eq_profile(vProfileData[PROF_MIN_EQUALIZER], EQP_MAX_REDUCTION);
-            if (eq_dirty[EQP_REACTIVITY])
-                build_eq_profile(pReactivity, EQP_REACTIVITY);
+            if (eq_dirty != 0)
+            {
+                if (eq_dirty & (1 << EQP_REF_LEVEL))
+                    build_eq_profile(vProfileData[PROF_REF_EQUALIZER], EQP_REF_LEVEL);
+                if (eq_dirty & (1 << EQP_MAX_AMPLIFICATION))
+                    build_eq_profile(vProfileData[PROF_MAX_EQUALIZER], EQP_MAX_AMPLIFICATION);
+                if (eq_dirty & (1 << EQP_MAX_REDUCTION))
+                    build_eq_profile(vProfileData[PROF_MIN_EQUALIZER], EQP_MAX_REDUCTION);
+                if (eq_dirty & (1 << EQP_REACTIVITY))
+                    build_eq_profile(pReactivity, EQP_REACTIVITY);
+                if (nRefSource == REF_EQUALIZER)
+                    bSyncRefFFT         = true;
+            }
 
             // Update file configuration
             af_descriptor_t * const af  = &sFile;
@@ -1088,7 +1115,7 @@ namespace lsp
                     dsp::pmix_v1(profile->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
                 }
             }
-            else if ((in->nFlags | ref->nFlags | profile->nFlags) & PFLAGS_CHANGED)
+            else if (((in->nFlags | ref->nFlags | profile->nFlags) & PFLAGS_CHANGED) || (bUpdateMatch))
             {
                 const float norm = ref->fRMS / in->fRMS;
 
@@ -1105,11 +1132,14 @@ namespace lsp
             ref->nFlags        &= ~PFLAGS_CHANGED;
             profile->nFlags    &= ~(PFLAGS_CHANGED | PFLAGS_DIRTY);
             profile->nFlags    |= PFLAGS_READY | PFLAGS_SYNC;
+            bUpdateMatch        = false;
         }
 
         void matcher::process_block(float * const * spectrum, size_t rank)
         {
-            // Analyze capture signal channel
+            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+
+            // Select capture signal channel mode
             ssize_t cap_channel = -1;
             switch (nCapSource)
             {
@@ -1127,7 +1157,7 @@ namespace lsp
                     break;
             }
 
-            // Analyze reference channel
+            // Select reference channel mode
             ssize_t ref_channel = -1;
             ssize_t ref_profile = -1;
             bool match_dynamic  = false;
@@ -1152,7 +1182,7 @@ namespace lsp
                     break;
             }
 
-            // Analyze input profile
+            // Select input profile mode
             ssize_t in_profile  = -1;
             switch (nInSource)
             {
@@ -1165,17 +1195,6 @@ namespace lsp
                     break;
                 default:
                     break;
-            }
-
-            // Analyze input signal
-            for (size_t i=0; i<nChannels; ++i)
-            {
-                channel_t *c = &vChannels[i];
-                const size_t base = i*PC_TOTAL;
-
-                analyze_spectrum(c, SM_IN, spectrum[base + PC_INPUT]);
-                analyze_spectrum(c, SM_REFERENCE, spectrum[base + PC_REFERENCE]);
-                analyze_spectrum(c, SM_CAPTURE, (cap_channel >= 0) ? spectrum[base + cap_channel] : NULL);
             }
 
             // Record input profile if enabled
@@ -1216,6 +1235,26 @@ namespace lsp
             // Compute the new profile state
             if ((ref_profile >= 0) && (in_profile >= 0))
                 compute_match_profile(vProfileData[in_profile], vProfileData[ref_profile], match_dynamic);
+
+            // Analyze input signal
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c = &vChannels[i];
+                const size_t base = i*PC_TOTAL;
+
+                analyze_spectrum(c, SM_IN, spectrum[base + PC_INPUT]);
+                if (cap_channel >= 0)
+                    analyze_spectrum(c, SM_CAPTURE, spectrum[base + cap_channel]);
+                if (ref_channel >= 0)
+                    analyze_spectrum(c, SM_REFERENCE, spectrum[base + ref_channel]);
+                else if (ref_profile >= 0)
+                {
+                    profile_data_t * const profile = vProfileData[ref_profile];
+                    if ((profile != NULL) && ((profile->nFlags & PFLAGS_CHANGED) || (bSyncRefFFT)))
+                        dsp::copy(c->vFft[SM_REFERENCE], profile->vData[i], fft_csize);
+                }
+            }
+            bSyncRefFFT     = false;
 
             // Analyze output signal
             for (size_t i=0; i<nChannels; ++i)
@@ -1304,6 +1343,7 @@ namespace lsp
 
             // Copy equalization curve
             dsp::fill(&dst[i_prev], v_prev, fft_csize - i_prev);
+            dsp::mul2(dst, vEnvelope, fft_csize);
             for (size_t i=1; i<nChannels; ++i)
                 dsp::copy(profile->vData[i], profile->vData[0], fft_csize);
 
@@ -1432,18 +1472,17 @@ namespace lsp
                     {
                         const float *fft    = c->vFft[j];
 
-                        ptr[0]              = 0.0f;
-                        ptr[1]              = 0.0f;
                         ptr                += 2;
-
                         for (size_t k=0; k<meta::matcher::FFT_MESH_SIZE; ++k)
                         {
                             const size_t idx    = vIndices[k];
-                            ptr[k]              = fft[idx] * vEnvelope[idx] * fFftShift;
+                            ptr[k]              = fft[idx] * vRevEnvelope[idx] * fFftShift;
                         }
 
+                        ptr[-2]             = 0.0f;
+                        ptr[-1]             = ptr[0];
                         ptr                += meta::matcher::FFT_MESH_SIZE;
-                        ptr[0]              = 0.0f;
+                        ptr[0]              = ptr[-1];
                         ptr[1]              = 0.0f;
                     }
                     else
@@ -1489,18 +1528,7 @@ namespace lsp
                         continue;
                     }
 
-                    bool has_envelope   = true;
-                    switch (j)
-                    {
-                        case PROF_MATCH:
-                        case PROF_REF_EQUALIZER:
-                        case PROF_MIN_EQUALIZER:
-                        case PROF_MAX_EQUALIZER:
-                            has_envelope    = false;
-                            break;
-                        default:
-                            break;
-                    }
+                    const bool has_envelope     = (j != PROF_MATCH);
 
                     // Copy profile data
                     const float * const fft     = profile->vData[i];
@@ -1511,7 +1539,7 @@ namespace lsp
                         for (size_t k=0; k<meta::matcher::FFT_MESH_SIZE; ++k)
                         {
                             const size_t idx    = vIndices[k];
-                            dst[k]              = fft[idx] * vEnvelope[idx];
+                            dst[k]              = fft[idx] * vRevEnvelope[idx];
                         }
                     }
                     else

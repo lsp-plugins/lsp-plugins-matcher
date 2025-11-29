@@ -78,9 +78,9 @@ namespace lsp
                 enum sig_meters_t
                 {
                     SM_IN,
-                    SM_REFERENCE,
-                    SM_CAPTURE,
                     SM_OUT,
+                    SM_CAPTURE,
+                    SM_REFERENCE,
 
                     SM_TOTAL
                 };
@@ -261,6 +261,8 @@ namespace lsp
                 bool                bSidechain;         // Sidechain flag
                 bool                bProfile;           // Profile capturing is enabled
                 bool                bCapture;           // Capture side signal
+                bool                bSyncRefFFT;        // Synchronize reference FFT
+                bool                bUpdateMatch;       // Update matching profile
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
                 af_descriptor_t     sFile;              // Audio file
@@ -278,6 +280,7 @@ namespace lsp
                 uint16_t           *vIndices;           // FFT indices
                 float              *vFreqs;             // FFT frequencies
                 float              *vEnvelope;          // FFT envelope
+                float              *vRevEnvelope;       // FFT reverse envelope
                 float              *vBuffer;            // Temporary buffer
 
                 plug::IPort        *pBypass;            // Bypass

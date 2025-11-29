@@ -126,6 +126,7 @@ namespace lsp
             CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_MSEC, matcher::BAND_REACT)
 
         #define MATCHER_EQ(channels) \
+            SWITCH("showeq", "Show profile equalizer", "Show equalizer", 0), \
             SWITCH("showlim", "Show profile limiting", "Show limit", 0), \
             SWITCH("showmrp", "Show profile morphing", "Show morph", 0), \
             SWITCH("limit", "Enable profile limiting", "Limit", 0), \
@@ -163,9 +164,17 @@ namespace lsp
 
         #define MATCHER_METERS(id, label, alias) \
             SWITCH("ife" id, "Input FFT enabled", "FFT In" alias, 1), \
-            SWITCH("rfe" id, "Reference FFT enabled", "FFT Ref" alias, 1), \
-            SWITCH("cfe" id, "Capture FFT enabled", "FFT Cap" alias, 1), \
             SWITCH("ofe" id, "Output FFT enabled", "FFT Out" alias, 1), \
+            SWITCH("cfe" id, "Capture FFT enabled", "FFT Cap" alias, 1), \
+            SWITCH("rfe" id, "Reference FFT enabled", "FFT Ref" alias, 1), \
+            SWITCH("rfe" id, "Reference FFT enabled", "FFT Ref" alias, 1), \
+            SWITCH("psfe" id, "Draw static input profile", "Stat prof" alias, 0), \
+            SWITCH("pcfe" id, "Draw capture profile", "Capt prof" alias, 0), \
+            SWITCH("pffe" id, "Draw file profile", "File prof" alias, 0), \
+            SWITCH("pefe" id, "Draw equalizer profile", "Eq prof" alias, 0), \
+            SWITCH("pife" id, "Draw dynamic input profile", "In prof" alias, 0), \
+            SWITCH("prfe" id, "Draw dynamic reference profile", "Ref prof" alias, 0), \
+            SWITCH("pmfe" id, "Draw resulting match profile", "Match prof" alias, 1), \
             METER_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_P_24_DB), \
             METER_GAIN("rlm" id, "Reference level meter" label, GAIN_AMP_P_24_DB), \
             METER_GAIN("clm" id, "Capture level meter" label, GAIN_AMP_P_24_DB), \

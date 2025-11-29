@@ -51,6 +51,7 @@
 				<axis min="0" max=":_a_scaled_height" visibility="false" angle="0.5"/>
 				<axis min="0" max="1" visibility="false" angle="0.5"/>
 				
+				<ui:set id="hide_cond" value="(:showfil or :showeq or :showlim)" />
 				<!-- Meshes -->
 				<ui:if test="!ex :out_r">
 					<mesh id="fft" xi="0" yi="1" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife" />
@@ -58,24 +59,66 @@
 					<mesh id="fft" xi="0" yi="3" width="2" color="mono_in" visibility=":cfe"/>
 					<mesh id="fft" xi="0" yi="4" width="2" color="mono" visibility=":ofe"/>
 					
-					<ui:for id="i" first="1" count="9">
-						<mesh id="pmesh" xi="0" yi="${i}" width="2" color="mono" />
-					</ui:for>
+					<!-- Dynamic input profile -->
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="mono" visibility=":pife or ((:in_src ieq 1) and not ${hide_cond})" />
+					<!-- Reference profile -->
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="mono" visibility=":prfe or ((:ref_src ige 3) and not ${hide_cond})" />
+					<!-- Static input profile -->
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="mono" visibility=":psfe or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
+					<!-- Capture input profile -->
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="mono" visibility=":pcfe or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<!-- File profile -->
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="mono" visibility=":pffe or :showfil" />
+					<!-- Reference equalizer -->
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="mono" visibility=":pefe or :showeq" />
+					<!-- Reference equalizer maximum bounds -->
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility=":limit or :showlim" />
+					<!-- Reference equalizer minimum bounds -->
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility=":limit or :showlim" />
+					<!-- Match profile -->
+					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" visibility=":pmfe and not ${hide_cond}" />
 				</ui:if>
 				<ui:if test="ex :out_r">
+					<!-- Input -->
 					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife_l" />
 					<mesh id="fft" xi="0" yi="5" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":ife_r" />
-					<mesh id="fft" xi="0" yi="2" width="2" color="left_in" visibility=":rfe_l"/>
-					<mesh id="fft" xi="0" yi="7" width="2" color="right_in" visibility=":rfe_r"/>
+					<!-- Capture -->
 					<mesh id="fft" xi="0" yi="3" width="2" color="left_in" visibility=":cfe_l"/>
-					<mesh id="fft" xi="0" yi="8" width="2" color="right_in" visibility=":cfe_r"/>
-					<mesh id="fft" xi="0" yi="4" width="2" color="left" visibility=":ofe_l"/>
-					<mesh id="fft" xi="0" yi="9" width="2" color="right" visibility=":ofe_r"/>
+					<mesh id="fft" xi="0" yi="7" width="2" color="right_in" visibility=":cfe_r"/>
+					<!-- Reference -->
+					<mesh id="fft" xi="0" yi="4" width="2" color="left_in" visibility=":rfe_l"/>
+					<mesh id="fft" xi="0" yi="8" width="2" color="right_in" visibility=":rfe_r"/>
+					<!-- Output -->
+					<mesh id="fft" xi="0" yi="2" width="2" color="left_in" visibility=":ofe_l"/>
+					<mesh id="fft" xi="0" yi="6" width="2" color="right_in" visibility=":ofe_r"/>
 					
-					<ui:for id="i" first="1" count="9">
-						<mesh id="pmesh" xi="0" yi="${i}" width="2" color="left" />
-						<mesh id="pmesh" xi="0" yi="${:i+9}" width="2" color="right" />
-					</ui:for>
+					<!-- Dynamic input profile -->
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" visibility=":pife_l or ((:in_src ieq 1) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="11" width="2" color="right" visibility=":pife_r or ((:in_src ieq 1) and not ${hide_cond})" />
+					<!-- Reference profile -->
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" visibility=":prfe_l or ((:ref_src ige 3) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" visibility=":prfe_r or ((:ref_src ige 3) and not ${hide_cond})" />
+					<!-- Static input profile -->
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" visibility=":psfe_l or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="13" width="2" color="right" visibility=":psfe_r or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
+					<!-- Capture input profile -->
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" visibility=":pcfe_l or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" visibility=":pcfe_r or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<!-- File profile -->
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" visibility=":pffe_l or :showfil" />
+					<mesh id="pmesh" xi="0" yi="15" width="2" color="right" visibility=":pffe_r or :showfil" />
+					<!-- Reference equalizer -->
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" visibility=":pefe_l or :showeq" />
+					<mesh id="pmesh" xi="0" yi="16" width="2" color="right" visibility=":pefe_r or :showeq" />
+					<!-- Reference equalizer maximum bounds -->
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility=":limit or :showlim" />
+					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility=":limit or :showlim" />
+					<!-- Reference equalizer minimum bounds -->
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility=":limit or :showlim" />
+					<mesh id="pmesh" xi="0" yi="18" width="2" color="threshold" visibility=":limit or :showlim" />
+					<!-- Match profile -->
+					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" visibility=":pmfe_l and not ${hide_cond}" />
+					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" visibility=":pmfe_r and not ${hide_cond}" />
 				</ui:if>
 				
 				<!-- Text -->
@@ -133,22 +176,27 @@
 						<label text="labels.signal" />
 						<ui:if test="!ex :out_r">
 							<button id="ife" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
-							<button id="rfe" text="labels.chan.reference" height="19" width="30" ui:inject="Button_mono_8"/>
 							<button id="ofe" text="labels.chan.output" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="rfe" text="labels.chan.reference" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="cfe" text="labels.chan.capture" height="19" width="30" ui:inject="Button_mono_8"/>
 						</ui:if>
 						<ui:if test="ex :out_r">
-							<grid rows="3" cols="3">
+							<grid rows="4" cols="3">
 								<label text="labels.chan.input" />
 								<button id="ife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
 								<button id="ife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
 								
-								<label text="labels.chan.reference" />
-								<button id="rfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
-								<button id="rfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
-								
 								<label text="labels.chan.output" />
 								<button id="ofe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
 								<button id="ofe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.capture" />
+								<button id="cfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="cfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+								
+								<label text="labels.chan.reference" />
+								<button id="rfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="rfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
 							</grid>
 						</ui:if>
 	
@@ -165,7 +213,10 @@
 								<value id="shift" width.min="50" sline="true" halign="0"/>
 							</vbox>
 						</grid>
-						
+					</vbox>
+				</group>
+				<group text="groups.profiles" expand="true" ipadding="0">
+					<vbox>
 						<label text="labels.static_profiles" />
 						<ui:if test="!ex :out_r">
 							<button id="psfe" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
@@ -174,7 +225,7 @@
 							<button id="pefe" text="labels.equalizer" height="19" width="30" ui:inject="Button_mono_8"/>
 						</ui:if>
 						<ui:if test="ex :out_r">
-							<grid rows="3" cols="3">
+							<grid rows="4" cols="3">
 								<label text="labels.chan.input" />
 								<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
 								<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
@@ -207,6 +258,18 @@
 								<label text="labels.chan.reference" />
 								<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
 								<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
+							</grid>
+						</ui:if>
+						
+						<label text="labels.result" />
+						<ui:if test="!ex :out_r">
+							<button id="prfe" text="labels.signal.match" height="19" width="30" ui:inject="Button_mono_8"/>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="1" cols="3">
+								<label text="labels.signal.match" />
+								<button id="pmfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
+								<button id="pmfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
 							</grid>
 						</ui:if>
 					</vbox>
@@ -254,10 +317,39 @@
 			
 			<vsep />
 			
+			<button ui:id="profile_equalizer_trigger" id="showeq" text="labels.equalizer" />
+			
+			<vsep />
+			
 			<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" />
 			<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" />
 		</hbox>
 	</grid>
+	
+	<!-- Profile equalizer overlay -->
+	<overlay id="showeq" trigger="profile_equalizer_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
+		<group text="groups.equalizer">
+			<grid rows="3" cols="10" heifht.min="96">
+				<label text="25"/>
+				<label text="50"/>
+				<label text="107"/>
+				<label text="227"/>
+				<label text="484"/>
+				<label text="labels.flt.x_k" text:value="1" />
+				<label text="labels.flt.x_k" text:value="2.2" />
+				<label text="labels.flt.x_k" text:value="4.7" />
+				<label text="labels.flt.x_k" text:value="10" />
+				<label text="labels.flt.x_k" text:value="16" />
+
+				<ui:for id="i" first="1" count="10">
+					<fader id="ref_${i}" angle="1" />
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="ref_${i}" />
+				</ui:for>
+			</grid>
+		</group>
+	</overlay>
 	
 	<!-- Profile limiting overlay -->
 	<overlay id="showlim" trigger="profile_limit_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
