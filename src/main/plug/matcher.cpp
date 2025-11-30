@@ -791,9 +791,8 @@ namespace lsp
                 dsp::fill_zero(profile->vData[i], fft_csize);
         }
 
-        void matcher::bind_buffers()
+        void matcher::init_buffers()
         {
-            // Process each channel independently
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c            = &vChannels[i];
@@ -805,6 +804,14 @@ namespace lsp
                 core::AudioBuffer *buf  = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
                 if ((buf != NULL) && (buf->active()))
                     c->vShmIn               = buf->buffer();
+            }
+        }
+
+        void matcher::bind_buffers()
+        {
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c            = &vChannels[i];
 
                 // Bind processor buffers
                 const size_t base       = i * PC_TOTAL;
@@ -846,12 +853,17 @@ namespace lsp
             }
         }
 
-        void matcher::process_signal(size_t to_do)
+        void matcher::advance_buffers(size_t samples)
         {
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c            = &vChannels[i];
-                dsp::copy(c->vOut, c->vIn, to_do);
+                channel_t *c        = &vChannels[i];
+                c->vIn             += samples;
+                c->vOut            += samples;
+                if (c->vSc != NULL)
+                    c->vSc             += samples;
+                if (c->vShmIn != NULL)
+                    c->vShmIn          += samples;
             }
         }
 
@@ -1391,17 +1403,19 @@ namespace lsp
 
         void matcher::process(size_t samples)
         {
+            init_buffers();
             process_file_loading_tasks();
             process_file_processing_tasks();
             process_listen_events();
             process_gc_tasks();
             update_profiles();
 
-            bind_buffers();
 
             for (size_t offset=0; offset<samples; )
             {
                 const size_t to_do  = lsp_min(samples - offset, BUFFER_SIZE, sProcessor.remaining());
+
+                bind_buffers();
 
                 // Perform processing
                 for (size_t i=0; i<nChannels; ++i)
@@ -1421,17 +1435,8 @@ namespace lsp
                 }
 
                 // Update position
+                advance_buffers(to_do);
                 offset             += to_do;
-                for (size_t i=0; i<nChannels; ++i)
-                {
-                    channel_t *c        = &vChannels[i];
-                    c->vIn             += to_do;
-                    c->vOut            += to_do;
-                    if (c->vSc != NULL)
-                        c->vSc             += to_do;
-                    if (c->vShmIn != NULL)
-                        c->vShmIn          += to_do;
-                }
             }
 
             post_process_profiles();

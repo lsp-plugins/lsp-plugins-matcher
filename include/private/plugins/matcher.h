@@ -323,8 +323,9 @@ namespace lsp
                 void                do_destroy();
                 profile_data_t     *allocate_profile_data();
                 profile_data_t     *create_default_profile();
+                void                init_buffers();
                 void                bind_buffers();
-                void                process_signal(size_t to_do);
+                void                advance_buffers(size_t samples);
                 void                update_frequency_mapping();
                 void                output_fft_mesh_data();
                 void                output_profile_mesh_data();
