@@ -37,6 +37,7 @@ namespace lsp
         /* The size of temporary buffer for audio processing */
         static constexpr size_t BUFFER_SIZE             = 0x200;
         static constexpr float FFT_TIME_CONST           = -1.2279471773f; // logf(1.0f - float(M_SQRT1_2));
+        static constexpr float NORMING_SHIFT            = 100.0f;
 
         //---------------------------------------------------------------------
         // Plugin factory
@@ -652,7 +653,7 @@ namespace lsp
             }
 
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
-            fFftShift               = pFftShift->value() * 100.0f / float(1 << rank);
+            fFftShift               = pFftShift->value();
             fInTau                  = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), in_react));
             fRefTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), ref_react));
 
@@ -699,8 +700,11 @@ namespace lsp
 
                     if (c->bFft[j] != fft)
                     {
-                        dsp::fill_zero(c->vFft[j], fft_csize);
                         c->bFft[j]      = fft;
+                        if ((j == SM_REFERENCE) && ((nRefSource == REF_SIDECHAIN) || (nRefSource == REF_LINK)))
+                            dsp::fill_zero(c->vFft[j], fft_csize);
+                        else
+                            dsp::fill_zero(c->vFft[j], fft_csize);
                     }
                 }
             }
@@ -937,6 +941,7 @@ namespace lsp
             if (fft != NULL)
             {
                 dsp::pcomplex_mod(vBuffer, fft, fft_csize);
+                dsp::mul_k2(vBuffer, NORMING_SHIFT / float(1 << nRank), fft_csize);
                 dsp::mix2(dst, vBuffer, 1.0f - fFftTau, fFftTau, fft_csize);
             }
             else
@@ -947,6 +952,7 @@ namespace lsp
         {
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
             const size_t frames     = profile->nFrames;
+            const float norm        = NORMING_SHIFT / float(1 << nRank);
             const float k           = 1.0f / (float(frames) + 1.0f);
             const float kp          = float(frames) * k;
 
@@ -962,7 +968,7 @@ namespace lsp
                     if (src != NULL)
                     {
                         dsp::pcomplex_mod(vBuffer, src, fft_csize);
-                        dsp::mix2(dst, vBuffer, kp, k, fft_csize);
+                        dsp::mix2(dst, vBuffer, kp, k * norm, fft_csize);
                     }
                     else
                         dsp::mul_k2(dst, kp, fft_csize);
@@ -971,6 +977,7 @@ namespace lsp
                 {
                     // Fill empty profile
                     dsp::pcomplex_mod(dst, src, fft_csize);
+                    dsp::mul_k2(dst, norm, fft_csize);
                 }
             }
 
@@ -994,6 +1001,7 @@ namespace lsp
 
         void matcher::track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel)
         {
+            const float norm        = NORMING_SHIFT / float(1 << nRank);
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
             const size_t frames     = profile->nFrames;
 
@@ -1009,7 +1017,7 @@ namespace lsp
                     if (src != NULL)
                     {
                         dsp::pcomplex_mod(vBuffer, src, fft_csize);
-                        dsp::mix2(dst, vBuffer, 1.0f - tau, tau, fft_csize);
+                        dsp::mix2(dst, vBuffer, 1.0f - tau, tau * norm, fft_csize);
                     }
                     else
                         dsp::mul_k2(dst, tau, fft_csize);
@@ -1018,6 +1026,7 @@ namespace lsp
                 {
                     // Fill empty profile
                     dsp::pcomplex_mod(dst, src, fft_csize);
+                    dsp::mul_k2(dst, norm, fft_csize);
                 }
             }
 
@@ -1800,11 +1809,12 @@ namespace lsp
             // Finalize and publish profile
             const size_t fft_csize      = (1 << (nRank - 1)) + 1;
             profile->nRank              = nRank;
+            const float norm            = NORMING_SHIFT / float(1 << nRank);
             const float k               = 1.0f / float(profile->nFrames);
             const float rms_norm        = 1.0f / float(fft_csize);
             for (size_t i=0; i<profile->nChannels; ++i)
             {
-                dsp::mul_k2(profile->vData[i], k, fft_csize);
+                dsp::mul_k2(profile->vData[i], k*norm, fft_csize);
                 profile->fRMS              += dsp::h_sum(profile->vData[i], fft_csize) * rms_norm;
             }
             if (profile->fRMS >= GAIN_AMP_M_72_DB)
