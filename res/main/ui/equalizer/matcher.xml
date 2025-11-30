@@ -51,74 +51,75 @@
 				<axis min="0" max=":_a_scaled_height" visibility="false" angle="0.5"/>
 				<axis min="0" max="1" visibility="false" angle="0.5"/>
 				
-				<ui:set id="hide_cond" value="(:showfil or :showeq or :showlim)" />
+				<ui:set id="hide_cond" value="(:showfil or :showenv or :showlim)" />
+				<ui:set id="hide_cond_soft" value="(:showfil or :showenv)" />
 				<!-- Meshes -->
 				<ui:if test="!ex :out_r">
-					<mesh id="fft" xi="0" yi="1" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife" />
-					<mesh id="fft" xi="0" yi="2" width="2" color="mono_in" visibility=":rfe"/>
-					<mesh id="fft" xi="0" yi="3" width="2" color="mono_in" visibility=":cfe"/>
-					<mesh id="fft" xi="0" yi="4" width="2" color="mono" visibility=":ofe"/>
+					<mesh id="fft" xi="0" yi="1" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife" />
+					<mesh id="fft" xi="0" yi="2" width="2" color="mono_in" visibility=":showfft and :rfe"/>
+					<mesh id="fft" xi="0" yi="3" width="2" color="mono_in" visibility=":showfft and :cfe"/>
+					<mesh id="fft" xi="0" yi="4" width="2" color="mono" visibility=":showfft and :ofe"/>
 					
 					<!-- Dynamic input profile -->
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="mono" visibility=":pife or ((:in_src ieq 1) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="mono" visibility="(:showpro and :pife) or (:track and (:in_src ieq 1) and not ${hide_cond})" />
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="mono" visibility=":prfe or ((:ref_src ige 3) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="mono" visibility="(:showpro and :prfe) or (:track and (:ref_src ige 3) and not ${hide_cond})" />
 					<!-- Static input profile -->
-					<mesh id="pmesh" xi="0" yi="4" width="2" color="mono" visibility=":psfe or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="mono" visibility="(:showpro and :psfe) or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="mono" visibility=":pcfe or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="mono" visibility="(:showpro and :pcfe) or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
 					<!-- File profile -->
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="mono" visibility=":pffe or :showfil" />
-					<!-- Reference equalizer -->
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="mono" visibility=":pefe or :showeq" />
-					<!-- Reference equalizer maximum bounds -->
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="mono" visibility="(:showpro and :pffe) or :showfil" />
+					<!-- Envelope -->
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="mono" visibility="(:showpro and :pefe) or :showenv" />
+					<!-- Envelope maximum bounds -->
 					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility=":limit or :showlim" />
-					<!-- Reference equalizer minimum bounds -->
+					<!-- Envelope minimum bounds -->
 					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility=":limit or :showlim" />
 					<!-- Match profile -->
-					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" visibility=":pmfe and not ${hide_cond}" />
+					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" visibility=":pmfe and not ${hide_cond_soft}" />
 				</ui:if>
 				<ui:if test="ex :out_r">
 					<!-- Input -->
-					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife_l" />
-					<mesh id="fft" xi="0" yi="5" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":ife_r" />
+					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife_l" />
+					<mesh id="fft" xi="0" yi="5" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":showfft and :ife_r" />
 					<!-- Capture -->
-					<mesh id="fft" xi="0" yi="3" width="2" color="left_in" visibility=":cfe_l"/>
-					<mesh id="fft" xi="0" yi="7" width="2" color="right_in" visibility=":cfe_r"/>
+					<mesh id="fft" xi="0" yi="3" width="2" color="left_in" visibility=":showfft and :cfe_l"/>
+					<mesh id="fft" xi="0" yi="7" width="2" color="right_in" visibility=":showfft and :cfe_r"/>
 					<!-- Reference -->
-					<mesh id="fft" xi="0" yi="4" width="2" color="left_in" visibility=":rfe_l"/>
-					<mesh id="fft" xi="0" yi="8" width="2" color="right_in" visibility=":rfe_r"/>
+					<mesh id="fft" xi="0" yi="4" width="2" color="left_in" visibility=":showfft and :rfe_l"/>
+					<mesh id="fft" xi="0" yi="8" width="2" color="right_in" visibility=":showfft and :rfe_r"/>
 					<!-- Output -->
-					<mesh id="fft" xi="0" yi="2" width="2" color="left_in" visibility=":ofe_l"/>
-					<mesh id="fft" xi="0" yi="6" width="2" color="right_in" visibility=":ofe_r"/>
+					<mesh id="fft" xi="0" yi="2" width="2" color="left_in" visibility=":showfft and :ofe_l"/>
+					<mesh id="fft" xi="0" yi="6" width="2" color="right_in" visibility=":showfft and :ofe_r"/>
 					
 					<!-- Dynamic input profile -->
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" visibility=":pife_l or ((:in_src ieq 1) and not ${hide_cond})" />
-					<mesh id="pmesh" xi="0" yi="11" width="2" color="right" visibility=":pife_r or ((:in_src ieq 1) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" visibility="(:showpro and :pife_l) or (:track and (:in_src ieq 1) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="11" width="2" color="right" visibility="(:showpro and :pife_r) or (:track and (:in_src ieq 1) and not ${hide_cond})" />
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" visibility=":prfe_l or ((:ref_src ige 3) and not ${hide_cond})" />
-					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" visibility=":prfe_r or ((:ref_src ige 3) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" visibility="(:showpro and :prfe_l) or (:track and (:ref_src ige 3) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" visibility="(:showpro and :prfe_r) or (:track and (:ref_src ige 3) and not ${hide_cond})" />
 					<!-- Static input profile -->
-					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" visibility=":psfe_l or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
-					<mesh id="pmesh" xi="0" yi="13" width="2" color="right" visibility=":psfe_r or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" visibility="(:showpro and :psfe_l) or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="13" width="2" color="right" visibility="(:showpro and :psfe_r) or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" visibility=":pcfe_l or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
-					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" visibility=":pcfe_r or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" visibility="(:showpro and :pcfe_l) or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" visibility="(:showpro and :pcfe_r) or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
 					<!-- File profile -->
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" visibility=":pffe_l or :showfil" />
-					<mesh id="pmesh" xi="0" yi="15" width="2" color="right" visibility=":pffe_r or :showfil" />
-					<!-- Reference equalizer -->
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" visibility=":pefe_l or :showeq" />
-					<mesh id="pmesh" xi="0" yi="16" width="2" color="right" visibility=":pefe_r or :showeq" />
-					<!-- Reference equalizer maximum bounds -->
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" visibility="(:showpro and :pffe_l) or :showfil" />
+					<mesh id="pmesh" xi="0" yi="15" width="2" color="right" visibility="(:showpro and :pffe_r) or :showfil" />
+					<!-- Envelope -->
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" visibility="(:showpro and :pefe_l) or :showenv" />
+					<mesh id="pmesh" xi="0" yi="16" width="2" color="right" visibility="(:showpro and :pefe_r) or :showenv" />
+					<!-- Envelope maximum bounds -->
 					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility=":limit or :showlim" />
 					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility=":limit or :showlim" />
-					<!-- Reference equalizer minimum bounds -->
+					<!-- Envelope minimum bounds -->
 					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility=":limit or :showlim" />
 					<mesh id="pmesh" xi="0" yi="18" width="2" color="threshold" visibility=":limit or :showlim" />
 					<!-- Match profile -->
-					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" visibility=":pmfe_l and not ${hide_cond}" />
-					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" visibility=":pmfe_r and not ${hide_cond}" />
+					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" visibility=":pmfe_l and not ${hide_cond_soft}" />
+					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" visibility=":pmfe_r and not ${hide_cond_soft}" />
 				</ui:if>
 				
 				<!-- Text -->
@@ -173,7 +174,7 @@
 				<!-- Analysis -->
 				<group text="groups.analysis" expand="true" ipadding="0">
 					<vbox>
-						<label text="labels.signal" />
+						<button id="showfft" text="actions.show" height="19" width="30" ui:inject="Button_mono_8"/>
 						<ui:if test="!ex :out_r">
 							<button id="ife" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
 							<button id="ofe" text="labels.chan.output" height="19" width="30" ui:inject="Button_mono_8"/>
@@ -217,12 +218,13 @@
 				</group>
 				<group text="groups.profiles" expand="true" ipadding="0">
 					<vbox>
+						<button id="showpro" text="actions.show" height="19" width="30" ui:inject="Button_mono_8"/>
 						<label text="labels.static_profiles" />
 						<ui:if test="!ex :out_r">
 							<button id="psfe" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
 							<button id="pcfe" text="labels.capture" height="19" width="30" ui:inject="Button_mono_8"/>
 							<button id="pffe" text="labels.file" height="19" width="30" ui:inject="Button_mono_8"/>
-							<button id="pefe" text="labels.equalizer" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="pefe" text="labels.signal.envelope" height="19" width="30" ui:inject="Button_mono_8"/>
 						</ui:if>
 						<ui:if test="ex :out_r">
 							<grid rows="4" cols="3">
@@ -238,7 +240,7 @@
 								<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
 								<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
 								
-								<label text="labels.equalizer" />
+								<label text="labels.signal.envelope" />
 								<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" />
 								<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8" />
 							</grid>
@@ -284,6 +286,7 @@
 			<combo id="in_src" />
 			<label text="labels.signal.reference" />
 			<combo id="ref_src" />
+			<button id="track" text="actions.tracking" />
 			
 			<vsep />
 			
@@ -317,7 +320,7 @@
 			
 			<vsep />
 			
-			<button ui:id="profile_equalizer_trigger" id="showeq" text="labels.equalizer" />
+			<button ui:id="profile_envelope_trigger" id="showenv" text="labels.signal.envelope" />
 			
 			<vsep />
 			
@@ -326,9 +329,9 @@
 		</hbox>
 	</grid>
 	
-	<!-- Profile equalizer overlay -->
-	<overlay id="showeq" trigger="profile_equalizer_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
-		<group text="groups.equalizer">
+	<!-- Profile envelope overlay -->
+	<overlay id="showenv" trigger="profile_envelope_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
+		<group text="groups.envelope">
 			<grid rows="3" cols="10" heifht.min="96">
 				<label text="25"/>
 				<label text="50"/>

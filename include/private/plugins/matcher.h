@@ -93,7 +93,7 @@ namespace lsp
                     PROF_STATIC,            // Profile for the static input audio, SR -> resample
                     PROF_CAPTURE,           // Profile for the static captured audio, SR -> resample
                     PROF_FILE,              // Profile for the file, SR -> re-render
-                    PROF_REF_EQUALIZER,     // Profile for the reference equalizer, SR -> recompute
+                    PROF_ENVELOPE,          // Profile for the envelope, SR -> recompute
                     PROF_MIN_EQUALIZER,     // Profile for the minimum equalizer, SR -> recompute
                     PROF_MAX_EQUALIZER,     // Profile for the maximum equalizer, SR -> recompute
 
@@ -252,6 +252,8 @@ namespace lsp
                 uint32_t            nRefSource;         // Reference source
                 uint32_t            nCapSource;         // Capture source
                 uint32_t            nRank;              // FFT rank
+                float               fGainIn;            // Input gain
+                float               fGainOut;           // Output gain
                 float               fFftTau;            // FFT time constant
                 float               fFftShift;          // FFT shift
                 float               fInTau;             // Input profile reactivity
@@ -263,6 +265,7 @@ namespace lsp
                 bool                bCapture;           // Capture side signal
                 bool                bSyncRefFFT;        // Synchronize reference FFT
                 bool                bUpdateMatch;       // Update matching profile
+                bool                bMatchLimit;        // Match curve limiting enabled
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
                 af_descriptor_t     sFile;              // Audio file
@@ -318,13 +321,14 @@ namespace lsp
                 static void         destroy_sample(dspu::Sample * &s);
                 static void         destroy_samples(dspu::Sample *gc_list);
                 static void         resample_profile(profile_data_t *profile, size_t srate);
+                static bool         profile_is_relative(size_t profile);
 
             protected:
                 void                do_destroy();
                 profile_data_t     *allocate_profile_data();
                 profile_data_t     *create_default_profile();
                 void                init_buffers();
-                void                bind_buffers();
+                void                bind_buffers(size_t samples);
                 void                advance_buffers(size_t samples);
                 void                update_frequency_mapping();
                 void                output_fft_mesh_data();
@@ -347,13 +351,13 @@ namespace lsp
                 void                process_listen_events();
                 void                perform_gc();
                 void                update_profiles();
-                void                build_eq_profile(profile_data_t *profile, eq_param_t param);
+                void                build_eq_profile(profile_data_t *profile, eq_param_t param, bool envelope);
                 void                smooth_eq_curve(float *dst, float x1, float y1, float x2, float y2, size_t count);
                 void                sync_profile(profile_data_t *dst, profile_data_t *src);
                 inline void         sync_profile_with_state(profile_data_t *profile);
                 void                post_process_profiles();
                 void                track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel);
-                void                compute_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic);
+                void                build_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

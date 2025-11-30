@@ -57,7 +57,7 @@ namespace lsp
         {
             { "Capture",            "matcher.ref.capture"           },
             { "File",               "matcher.ref.file"              },
-            { "Equalizer",          "matcher.ref.equalizer"         },
+            { "Envelope",           "matcher.ref.envelope"          },
             { "Link",               "matcher.ref.link"              },
             { NULL, NULL }
         };
@@ -66,7 +66,7 @@ namespace lsp
         {
             { "Capture",            "matcher.ref.capture"           },
             { "File",               "matcher.ref.file"              },
-            { "Equalizer",          "matcher.ref.equalizer"         },
+            { "Envelope",           "matcher.ref.envelope"          },
             { "Sidechain",          "matcher.ref.sidechain"         },
             { "Link",               "matcher.ref.link"              },
             { NULL, NULL }
@@ -126,9 +126,12 @@ namespace lsp
             CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_MSEC, matcher::BAND_REACT)
 
         #define MATCHER_EQ(channels) \
-            SWITCH("showeq", "Show profile equalizer", "Show equalizer", 0), \
+            SWITCH("showfft", "Show any FFT analysis for all channels", "Show FFT", 1), \
+            SWITCH("showpro", "Show any profiles", "Show profiles", 1), \
+            SWITCH("showenv", "Show profile envelope", "Show env", 0), \
             SWITCH("showlim", "Show profile limiting", "Show limit", 0), \
             SWITCH("showmrp", "Show profile morphing", "Show morph", 0), \
+            SWITCH("track", "Enable tracking of dynamic profiles", "Track dynamic", 1), \
             SWITCH("limit", "Enable profile limiting", "Limit", 0), \
             TRIGGER("reset", "Reset match curves", "Reset"), \
             TRIGGER("match", "Perform immediate match", "Match"), \
@@ -170,7 +173,7 @@ namespace lsp
             SWITCH("psfe" id, "Draw static input profile", "Stat prof" alias, 0), \
             SWITCH("pcfe" id, "Draw capture profile", "Capt prof" alias, 0), \
             SWITCH("pffe" id, "Draw file profile", "File prof" alias, 0), \
-            SWITCH("pefe" id, "Draw equalizer profile", "Eq prof" alias, 0), \
+            SWITCH("pefe" id, "Draw envelope profile", "Env prof" alias, 0), \
             SWITCH("pife" id, "Draw dynamic input profile", "In prof" alias, 0), \
             SWITCH("prfe" id, "Draw dynamic reference profile", "Ref prof" alias, 0), \
             SWITCH("pmfe" id, "Draw resulting match profile", "Match prof" alias, 1), \
