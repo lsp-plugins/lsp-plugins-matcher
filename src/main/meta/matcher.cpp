@@ -167,7 +167,6 @@ namespace lsp
             SWITCH("ofe" id, "Output FFT enabled", "FFT Out" alias, 1), \
             SWITCH("cfe" id, "Capture FFT enabled", "FFT Cap" alias, 1), \
             SWITCH("rfe" id, "Reference FFT enabled", "FFT Ref" alias, 1), \
-            SWITCH("rfe" id, "Reference FFT enabled", "FFT Ref" alias, 1), \
             SWITCH("psfe" id, "Draw static input profile", "Stat prof" alias, 0), \
             SWITCH("pcfe" id, "Draw capture profile", "Capt prof" alias, 0), \
             SWITCH("pffe" id, "Draw file profile", "File prof" alias, 0), \
