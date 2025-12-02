@@ -85,6 +85,26 @@ namespace lsp
             static constexpr float          SAMPLE_PITCH_DFL            = 0.0f;         // Pitch (st)
             static constexpr float          SAMPLE_PITCH_STEP           = 0.01f;        // Pitch step (st)
 
+            static constexpr float          LPF_FREQ_MIN                = 1000.0f;
+            static constexpr float          LPF_FREQ_MAX                = 24000.0f;
+            static constexpr float          LPF_FREQ_DFL                = 20000.0f;
+            static constexpr float          LPF_FREQ_STEP               = 0.001f;
+
+            static constexpr float          HPF_FREQ_MIN                = 10.0f;
+            static constexpr float          HPF_FREQ_MAX                = 500.0f;
+            static constexpr float          HPF_FREQ_DFL                = 30.0f;
+            static constexpr float          HPF_FREQ_STEP               = 0.001f;
+
+            static constexpr float          CLIP_FREQ_MIN               = 4000.0f;
+            static constexpr float          CLIP_FREQ_MAX               = 24000.0f;
+            static constexpr float          CLIP_FREQ_DFL               = 24000.0f;
+            static constexpr float          CLIP_FREQ_STEP              = 0.001f;
+
+            static constexpr float          FLT_SLOPE_MIN               = 6.0f;
+            static constexpr float          FLT_SLOPE_MAX               = 240.0f;
+            static constexpr float          FLT_SLOPE_DFL               = 36.0f;
+            static constexpr float          FLT_SLOPE_STEP              = 0.05f;
+
             static const float              eq_frequencies[];
         } matcher;
 

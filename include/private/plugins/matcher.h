@@ -176,6 +176,7 @@ namespace lsp
                     dspu::Bypass            sBypass;            // Bypass
                     dspu::SamplePlayer      sPlayer;            // Sample player
                     dspu::Playback          sPlayback;          // Sample playback
+                    dspu::Delay             sDryDelay;          // Delay for dry (unprocessed) signal
 
                     float                  *vIn;                // Input buffer
                     float                  *vOut;               // Output buffer
@@ -260,12 +261,18 @@ namespace lsp
                 float               fRefTau;            // Reference profile reactivity
                 float               fStereoLink;        // Stereo linking
                 float               fBlend;             // Blend signal
+                float               fHpfFreq;           // HPF frequency
+                float               fHpfSlope;          // HPF slope
+                float               fLpfFreq;           // LPF frequency
+                float               fLpfSlope;          // LPF slope
+                float               fClipFreq;          // Brickwall clipping frequency
                 uint32_t            nFileProcessReq;    // File processing request
                 uint32_t            nFileProcessResp;   // File processing response
                 bool                bSidechain;         // Sidechain flag
                 bool                bProfile;           // Profile capturing is enabled
                 bool                bCapture;           // Capture side signal
                 bool                bSyncRefFFT;        // Synchronize reference FFT
+                bool                bSyncFilter;        // Synchronize filter profile
                 bool                bUpdateMatch;       // Update matching profile
                 bool                bMatchLimit;        // Match curve limiting enabled
 
@@ -279,11 +286,14 @@ namespace lsp
                 dspu::Sample       *pGCList;            // Garbage collection list
                 profile_data_t     *pReactivity;        // Reactivity profile
                 profile_data_t     *pTempProfile;       // Temporary profile
+                profile_data_t     *pFilterProfile;     // Filter profile
+                profile_data_t     *pMatchProfile;      // Actual matching profile
                 profile_data_t     *vProfileData[PROF_TOTAL];               // Profile data
                 lltl::state<profile_data_t> vProfileState[SPROF_TOTAL];     // Record of the input profile
 
                 uint16_t           *vIndices;           // FFT indices
                 float              *vFreqs;             // FFT frequencies
+                float              *vFilterCurve;       // Filter curve
                 float              *vEnvelope;          // FFT envelope
                 float              *vRevEnvelope;       // FFT reverse envelope
                 float              *vBuffer;            // Temporary buffer
@@ -304,6 +314,15 @@ namespace lsp
                 plug::IPort        *pProfile;           // Start profiling
                 plug::IPort        *pCapture;           // Enable capturing
                 plug::IPort        *pListen;            // Listen capture
+                plug::IPort        *pHpfOn;             // High-pass filter on
+                plug::IPort        *pHpfFreq;           // High-pass filter frequency
+                plug::IPort        *pHpfSlope;          // High-pass filter slope
+                plug::IPort        *pLpfOn;             // Low-pass filter on
+                plug::IPort        *pLpfFreq;           // Low-pass filter frequency
+                plug::IPort        *pLpfSlope;          // Low-pass filter slope
+                plug::IPort        *pClipOn;            // Brickwall clipping enabled
+                plug::IPort        *pClipFreq;          // Brickwall clipping frequency
+                plug::IPort        *pFilterMesh;        // Filter mesh
                 plug::IPort        *pStereoLink;        // Stereo link
 
                 plug::IPort        *pMatchLimit;        // Enable frequency limiting
@@ -328,8 +347,8 @@ namespace lsp
 
             protected:
                 void                do_destroy();
-                profile_data_t     *allocate_profile_data();
-                profile_data_t     *create_default_profile();
+                profile_data_t     *allocate_profile_data(size_t channels = 0);
+                profile_data_t     *create_default_profile(size_t channels = 0);
                 void                init_buffers();
                 void                bind_buffers(size_t samples);
                 void                advance_buffers(size_t samples);
@@ -337,6 +356,7 @@ namespace lsp
                 void                output_fft_mesh_data();
                 void                output_profile_mesh_data();
                 void                output_file_mesh_data();
+                void                output_filter_mesh_data();
                 void                process_block(float * const * spectrum, size_t rank);
                 void                analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft);
                 uint32_t            decode_reference_source(size_t ref) const;
@@ -355,6 +375,7 @@ namespace lsp
                 void                perform_gc();
                 void                update_profiles();
                 void                build_eq_profile(profile_data_t *profile, eq_param_t param, bool envelope);
+                void                build_filter_profile();
                 void                smooth_eq_curve(float *dst, float x1, float y1, float x2, float y2, size_t count);
                 void                sync_profile(profile_data_t *dst, profile_data_t *src);
                 inline void         sync_profile_with_state(profile_data_t *profile);

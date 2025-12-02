@@ -51,7 +51,7 @@
 				<axis min="0" max=":_a_scaled_height" visibility="false" angle="0.5"/>
 				<axis min="0" max="1" visibility="false" angle="0.5"/>
 				
-				<ui:set id="hide_cond" value="(:showfil or :showenv or :showlim)" />
+				<ui:set id="hide_cond" value="(:showfil or :showenv or :showlim or :showflt)" />
 				<ui:set id="hide_cond_soft" value="(:showfil or :showenv)" />
 				<!-- Meshes -->
 				<ui:if test="!ex :out_r">
@@ -121,6 +121,8 @@
 					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" visibility=":pmfe_l and not ${hide_cond_soft}" />
 					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" visibility=":pmfe_r and not ${hide_cond_soft}" />
 				</ui:if>
+				
+				<mesh id="fltmesh" width="3" color="bright_cyan" smooth="true" visibility=":showflt" />
 				
 				<!-- Text -->
 				<ui:with ox="0" oy="2" y="0" halign="1" valign="1" pgroup="0" priority="0">
@@ -337,6 +339,10 @@
 			
 			<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" />
 			<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" />
+			
+			<vsep />
+			
+			<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters" />
 		</hbox>
 	</grid>
 	
@@ -423,6 +429,40 @@
 				<ui:for id="i" first="1" count="10">
 					<value id="spd_${i}" />
 				</ui:for>
+			</grid>
+		</group>
+	</overlay>
+	
+	<!-- Filters -->
+	<overlay id="showflt" trigger="profile_filters_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
+		<group text="groups.filters">
+			<grid rows="4" cols="5" heifht.min="96">
+				<cell cols="2">
+					<button id="hpf_on" text="labels.flt.hpf" />
+				</cell>
+				<cell cols="2">
+					<button id="lpf_on" text="labels.flt.lpf" />
+				</cell>
+				<cell rows="2">
+					<button id="clip_on" text="labels.signal.clip" />
+				</cell>
+
+				<label text="labels.frequency" />
+				<label text="labels.slope" />
+				<label text="labels.frequency" />
+				<label text="labels.slope" />
+				
+				<knob id="hpf_f" />
+				<knob id="hpf_s" />
+				<knob id="lpf_f" />
+				<knob id="lpf_s" />
+				<knob id="clip_f" />
+
+				<value id="hpf_f" />
+				<value id="hpf_s" />
+				<value id="lpf_f" />
+				<value id="lpf_s" />
+				<value id="clip_f" />
 			</grid>
 		</group>
 	</overlay>

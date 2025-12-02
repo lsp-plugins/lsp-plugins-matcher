@@ -23,6 +23,7 @@
 #include <lsp-plug.in/common/debug.h>
 #include <lsp-plug.in/dsp/dsp.h>
 #include <lsp-plug.in/dsp-units/misc/envelope.h>
+#include <lsp-plug.in/dsp-units/misc/fft_crossover.h>
 #include <lsp-plug.in/dsp-units/units.h>
 #include <lsp-plug.in/plug-fw/core/AudioBuffer.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
@@ -148,15 +149,18 @@ namespace lsp
 
             // Initialize other parameters
             vChannels       = NULL;
+            vIndices        = NULL;
             vFreqs          = NULL;
+            vFilterCurve    = NULL;
             vEnvelope       = NULL;
             vRevEnvelope    = NULL;
+            vBuffer         = NULL;
             pExecutor       = NULL;
             pGCList         = NULL;
             pReactivity     = NULL;
             pTempProfile    = NULL;
-            vIndices        = NULL;
-            vBuffer         = NULL;
+            pFilterProfile  = NULL;
+            pMatchProfile   = NULL;
 
             nInSource       = IN_STATIC;
             nRefSource      = REF_CAPTURE;
@@ -169,6 +173,11 @@ namespace lsp
             fInTau          = 1.0f;
             fRefTau         = 1.0f;
             fBlend          = 0.0f;
+            fHpfFreq        = 0.0f;
+            fHpfSlope       = 0.0f;
+            fLpfFreq        = 0.0f;
+            fLpfSlope       = 0.0f;
+            fClipFreq       = -0.0f;
             fStereoLink     = 0.0f;
 
             nFileProcessReq = 0;
@@ -177,6 +186,7 @@ namespace lsp
             bProfile        = false;
             bCapture        = false;
             bSyncRefFFT     = true;
+            bSyncFilter     = true;
             bUpdateMatch    = true;
             bMatchLimit     = false;
 
@@ -209,6 +219,15 @@ namespace lsp
             pProfile        = NULL;
             pCapture        = NULL;
             pListen         = NULL;
+            pHpfOn          = NULL;
+            pHpfFreq        = NULL;
+            pHpfSlope       = NULL;
+            pLpfOn          = NULL;
+            pLpfFreq        = NULL;
+            pLpfSlope       = NULL;
+            pClipOn         = NULL;
+            pClipFreq       = NULL;
+            pFilterMesh     = NULL;
             pStereoLink     = NULL;
 
             pMatchLimit     = NULL;
@@ -250,6 +269,7 @@ namespace lsp
             const size_t alloc          =
                 szof_channels +     // vChannels
                 szof_freqs +        // vFreqs
+                szof_freqs +        // vFilterCurve
                 szof_fft_buf +      // vEnvelope
                 szof_fft_buf +      // vRevEnvelope
                 szof_idx +          // vIndices
@@ -269,6 +289,7 @@ namespace lsp
             // Initialize pointers to channels and temporary buffer
             vChannels               = advance_ptr_bytes<channel_t>(ptr, szof_channels);
             vFreqs                  = advance_ptr_bytes<float>(ptr, szof_freqs);
+            vFilterCurve            = advance_ptr_bytes<float>(ptr, szof_freqs);
             vEnvelope               = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vRevEnvelope            = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vIndices                = advance_ptr_bytes<uint16_t>(ptr, szof_idx);
@@ -282,8 +303,12 @@ namespace lsp
                 c->sBypass.construct();
                 c->sPlayer.construct();
                 c->sPlayback.construct();
+                c->sDryDelay.construct();
 
                 if (!c->sPlayer.init(1, 32))
+                    return;
+
+                if (!c->sDryDelay.init(1 << meta::matcher::FFT_RANK_MAX))
                     return;
 
                 c->vIn                  = NULL;
@@ -388,6 +413,15 @@ namespace lsp
             BIND_PORT(pProfile);
             BIND_PORT(pCapture);
             BIND_PORT(pListen);
+            BIND_PORT(pHpfOn);
+            BIND_PORT(pHpfFreq);
+            BIND_PORT(pHpfSlope);
+            BIND_PORT(pLpfOn);
+            BIND_PORT(pLpfFreq);
+            BIND_PORT(pLpfSlope);
+            BIND_PORT(pClipOn);
+            BIND_PORT(pClipFreq);
+            BIND_PORT(pFilterMesh);
             if (nChannels > 1)
             {
                 BIND_PORT(pStereoLink);
@@ -411,10 +445,12 @@ namespace lsp
             lsp_trace("Binding match equalizer");
             SKIP_PORT("Show FFT");
             SKIP_PORT("Show profiles");
-            SKIP_PORT("Show equalizer");
+            SKIP_PORT("Show envelope");
             SKIP_PORT("Show limiting");
-            SKIP_PORT("Show reactivity");
+            SKIP_PORT("Show profile morphing");
+            SKIP_PORT("Show filters");
             SKIP_PORT("Show selected profiles");
+
             BIND_PORT(pMatchLimit);
             BIND_PORT(pMatchReset);
             BIND_PORT(pMatchImmediate);
@@ -461,7 +497,15 @@ namespace lsp
                 return;
 
             pTempProfile        = create_default_profile();
-            if (pReactivity == NULL)
+            if (pTempProfile == NULL)
+                return;
+
+            pFilterProfile      = create_default_profile(1);
+            if (pFilterProfile == NULL)
+                return;
+
+            pMatchProfile       = create_default_profile();
+            if (pMatchProfile == NULL)
                 return;
 
             for (size_t i=0; i<PROF_TOTAL; ++i)
@@ -481,6 +525,8 @@ namespace lsp
                 vProfileState[i].set_deleter(free_profile_data);
                 vProfileState[i].push(prof);
             }
+
+            dsp::fill(vFilterCurve, GAIN_AMP_0_DB, meta::matcher::FFT_MESH_SIZE);
         }
 
         void matcher::destroy()
@@ -498,6 +544,8 @@ namespace lsp
                 {
                     channel_t *c    = &vChannels[i];
                     c->sBypass.destroy();
+                    c->sDryDelay.destroy();
+                    c->sPlayback.destroy();
 
                     dspu::Sample *gc_list = c->sPlayer.destroy(false);
                     destroy_samples(gc_list);
@@ -519,6 +567,16 @@ namespace lsp
             {
                 free_profile_data(pTempProfile);
                 pTempProfile = NULL;
+            }
+            if (pFilterProfile != NULL)
+            {
+                free_profile_data(pFilterProfile);
+                pFilterProfile = NULL;
+            }
+            if (pMatchProfile != NULL)
+            {
+                free_profile_data(pMatchProfile);
+                pMatchProfile = NULL;
             }
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
@@ -663,6 +721,7 @@ namespace lsp
             nInSource               = pInSource->value();
             fBlend                  = pBlend->value() * 0.01f;
             fStereoLink             = (pStereoLink != NULL) ? pStereoLink->value() * 0.01f : 0.0f;
+            bUpdateMatch            = rebuild_eq_profiles;
 
             if ((old_ref_source != nRefSource) || (old_cap_source != nCapSource) || (old_in_source != nInSource))
             {
@@ -687,6 +746,31 @@ namespace lsp
             {
                 channel_t *c            = &vChannels[i];
                 c->sBypass.set_bypass(bypass);
+            }
+
+            // Apply filter
+            const float old_hpf_freq    = fHpfFreq;
+            const float old_hpf_slope   = fHpfSlope;
+            const float old_lpf_freq    = fLpfFreq;
+            const float old_lpf_slope   = fLpfSlope;
+            const float old_clip_freq   = fClipFreq;
+            fHpfFreq                    = pHpfFreq->value();
+            fHpfSlope                   = (pHpfOn->value() >= 0.5f) ? -pHpfSlope->value() : 0.0f;
+            fLpfFreq                    = pLpfFreq->value();
+            fLpfSlope                   = (pLpfOn->value() >= 0.5f) ? -pLpfSlope->value() : 0.0f;
+            fClipFreq                   = (pClipOn->value() >= 0.5f) ? pClipFreq->value() : -1.0f;
+
+            if ((old_hpf_freq != fHpfFreq) ||
+                (old_hpf_slope != fHpfSlope) ||
+                (old_lpf_freq != fLpfFreq) ||
+                (old_lpf_slope != fLpfSlope) ||
+                (old_clip_freq != fClipFreq) ||
+                (rebuild_eq_profiles))
+            {
+                if (pFilterProfile != NULL)
+                    pFilterProfile->nFlags      |= PFLAGS_CHANGED;
+
+                bUpdateMatch            = true;
             }
 
             // Apply FFT rank
@@ -811,6 +895,12 @@ namespace lsp
                 af->sListen.submit(af->pListen->value());
             if (af->pStop != NULL)
                 af->sStop.submit(af->pStop->value());
+
+            // Set latency
+            const size_t latency    = sProcessor.latency();
+            set_latency(latency);
+            for (size_t i=0; i<nChannels; ++i)
+                vChannels[i].sDryDelay.set_delay(latency);
         }
 
         void matcher::clear_profile_data(profile_data_t *profile)
@@ -926,9 +1016,10 @@ namespace lsp
             ++profile->nFrames;
         }
 
-        matcher::profile_data_t *matcher::allocate_profile_data()
+        matcher::profile_data_t *matcher::allocate_profile_data(size_t channels)
         {
-            const size_t channels       = nChannels;
+            if (channels == 0)
+                channels                    = nChannels;
             const size_t fft_citems     = (1 << (meta::matcher::FFT_RANK_MAX - 1)) + 1;
             const size_t table_size     = sizeof(float *) * channels;
             const size_t szof_data_hdr  = align_size(sizeof(profile_data_t), DEFAULT_ALIGN);
@@ -965,9 +1056,9 @@ namespace lsp
             return profile;
         }
 
-        matcher::profile_data_t *matcher::create_default_profile()
+        matcher::profile_data_t *matcher::create_default_profile(size_t channels)
         {
-            profile_data_t *res = allocate_profile_data();
+            profile_data_t *res = allocate_profile_data(channels);
             if (res == NULL)
                 return res;
 
@@ -1133,9 +1224,11 @@ namespace lsp
 
         void matcher::build_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic)
         {
-            profile_data_t *profile = vProfileData[PROF_MATCH];
+            profile_data_t * const profile = vProfileData[PROF_MATCH];
             if (profile == NULL)
                 return;
+
+            profile_data_t * const match    = pMatchProfile;
 
             // Check that input and reference profiles are present
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
@@ -1154,7 +1247,7 @@ namespace lsp
             profile_data_t * src        = ref;
             if (fBlend > 0.0f)
             {
-                const float norm = ref->fRMS / in->fRMS;
+                const float norm    = ref->fRMS / in->fRMS;
                 src                 = pTempProfile;
                 if (src == NULL)
                 {
@@ -1165,14 +1258,18 @@ namespace lsp
                 // Compute blending profile
                 for (size_t i=0; i<nChannels; ++i)
                 {
-                    dsp::mul_k3(src->vData[i], in->vData[i], norm, fft_csize); // Normalize input profile to match RMS of reference
-                    dsp::mix2(src->vData[i], ref->vData[i], fBlend, 1.0f - fBlend, fft_csize); // Blend with reference
+                    dsp::mix_copy2(
+                        src->vData[i],
+                        in->vData[i], ref->vData[i],
+                        fBlend * norm, 1.0f - fBlend,
+                        fft_csize); // Blend with reference
                 }
 
                 // Replace reference with blending profile
                 src->fRMS           = ref->fRMS;
             }
 
+            bool sync = false;
             if ((in->nFlags | src->nFlags) & PFLAGS_DYNAMIC)
             {
                 // Check that temporary profile is present
@@ -1194,8 +1291,9 @@ namespace lsp
                     dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
 
                     // Apply reactivity to the changes
-                    dsp::pmix_v1(profile->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                    dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
                 }
+                sync = true;
             }
             else if (((in->nFlags | src->nFlags | profile->nFlags) & PFLAGS_CHANGED) || (bUpdateMatch))
             {
@@ -1204,36 +1302,53 @@ namespace lsp
                 // Compute new static profile value
                 for (size_t i=0; i<nChannels; ++i)
                 {
-                    dsp::clamp_kk2(profile->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::fmdiv_k3(profile->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                    dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                 }
+                sync = true;
             }
 
-            // Apply stereo linking
-            if ((nChannels > 1) && (fStereoLink > 0.0f))
+            // Synchronize state of computed profile with filters
+            if (sync)
             {
-                dsp::lr_to_mid(vBuffer, profile->vData[0], profile->vData[1], fft_csize);
-                dsp::pmix_k1(profile->vData[0], vBuffer, fStereoLink, fft_csize);
-                dsp::pmix_k1(profile->vData[1], vBuffer, fStereoLink, fft_csize);
-            }
-
-            // Apply limitations if present
-            if (bMatchLimit)
-            {
-                profile_data_t * const min = vProfileData[PROF_MIN_EQUALIZER];
-                profile_data_t * const max = vProfileData[PROF_MAX_EQUALIZER];
+                // Copy profile data
                 for (size_t i=0; i<nChannels; ++i)
+                    dsp::copy(profile->vData[i], match->vData[i], fft_csize);
+
+                // Apply stereo linking
+                if ((nChannels > 1) && (fStereoLink > 0.0f))
                 {
-                    if (min != NULL)
+                    dsp::lr_to_mid(vBuffer, profile->vData[0], profile->vData[1], fft_csize);
+                    dsp::pmix_k1(profile->vData[0], vBuffer, fStereoLink, fft_csize);
+                    dsp::pmix_k1(profile->vData[1], vBuffer, fStereoLink, fft_csize);
+                }
+
+                // Apply limitations if present
+                if (bMatchLimit)
+                {
+                    profile_data_t * const min = vProfileData[PROF_MIN_EQUALIZER];
+                    profile_data_t * const max = vProfileData[PROF_MAX_EQUALIZER];
+                    for (size_t i=0; i<nChannels; ++i)
                     {
-                        if (max != NULL)
-                            dsp::clamp_vv1(profile->vData[i], min->vData[i], max->vData[i], fft_csize);
-                        else
-                            dsp::pmax2(profile->vData[i], min->vData[i], fft_csize);
+                        if (min != NULL)
+                        {
+                            if (max != NULL)
+                                dsp::clamp_vv1(profile->vData[i], min->vData[i], max->vData[i], fft_csize);
+                            else
+                                dsp::pmax2(profile->vData[i], min->vData[i], fft_csize);
+                        }
+                        else if (max != NULL)
+                            dsp::pmin2(profile->vData[i], max->vData[i], fft_csize);
                     }
-                    else if (max != NULL)
-                        dsp::pmin2(profile->vData[i], max->vData[i], fft_csize);
+                }
+
+                // Apply filters
+                if (pFilterProfile->nFlags & PFLAGS_READY)
+                {
+                    profile_data_t * const flt  = pFilterProfile;
+                    for (size_t i=0; i<nChannels; ++i)
+                        dsp::mul2(profile->vData[i], flt->vData[0], fft_csize);
                 }
             }
 
@@ -1306,6 +1421,9 @@ namespace lsp
                 default:
                     break;
             }
+
+            // Build filter profile if needed
+            build_filter_profile();
 
             // Record input profile if enabled
             if (bProfile)
@@ -1505,6 +1623,65 @@ namespace lsp
                 profile->fRMS           = GAIN_AMP_M_INF_DB;
         }
 
+        void matcher::build_filter_profile()
+        {
+            profile_data_t * const profile = pFilterProfile;
+            if (profile == NULL)
+                return;
+            if (!(profile->nFlags & PFLAGS_CHANGED))
+                return;
+
+            // Build the filter profile
+            const float half_sr     = fSampleRate * 0.5f;
+            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+            dsp::lramp_set1(vBuffer, 0.0f, half_sr, fft_csize - 1);
+            vBuffer[fft_csize - 1]  = half_sr;
+
+            profile->nFlags        &= ~(PFLAGS_CHANGED | PFLAGS_READY);
+
+            if (fHpfSlope < 0.0f)
+            {
+                dspu::crossover::hipass_set(profile->vData[0], vBuffer, fHpfFreq, fHpfSlope, fft_csize);
+                dspu::crossover::hipass_set(vFilterCurve, vFreqs, fHpfFreq, fHpfSlope, meta::matcher::FFT_MESH_SIZE);
+
+                if (fLpfSlope < 0.0f)
+                {
+                    dspu::crossover::lopass_apply(profile->vData[0], vBuffer, fLpfFreq, fLpfSlope, fft_csize);
+                    dspu::crossover::lopass_apply(vFilterCurve, vFreqs, fLpfFreq, fLpfSlope, meta::matcher::FFT_MESH_SIZE);
+                }
+
+                profile->nFlags        |= PFLAGS_READY;
+            }
+            else if (fLpfSlope < 0.0f)
+            {
+                dspu::crossover::lopass_set(profile->vData[0], vBuffer, fLpfFreq, fLpfSlope, fft_csize);
+                dspu::crossover::lopass_set(vFilterCurve, vFreqs, fLpfFreq, fLpfSlope, meta::matcher::FFT_MESH_SIZE);
+
+                profile->nFlags        |= PFLAGS_READY;
+            }
+            else
+            {
+                dsp::fill(profile->vData[0], GAIN_AMP_0_DB, fft_csize);
+                dsp::fill(vFilterCurve, GAIN_AMP_0_DB, meta::matcher::FFT_MESH_SIZE);
+            }
+
+            if (fClipFreq > 0.0f)
+            {
+                const float norm        = logf(SPEC_FREQ_MAX/SPEC_FREQ_MIN) / (meta::matcher::FFT_MESH_SIZE - 1);
+                const size_t mesh_i     = truncf(logf(fClipFreq/SPEC_FREQ_MIN) / norm);
+                if (mesh_i < meta::matcher::FFT_MESH_SIZE)
+                    dsp::fill(&vFilterCurve[mesh_i], GAIN_AMP_M_INF_DB, meta::matcher::FFT_MESH_SIZE - mesh_i);
+
+                const size_t fft_i      = truncf((fClipFreq / fSampleRate) * float(1 << nRank));
+                if (fft_i < fft_csize)
+                    dsp::fill(&profile->vData[0][fft_i], GAIN_AMP_M_INF_DB, fft_csize - fft_i);
+
+                profile->nFlags        |= PFLAGS_READY;
+            }
+
+            bSyncFilter             = true;
+        }
+
         inline void matcher::sync_profile_with_state(profile_data_t * profile)
         {
             if (profile == NULL)
@@ -1545,7 +1722,8 @@ namespace lsp
                 {
                     channel_t *c        = &vChannels[i];
                     c->sPlayer.process(c->vBuffer, c->vBuffer, to_do);
-                    c->sBypass.process(c->vOut, c->vIn, c->vBuffer, to_do);
+                    c->sDryDelay.process(vBuffer, c->vIn, to_do);
+                    c->sBypass.process(c->vOut, vBuffer, c->vBuffer, to_do);
                 }
 
                 // Update position
@@ -1557,6 +1735,7 @@ namespace lsp
             output_fft_mesh_data();
             output_profile_mesh_data();
             output_file_mesh_data();
+            output_filter_mesh_data();
         }
 
         bool matcher::check_need_profile_sync()
@@ -1705,6 +1884,40 @@ namespace lsp
             mesh->data(index, meta::matcher::FFT_MESH_SIZE + 4);
         }
 
+        void matcher::output_filter_mesh_data()
+        {
+            if (!bSyncFilter)
+                return;
+
+            plug::mesh_t * mesh = (pFilterMesh != NULL) ? pFilterMesh->buffer<plug::mesh_t>() : NULL;
+            if ((mesh == NULL) || (!mesh->isEmpty()))
+                return;
+
+            size_t index        = 0;
+
+            // Frequencies
+            float *ptr          = mesh->pvData[index++];
+            ptr[0]              = SPEC_FREQ_MIN * 0.5f;
+            ptr[1]              = ptr[0];
+            dsp::copy(&ptr[2], vFreqs, meta::matcher::FFT_MESH_SIZE);
+            ptr                += meta::matcher::FFT_MESH_SIZE + 2;
+            ptr[0]              = SPEC_FREQ_MAX * 2.0f;
+            ptr[1]              = ptr[0];
+
+            // Mesh data
+            ptr                 = mesh->pvData[index++];
+            dsp::copy(&ptr[2], vFilterCurve, meta::matcher::FFT_MESH_SIZE);
+            ptr[0]              = 0.0f;
+            ptr[1]              = ptr[2];
+            ptr                += meta::matcher::FFT_MESH_SIZE + 2;
+            ptr[0]              = ptr[-1];
+            ptr[1]              = 0.0f;
+
+            // Report mesh size
+            mesh->data(index, meta::matcher::FFT_MESH_SIZE + 4);
+            bSyncFilter         = false;
+        }
+
         void matcher::ui_activated()
         {
             for (size_t i=0; i<PROF_TOTAL; ++i)
@@ -1717,6 +1930,7 @@ namespace lsp
             // Request for file processing (if file is present)
             ++nFileProcessReq;
             sFile.bSync     = true;
+            bSyncFilter     = true;
         }
 
         void matcher::destroy_samples(dspu::Sample *gc_list)

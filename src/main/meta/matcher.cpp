@@ -115,7 +115,16 @@ namespace lsp
             PERCENTS("blend", "Blend signal", "Blend signal", 0.0f, 0.05f), \
             SWITCH("profile", "Profile", "Profile", 0.0f), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
-            SWITCH("listen", "Listen capture", "Listen", 1.0f)
+            SWITCH("listen", "Listen capture", "Listen", 1.0f), \
+            SWITCH("hpf_on", "High-pass filter enable", "HPF On", 1.0f), \
+            LOG_CONTROL("hpf_f", "High-pass filter frequency", "HPF Freq", U_HZ, matcher::HPF_FREQ), \
+            CONTROL("hpf_s", "High-pass filter slope", "HPF Slope", U_DB, matcher::FLT_SLOPE), \
+            SWITCH("lpf_on", "Low-pass filter enable", "LPF On", 1.0f), \
+            LOG_CONTROL("lpf_f", "Low-pass filter frequency", "LPF Freq", U_HZ, matcher::LPF_FREQ), \
+            CONTROL("lpf_s", "Low-pass filter slope", "LPF Slope", U_DB, matcher::FLT_SLOPE), \
+            SWITCH("clip_on", "Enable brickwall clipping of high frequencies", "Clip On", 1.0f), \
+            LOG_CONTROL("clip_f", "Brickwall clipping frequency", "Clip Freq", U_HZ, matcher::CLIP_FREQ), \
+            MESH("fltmesh", "Filter mesh characteristics", 2, matcher::FFT_MESH_SIZE + 4)
 
         #define MATCHER_COMMON_STEREO \
             PERCENTS("slink", "Stereo link", "Stereo link", 0.0f, 0.05f)
@@ -132,6 +141,7 @@ namespace lsp
             SWITCH("showenv", "Show profile envelope", "Show env", 0), \
             SWITCH("showlim", "Show profile limiting", "Show limit", 0), \
             SWITCH("showmrp", "Show profile morphing", "Show morph", 0), \
+            SWITCH("showflt", "Show filters", "Show filters", 0), \
             SWITCH("track", "Enable tracking of dynamic profiles", "Track dynamic", 1), \
             SWITCH("limit", "Enable profile limiting", "Limit", 0), \
             TRIGGER("reset", "Reset match curves", "Reset"), \
@@ -146,7 +156,7 @@ namespace lsp
             MATCHER_EQ_BAND(8, "4.7 k"), \
             MATCHER_EQ_BAND(9, "9 k"), \
             MATCHER_EQ_BAND(10, "16 k"), \
-            MESH("pmesh", "Match profile mesh characteristics", 1 + 9 * channels, matcher::FFT_MESH_SIZE + 4)
+            MESH("pmesh", "Match profile mesh characteristics", 1 + 10 * channels, matcher::FFT_MESH_SIZE + 4)
 
         #define MATCHER_FILE_SOURCE(channels) \
             SWITCH("showfil", "Show file loading", "Show file", 0), \
