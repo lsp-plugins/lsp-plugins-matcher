@@ -293,8 +293,19 @@
 			<void hexpand="true" />
 			
 			<vsep />
+			<label text="labels.blend" />
+			<knob id="blend" />
+			<value id="blend" />
 			
-			<shmlink id="slink" pad.v="4" pad.l="2"/>
+			<ui:if test="ex :out_r">
+				<label text="labels.stereo_link" />
+				<knob id="slink" />
+				<value id="slink" />
+			</ui:if>
+			
+			<vsep />
+			
+			<shmlink id="link" pad.v="4" pad.l="2"/>
 		</hbox>
 		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
 			<label text="labels.signal.input" />

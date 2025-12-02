@@ -112,12 +112,13 @@ namespace lsp
             COMBO("in_src", "Input source", "Input src", 0, matcher_input_source), \
             COMBO("ref_src", "Reference source", "Reference src", 0, sources), \
             COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \
+            PERCENTS("blend", "Blend signal", "Blend signal", 0.0f, 0.05f), \
             SWITCH("profile", "Profile", "Profile", 0.0f), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
             SWITCH("listen", "Listen capture", "Listen", 1.0f)
 
         #define MATCHER_COMMON_STEREO \
-            PERCENTS("slink", "Stereo link", "Stereo link", 100.0f, 0.1f)
+            PERCENTS("slink", "Stereo link", "Stereo link", 0.0f, 0.05f)
 
         #define MATCHER_EQ_BAND(id, freq) \
             CONTROL("ref_" #id, "Reference level " freq "Hz", "Ref " freq "Hz", U_DB, matcher::BAND_REF_GAIN), \

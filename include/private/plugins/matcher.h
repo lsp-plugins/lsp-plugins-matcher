@@ -258,6 +258,8 @@ namespace lsp
                 float               fFftShift;          // FFT shift
                 float               fInTau;             // Input profile reactivity
                 float               fRefTau;            // Reference profile reactivity
+                float               fStereoLink;        // Stereo linking
+                float               fBlend;             // Blend signal
                 uint32_t            nFileProcessReq;    // File processing request
                 uint32_t            nFileProcessResp;   // File processing response
                 bool                bSidechain;         // Sidechain flag
@@ -298,6 +300,7 @@ namespace lsp
                 plug::IPort        *pInSource;          // Input source
                 plug::IPort        *pRefSource;         // Reference source
                 plug::IPort        *pCapSource;         // Capture source
+                plug::IPort        *pBlend;             // Blend signal
                 plug::IPort        *pProfile;           // Start profiling
                 plug::IPort        *pCapture;           // Enable capturing
                 plug::IPort        *pListen;            // Listen capture

@@ -168,6 +168,8 @@ namespace lsp
             fFftShift       = GAIN_AMP_0_DB;
             fInTau          = 1.0f;
             fRefTau         = 1.0f;
+            fBlend          = 0.0f;
+            fStereoLink     = 0.0f;
 
             nFileProcessReq = 0;
             nFileProcessResp= 0;
@@ -203,6 +205,7 @@ namespace lsp
             pInSource       = NULL;
             pRefSource      = NULL;
             pCapSource      = NULL;
+            pBlend          = NULL;
             pProfile        = NULL;
             pCapture        = NULL;
             pListen         = NULL;
@@ -381,6 +384,7 @@ namespace lsp
             BIND_PORT(pInSource);
             BIND_PORT(pRefSource);
             BIND_PORT(pCapSource);
+            BIND_PORT(pBlend);
             BIND_PORT(pProfile);
             BIND_PORT(pCapture);
             BIND_PORT(pListen);
@@ -650,11 +654,15 @@ namespace lsp
             const size_t old_cap_source = nCapSource;
             const bool old_match_lim    = bMatchLimit;
             const size_t old_in_source  = nInSource;
+            const float old_slink       = fStereoLink;
+            const float old_blend       = fBlend;
 
             nRefSource              = decode_reference_source(pRefSource->value());
             nCapSource              = decode_capture_source(pCapSource->value(), nRefSource);
             bMatchLimit             = pMatchLimit->value() >= 0.5f;
             nInSource               = pInSource->value();
+            fBlend                  = pBlend->value() * 0.01f;
+            fStereoLink             = (pStereoLink != NULL) ? pStereoLink->value() * 0.01f : 0.0f;
 
             if ((old_ref_source != nRefSource) || (old_cap_source != nCapSource) || (old_in_source != nInSource))
             {
@@ -665,7 +673,9 @@ namespace lsp
                 if (old_ref_source != nRefSource)
                     bSyncRefFFT             = true;
             }
-            if (bMatchLimit != old_match_lim)
+            if ((bMatchLimit != old_match_lim) ||
+                (fStereoLink != old_slink) ||
+                (fBlend != old_blend))
                 bUpdateMatch            = true;
 
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
@@ -1140,41 +1150,72 @@ namespace lsp
                 return;
             }
 
-            if ((in->nFlags | ref->nFlags) & PFLAGS_DYNAMIC)
+            // Check that we need to blend profile
+            profile_data_t * src        = ref;
+            if (fBlend > 0.0f)
+            {
+                const float norm = ref->fRMS / in->fRMS;
+                src                 = pTempProfile;
+                if (src == NULL)
+                {
+                    profile->nFlags    &= ~PFLAGS_READY;
+                    return;
+                }
+
+                // Compute blending profile
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    dsp::mul_k3(src->vData[i], in->vData[i], norm, fft_csize); // Normalize input profile to match RMS of reference
+                    dsp::mix2(src->vData[i], ref->vData[i], fBlend, 1.0f - fBlend, fft_csize); // Blend with reference
+                }
+
+                // Replace reference with blending profile
+                src->fRMS           = ref->fRMS;
+            }
+
+            if ((in->nFlags | src->nFlags) & PFLAGS_DYNAMIC)
             {
                 // Check that temporary profile is present
-                profile_data_t *tmp = pTempProfile;
+                profile_data_t * const tmp = pTempProfile;
                 if (tmp == NULL)
                 {
                     profile->nFlags    &= ~PFLAGS_READY;
                     return;
                 }
 
-                const float norm = ref->fRMS / in->fRMS;
+                const float norm = src->fRMS / in->fRMS;
 
                 // Dynamically changing profile
                 for (size_t i=0; i<nChannels; ++i)
                 {
                     // Compute new profile value
-                    dsp::clamp_kk2(tmp->vData[i], ref->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(tmp->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // ref / (in * norm)
+                    dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
 
                     // Apply reactivity to the changes
                     dsp::pmix_v1(profile->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
                 }
             }
-            else if (((in->nFlags | ref->nFlags | profile->nFlags) & PFLAGS_CHANGED) || (bUpdateMatch))
+            else if (((in->nFlags | src->nFlags | profile->nFlags) & PFLAGS_CHANGED) || (bUpdateMatch))
             {
-                const float norm = ref->fRMS / in->fRMS;
+                const float norm = src->fRMS / in->fRMS;
 
                 // Compute new static profile value
                 for (size_t i=0; i<nChannels; ++i)
                 {
-                    dsp::clamp_kk2(profile->vData[i], ref->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(profile->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::fmdiv_k3(profile->vData[i], vBuffer, norm, fft_csize); // ref / (in * norm)
+                    dsp::fmdiv_k3(profile->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                 }
+            }
+
+            // Apply stereo linking
+            if ((nChannels > 1) && (fStereoLink > 0.0f))
+            {
+                dsp::lr_to_mid(vBuffer, profile->vData[0], profile->vData[1], fft_csize);
+                dsp::pmix_k1(profile->vData[0], vBuffer, fStereoLink, fft_csize);
+                dsp::pmix_k1(profile->vData[1], vBuffer, fStereoLink, fft_csize);
             }
 
             // Apply limitations if present
@@ -1196,6 +1237,7 @@ namespace lsp
                 }
             }
 
+            // Update profile flags
             in->nFlags         &= ~PFLAGS_CHANGED;
             ref->nFlags        &= ~PFLAGS_CHANGED;
             profile->nFlags    &= ~(PFLAGS_CHANGED | PFLAGS_DIRTY);
