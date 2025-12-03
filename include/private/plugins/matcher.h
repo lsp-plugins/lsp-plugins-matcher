@@ -342,7 +342,6 @@ namespace lsp
                 static void         free_profile_data(profile_data_t *profile);
                 static void         destroy_sample(dspu::Sample * &s);
                 static void         destroy_samples(dspu::Sample *gc_list);
-                static void         resample_profile(profile_data_t *profile, size_t srate);
                 static bool         profile_is_relative(size_t profile);
 
             protected:
@@ -382,6 +381,8 @@ namespace lsp
                 void                post_process_profiles();
                 void                track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel);
                 void                build_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic);
+                bool                resample_profile(profile_data_t *profile, size_t srate, size_t rank);
+                void                commit_profiles();
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

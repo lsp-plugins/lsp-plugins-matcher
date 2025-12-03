@@ -607,8 +607,19 @@ namespace lsp
                 c->sBypass.init(sr);
             }
 
+            // Mark source profiles as being changed
+            for (size_t i=0; i<SPROF_TOTAL; ++i)
+            {
+                profile_data_t * const profile = vProfileState[i].get();
+                if (profile != NULL)
+                    profile->nFlags            |= PFLAGS_CHANGED;
+            }
+
             // Force frequency mapping to be updated
             nRank           = 0;
+            bUpdateMatch    = true;
+            bSyncFilter     = true;
+            bSyncRefFFT     = true;
         }
 
         void matcher::update_frequency_mapping()
@@ -777,9 +788,21 @@ namespace lsp
             sProcessor.set_rank(rank);
             if (rank != nRank)
             {
+                if (pFilterProfile != NULL)
+                    pFilterProfile->nFlags      |= PFLAGS_CHANGED;
+
                 nRank                   = rank;
+                bSyncRefFFT             = true;
                 rebuild_eq_profiles     = true;
                 update_frequency_mapping();
+
+                // Mark source profiles as being changed
+                for (size_t i=0; i<SPROF_TOTAL; ++i)
+                {
+                    profile_data_t * const profile = vProfileState[SPROF_STATIC].get();
+                    if (profile != NULL)
+                        profile->nFlags            |= PFLAGS_CHANGED;
+                }
             }
 
             // Trigger profile recordings
@@ -811,8 +834,13 @@ namespace lsp
                     if (c->bFft[j] != fft)
                     {
                         c->bFft[j]      = fft;
-                        if ((j == SM_REFERENCE) && ((nRefSource == REF_SIDECHAIN) || (nRefSource == REF_LINK)))
-                            dsp::fill_zero(c->vFft[j], fft_csize);
+                        if (j == SM_REFERENCE)
+                        {
+                            if ((nRefSource == REF_SIDECHAIN) || (nRefSource == REF_LINK))
+                                dsp::fill_zero(c->vFft[j], fft_csize);
+                            else
+                                bSyncRefFFT = true;
+                        }
                         else
                             dsp::fill_zero(c->vFft[j], fft_csize);
                     }
@@ -1128,6 +1156,7 @@ namespace lsp
             profile->nSampleRate    = fSampleRate;
             profile->nRank          = nRank;
             profile->nFrames        = lsp_min(frames + 1, size_t(0x100));
+            profile->nFlags        &= ~PFLAGS_DEFAULT;
             profile->nFlags        |= PFLAGS_DIRTY | PFLAGS_CHANGED | PFLAGS_SYNC;
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
@@ -1177,6 +1206,7 @@ namespace lsp
             profile->nRank          = nRank;
             if (profile->nFrames < ~uint32_t(0))
                 ++profile->nFrames;
+            profile->nFlags        &= ~PFLAGS_DEFAULT;
             profile->nFlags        |= PFLAGS_CHANGED | PFLAGS_SYNC | PFLAGS_DYNAMIC;
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
@@ -1243,9 +1273,12 @@ namespace lsp
                 return;
             }
 
+            const bool is_dynamic   = (in->nFlags | ref->nFlags) & PFLAGS_DYNAMIC;
+            const bool need_sync    = ((in->nFlags | ref->nFlags | profile->nFlags) & PFLAGS_CHANGED) || (bUpdateMatch);
+
             // Check that we need to blend profile
             profile_data_t * src        = ref;
-            if (fBlend > 0.0f)
+            if ((fBlend > 0.0f) && ((is_dynamic) || (need_sync)))
             {
                 const float norm    = ref->fRMS / in->fRMS;
                 src                 = pTempProfile;
@@ -1269,8 +1302,7 @@ namespace lsp
                 src->fRMS           = ref->fRMS;
             }
 
-            bool sync = false;
-            if ((in->nFlags | src->nFlags) & PFLAGS_DYNAMIC)
+            if (is_dynamic)
             {
                 // Check that temporary profile is present
                 profile_data_t * const tmp = pTempProfile;
@@ -1293,9 +1325,8 @@ namespace lsp
                     // Apply reactivity to the changes
                     dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
                 }
-                sync = true;
             }
-            else if (((in->nFlags | src->nFlags | profile->nFlags) & PFLAGS_CHANGED) || (bUpdateMatch))
+            else if (need_sync)
             {
                 const float norm = src->fRMS / in->fRMS;
 
@@ -1306,11 +1337,10 @@ namespace lsp
                     dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                 }
-                sync = true;
             }
 
             // Synchronize state of computed profile with filters
-            if (sync)
+            if ((is_dynamic) || (need_sync))
             {
                 // Copy profile data
                 for (size_t i=0; i<nChannels; ++i)
@@ -1355,7 +1385,13 @@ namespace lsp
             // Update profile flags
             in->nFlags         &= ~PFLAGS_CHANGED;
             ref->nFlags        &= ~PFLAGS_CHANGED;
-            profile->nFlags    &= ~(PFLAGS_CHANGED | PFLAGS_DIRTY);
+            match->nSampleRate  = fSampleRate;
+            match->nRank        = nRank;
+            match->nFlags      &= ~(PFLAGS_CHANGED | PFLAGS_DIRTY | PFLAGS_DEFAULT);
+            match->nFlags      |= PFLAGS_READY | PFLAGS_SYNC;
+            profile->nSampleRate= fSampleRate;
+            profile->nRank      = nRank;
+            profile->nFlags    &= ~(PFLAGS_CHANGED | PFLAGS_DIRTY | PFLAGS_DEFAULT);
             profile->nFlags    |= PFLAGS_READY | PFLAGS_SYNC;
             bUpdateMatch        = false;
         }
@@ -1488,7 +1524,7 @@ namespace lsp
             profile_data_t * const match = vProfileData[PROF_MATCH];
             if ((match != NULL) && (match->nFlags & PFLAGS_READY))
             {
-                const size_t fft_half = 1 << (nRank - 1);
+                const size_t fft_half = fft_csize - 1;
                 float * const tmp = vBuffer;
 
                 for (size_t i=0; i<nChannels; ++i)
@@ -1505,13 +1541,85 @@ namespace lsp
             // Analyze output signal
             for (size_t i=0; i<nChannels; ++i)
                 analyze_spectrum(&vChannels[i], SM_OUT, spectrum[i*PC_TOTAL + PC_INPUT]);
+
+            commit_profiles();
         }
 
-        void matcher::resample_profile(profile_data_t *profile, size_t srate)
+        bool matcher::resample_profile(profile_data_t *profile, size_t srate, size_t rank)
         {
-            // TODO
+            if ((profile->nSampleRate == srate) && (profile->nRank == rank))
+                return false;
+
+            if (profile->nFlags & PFLAGS_DEFAULT)
+            {
+                profile->nSampleRate    = srate;
+                profile->nRank          = rank;
+                return false;
+            }
+
+            lsp_trace("resample profile ptr=%p, srate = %d -> %d, rank %d -> %d",
+                profile, int(profile->nSampleRate), int(srate), int(profile->nRank), int(rank));
+
+            const float dsrate          = lsp_min(srate, profile->nSampleRate);
+            const size_t src_fft_csize  = (1 << (profile->nRank - 1)) + 1;
+            const size_t dst_fft_csize  = (1 << (rank - 1)) + 1;
+            const size_t src_bins       = (float(1 << profile->nRank) * dsrate) / float (profile->nSampleRate);
+            const size_t dst_bins       = (float(1 << rank) * dsrate) / float (srate);
+            const float rk              = float(src_bins) / float(dst_bins);
+
+            float * const tmp           = vBuffer;
+            if (rk < 1.0f)
+            {
+                // Stretch profile using simple linear interpolation
+                for (size_t i=0; i<profile->nChannels; ++i)
+                {
+                    float *src      = profile->vData[i];
+                    for (size_t j_dst=0; j_dst<dst_fft_csize; ++j_dst)
+                    {
+                        const float j_time      = j_dst * rk;
+                        const size_t j_src      = truncf(j_time);
+                        const float k_src       = j_time - j_src;
+
+                        const float s0          = (j_src < src_fft_csize) ? src[j_src] : 0.0f;
+                        const float s1          = ((j_src + 1) < src_fft_csize) ? src[j_src+1] : 0.0f;
+                        tmp[j_dst]              = s0 + (s1 - s0) * k_src;
+                    }
+
+                    dsp::copy(src, tmp, dst_fft_csize);
+                }
+            }
+            else if (rk > 1.0f)
+            {
+                // Collapse profile using averaging
+                for (size_t i=0; i<profile->nChannels; ++i)
+                {
+                    float *src      = profile->vData[i];
+                    for (size_t j_dst=0; j_dst<dst_fft_csize; ++j_dst)
+                    {
+                        const float j0_t        = j_dst * rk;
+                        const float j1_t        = j0_t + rk;
+                        size_t j0_src           = truncf(j0_t);
+                        size_t j1_src           = truncf(j1_t);
+
+                        float s                 = 0.0f;
+                        for (size_t t = j0_src; t < j1_src; ++t)
+                            s                      += (t < src_fft_csize) ? src[t] : 0.0f;
+                        tmp[j_dst]              = s / float(j1_src - j0_src);
+                    }
+
+                    dsp::copy(src, tmp, dst_fft_csize);
+                }
+            }
 
             profile->nSampleRate    = srate;
+            profile->nRank          = rank;
+            profile->fRMS           = 0.0f;
+
+            const float rms_norm        = 1.0f / float(dst_fft_csize);
+            for (size_t i=0; i<nChannels; ++i)
+                profile->fRMS              += sqrtf(dsp::h_sqr_sum(profile->vData[i], dst_fft_csize) * rms_norm);
+
+            return true;
         }
 
         bool matcher::profile_is_relative(size_t profile)
@@ -1537,17 +1645,24 @@ namespace lsp
             sync_profile(vProfileData[PROF_FILE], vProfileState[SPROF_FILE].get());
 
             // Check that profile needs to be resampled
+            bool resampled;
+            for (size_t i=0; i<PROF_TOTAL; ++i)
+            {
+                resampled = resample_profile(vProfileData[i], fSampleRate, nRank);
+                if (resampled)
+                    lsp_trace("profile id=%d was resampled", int(i));
+            }
+            resampled = resample_profile(pMatchProfile, fSampleRate, nRank);
+            if (resampled)
+                lsp_trace("match profile was resampled");
+        }
+
+        void matcher::commit_profiles()
+        {
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
                 profile_data_t * const profile = vProfileData[i];
-
-                if (profile->nFlags & PFLAGS_DEFAULT)
-                {
-                    profile->nSampleRate    = fSampleRate;
-                    profile->nRank          = nRank;
-                }
-                else if (profile->nSampleRate != fSampleRate)
-                    resample_profile(profile, fSampleRate);
+                profile->nFlags        &= ~PFLAGS_CHANGED;
             }
         }
 
