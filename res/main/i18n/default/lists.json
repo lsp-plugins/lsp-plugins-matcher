@@ -14,6 +14,7 @@
 			"envelope": "Envelope",
 			"file": "File",
 			"link": "Link",
+			"none": "None",
 			"sidechain": "Sidechain"
 		}
 	}

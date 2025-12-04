@@ -155,6 +155,7 @@ namespace lsp
             vEnvelope       = NULL;
             vRevEnvelope    = NULL;
             vBuffer         = NULL;
+            vEmptyBuf       = NULL;
             pExecutor       = NULL;
             pGCList         = NULL;
             pReactivity     = NULL;
@@ -164,6 +165,7 @@ namespace lsp
 
             nInSource       = IN_STATIC;
             nRefSource      = REF_CAPTURE;
+            nRawCapSource   = RAW_CAP_INPUT;
             nCapSource      = CAP_NONE;
             nRank           = 0;
             fGainIn         = GAIN_AMP_0_DB;
@@ -185,6 +187,7 @@ namespace lsp
 
             bProfile        = false;
             bCapture        = false;
+            bListen         = false;
             bSyncRefFFT     = true;
             bSyncFilter     = true;
             bUpdateMatch    = true;
@@ -207,9 +210,6 @@ namespace lsp
             pGainIn         = NULL;
             pGainOut        = NULL;
             pFftSize        = NULL;
-            pResetIn        = NULL;
-            pResetRef       = NULL;
-            pResetCap       = NULL;
             pInReactivity   = NULL;
             pRefReactivity  = NULL;
             pInSource       = NULL;
@@ -231,8 +231,6 @@ namespace lsp
             pStereoLink     = NULL;
 
             pMatchLimit     = NULL;
-            pMatchReset     = NULL;
-            pMatchImmediate = NULL;
             pMatchMesh      = NULL;
 
             pFftReact       = NULL;
@@ -274,6 +272,7 @@ namespace lsp
                 szof_fft_buf +      // vRevEnvelope
                 szof_idx +          // vIndices
                 szof_tmp_buf +      // vBuffer
+                szof_buf +          // vEmptyBuf
                 nChannels * szof_thumbs +   // af_descriptor::vThumbs
                 nChannels * (       // channel_t
                     szof_fft_buf * SM_TOTAL +   // vFft
@@ -294,6 +293,7 @@ namespace lsp
             vRevEnvelope            = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vIndices                = advance_ptr_bytes<uint16_t>(ptr, szof_idx);
             vBuffer                 = advance_ptr_bytes<float>(ptr, szof_tmp_buf);
+            vEmptyBuf               = advance_ptr_bytes<float>(ptr, szof_buf);
 
             for (size_t i=0; i < nChannels; ++i)
             {
@@ -304,11 +304,14 @@ namespace lsp
                 c->sPlayer.construct();
                 c->sPlayback.construct();
                 c->sDryDelay.construct();
+                c->sScDelay.construct();
 
                 if (!c->sPlayer.init(1, 32))
                     return;
 
                 if (!c->sDryDelay.init(1 << meta::matcher::FFT_RANK_MAX))
+                    return;
+                if (!c->sScDelay.init(1 << meta::matcher::FFT_RANK_MAX))
                     return;
 
                 c->vIn                  = NULL;
@@ -401,9 +404,6 @@ namespace lsp
             BIND_PORT(pGainIn);
             BIND_PORT(pGainOut);
             BIND_PORT(pFftSize);
-            BIND_PORT(pResetIn);
-            BIND_PORT(pResetRef);
-            BIND_PORT(pResetCap);
             BIND_PORT(pInReactivity);
             BIND_PORT(pRefReactivity);
             BIND_PORT(pInSource);
@@ -452,8 +452,6 @@ namespace lsp
             SKIP_PORT("Show selected profiles");
 
             BIND_PORT(pMatchLimit);
-            BIND_PORT(pMatchReset);
-            BIND_PORT(pMatchImmediate);
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
                 match_band_t *b     = &vMatchBands[i];
@@ -527,6 +525,7 @@ namespace lsp
             }
 
             dsp::fill(vFilterCurve, GAIN_AMP_0_DB, meta::matcher::FFT_MESH_SIZE);
+            dsp::fill_zero(vEmptyBuf, BUFFER_SIZE);
         }
 
         void matcher::destroy()
@@ -545,6 +544,7 @@ namespace lsp
                     channel_t *c    = &vChannels[i];
                     c->sBypass.destroy();
                     c->sDryDelay.destroy();
+                    c->sScDelay.destroy();
                     c->sPlayback.destroy();
 
                     dspu::Sample *gc_list = c->sPlayer.destroy(false);
@@ -657,11 +657,12 @@ namespace lsp
             {
                 switch (ref)
                 {
-                    case 0: return REF_CAPTURE;
-                    case 1: return REF_FILE;
-                    case 2: return REF_EQUALIZER;
-                    case 3: return REF_SIDECHAIN;
-                    case 4: return REF_LINK;
+                    case 0: return REF_NONE;
+                    case 1: return REF_CAPTURE;
+                    case 2: return REF_FILE;
+                    case 3: return REF_EQUALIZER;
+                    case 4: return REF_SIDECHAIN;
+                    case 5: return REF_LINK;
                     default: break;
                 }
             }
@@ -669,15 +670,16 @@ namespace lsp
             {
                 switch (ref)
                 {
-                    case 0: return REF_CAPTURE;
-                    case 1: return REF_FILE;
-                    case 2: return REF_EQUALIZER;
-                    case 3: return REF_LINK;
+                    case 0: return REF_NONE;
+                    case 1: return REF_CAPTURE;
+                    case 2: return REF_FILE;
+                    case 3: return REF_EQUALIZER;
+                    case 4: return REF_LINK;
                     default: break;
                 }
             }
 
-            return REF_CAPTURE;
+            return REF_NONE;
         }
 
         uint32_t matcher::decode_capture_source(size_t cap, size_t ref) const
@@ -727,7 +729,8 @@ namespace lsp
             const float old_blend       = fBlend;
 
             nRefSource              = decode_reference_source(pRefSource->value());
-            nCapSource              = decode_capture_source(pCapSource->value(), nRefSource);
+            nRawCapSource           = pCapSource->value();
+            nCapSource              = decode_capture_source(nRawCapSource, nRefSource);
             bMatchLimit             = pMatchLimit->value() >= 0.5f;
             nInSource               = pInSource->value();
             fBlend                  = pBlend->value() * 0.01f;
@@ -820,6 +823,7 @@ namespace lsp
                 if (capture_on)
                     clear_profile_data(vProfileState[SPROF_CAPTURE].get());
             }
+            bListen                 = pListen->value() >= 0.5f;
 
             // Update channel configuration
             for (size_t i=0; i<nChannels; ++i)
@@ -928,7 +932,11 @@ namespace lsp
             const size_t latency    = sProcessor.latency();
             set_latency(latency);
             for (size_t i=0; i<nChannels; ++i)
-                vChannels[i].sDryDelay.set_delay(latency);
+            {
+                channel_t * const c = &vChannels[i];
+                c->sDryDelay.set_delay(latency);
+                c->sScDelay.set_delay(latency);
+            }
         }
 
         void matcher::clear_profile_data(profile_data_t *profile)
@@ -987,6 +995,7 @@ namespace lsp
                         sProcessor.bind(base + PC_REFERENCE, NULL, c->vShmIn);
                         break;
 
+                    case REF_NONE:
                     case REF_CAPTURE:
                     case REF_FILE:
                     case REF_EQUALIZER:
@@ -1398,7 +1407,8 @@ namespace lsp
 
         void matcher::process_block(float * const * spectrum, size_t rank)
         {
-            const size_t fft_csize  = (1 << (nRank - 1)) + 1;
+            const size_t fft_half   = (1 << (nRank - 1));
+            const size_t fft_csize  = fft_half + 1;
 
             // Select capture signal channel mode
             ssize_t cap_channel = -1;
@@ -1497,8 +1507,11 @@ namespace lsp
             }
 
             // Compute the new profile state
+            profile_data_t * const match = vProfileData[PROF_MATCH];
             if ((ref_profile >= 0) && (in_profile >= 0))
                 build_match_profile(vProfileData[in_profile], vProfileData[ref_profile], match_dynamic);
+            else
+                match->nFlags &= ~PFLAGS_READY;
 
             // Analyze input signal
             for (size_t i=0; i<nChannels; ++i)
@@ -1521,10 +1534,9 @@ namespace lsp
             bSyncRefFFT     = false;
 
             // Apply profile
-            profile_data_t * const match = vProfileData[PROF_MATCH];
             if ((match != NULL) && (match->nFlags & PFLAGS_READY))
             {
-                const size_t fft_half = fft_csize - 1;
+
                 float * const tmp = vBuffer;
 
                 for (size_t i=0; i<nChannels; ++i)
@@ -1540,7 +1552,14 @@ namespace lsp
 
             // Analyze output signal
             for (size_t i=0; i<nChannels; ++i)
-                analyze_spectrum(&vChannels[i], SM_OUT, spectrum[i*PC_TOTAL + PC_INPUT]);
+            {
+                // Apply output gain
+                float * const fft = spectrum[i*PC_TOTAL + PC_INPUT];
+                if (fGainOut != GAIN_AMP_0_DB)
+                    dsp::mul_k2(fft, fGainOut, fft_half * 4); // Complex numbers
+
+                analyze_spectrum(&vChannels[i], SM_OUT, fft);
+            }
 
             commit_profiles();
         }
@@ -1816,6 +1835,35 @@ namespace lsp
             sync_profile_with_state(vProfileData[PROF_CAPTURE]);
         }
 
+        void matcher::process_listen_output(channel_t *c, size_t samples)
+        {
+            const float *cap_src = vEmptyBuf;
+            switch (nRawCapSource)
+            {
+                case RAW_CAP_INPUT:
+                    cap_src = c->vIn;
+                    break;
+                case RAW_CAP_SIDECHAIN:
+                    if (c->vSc != NULL)
+                        cap_src     = c->vSc;
+                    break;
+                case RAW_CAP_LINK:
+                    if (c->vShmIn != NULL)
+                        cap_src     = c->vShmIn;
+                    break;
+                default:
+                    cap_src = vEmptyBuf;
+                    break;
+            }
+
+            if (bListen)
+                c->sScDelay.process(c->vBuffer, cap_src, samples);
+            else
+                c->sScDelay.append(cap_src, samples);
+
+            c->sPlayer.process(c->vBuffer, c->vBuffer, samples);
+        }
+
         void matcher::process(size_t samples)
         {
             init_buffers();
@@ -1836,8 +1884,10 @@ namespace lsp
                 for (size_t i=0; i<nChannels; ++i)
                 {
                     channel_t *c        = &vChannels[i];
-                    c->sPlayer.process(c->vBuffer, c->vBuffer, to_do);
-                    c->sDryDelay.process(vBuffer, c->vIn, to_do);
+
+                    process_listen_output(c, to_do);
+
+                    c->sDryDelay.process(vBuffer, c->vIn, samples);
                     c->sBypass.process(c->vOut, vBuffer, c->vBuffer, to_do);
                 }
 

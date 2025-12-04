@@ -59,11 +59,19 @@ namespace lsp
 
                 enum ref_source_t
                 {
+                    REF_NONE,
                     REF_CAPTURE,
                     REF_FILE,
                     REF_EQUALIZER,
                     REF_SIDECHAIN,
                     REF_LINK
+                };
+
+                enum raw_cap_source_t
+                {
+                    RAW_CAP_INPUT,          // Take spectral data from input channel
+                    RAW_CAP_SIDECHAIN,      // Take spectral data from sidechain channel
+                    RAW_CAP_LINK            // Take spectral data from shared memory link
                 };
 
                 enum cap_source_t
@@ -177,6 +185,7 @@ namespace lsp
                     dspu::SamplePlayer      sPlayer;            // Sample player
                     dspu::Playback          sPlayback;          // Sample playback
                     dspu::Delay             sDryDelay;          // Delay for dry (unprocessed) signal
+                    dspu::Delay             sScDelay;           // Delay for sidechain signal
 
                     float                  *vIn;                // Input buffer
                     float                  *vOut;               // Output buffer
@@ -251,6 +260,7 @@ namespace lsp
                 channel_t          *vChannels;          // Delay channels
                 uint32_t            nInSource;          // Input source
                 uint32_t            nRefSource;         // Reference source
+                uint32_t            nRawCapSource;      // Raw capture source
                 uint32_t            nCapSource;         // Capture source
                 uint32_t            nRank;              // FFT rank
                 float               fGainIn;            // Input gain
@@ -271,6 +281,7 @@ namespace lsp
                 bool                bSidechain;         // Sidechain flag
                 bool                bProfile;           // Profile capturing is enabled
                 bool                bCapture;           // Capture side signal
+                bool                bListen;            // Listen signal
                 bool                bSyncRefFFT;        // Synchronize reference FFT
                 bool                bSyncFilter;        // Synchronize filter profile
                 bool                bUpdateMatch;       // Update matching profile
@@ -297,14 +308,12 @@ namespace lsp
                 float              *vEnvelope;          // FFT envelope
                 float              *vRevEnvelope;       // FFT reverse envelope
                 float              *vBuffer;            // Temporary buffer
+                float              *vEmptyBuf;          // Empty
 
                 plug::IPort        *pBypass;            // Bypass
                 plug::IPort        *pGainIn;            // Input gain
                 plug::IPort        *pGainOut;           // Output gain
                 plug::IPort        *pFftSize;           // FFT size
-                plug::IPort        *pResetIn;           // Reset input signal profile
-                plug::IPort        *pResetRef;          // Reset reference signal profile
-                plug::IPort        *pResetCap;          // Reset captured signal profile
                 plug::IPort        *pInReactivity;      // Input profile reactivity
                 plug::IPort        *pRefReactivity;     // Reference profile reactivity
                 plug::IPort        *pInSource;          // Input source
@@ -326,8 +335,6 @@ namespace lsp
                 plug::IPort        *pStereoLink;        // Stereo link
 
                 plug::IPort        *pMatchLimit;        // Enable frequency limiting
-                plug::IPort        *pMatchReset;        // Reset match curves
-                plug::IPort        *pMatchImmediate;    // Perform immediate match
                 plug::IPort        *pMatchMesh;         // Match mesh
 
                 plug::IPort        *pFftReact;          // FFT reactivity for analysis
@@ -383,6 +390,7 @@ namespace lsp
                 void                build_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic);
                 bool                resample_profile(profile_data_t *profile, size_t srate, size_t rank);
                 void                commit_profiles();
+                void                process_listen_output(channel_t *c, size_t samples);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

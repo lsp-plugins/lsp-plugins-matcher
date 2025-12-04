@@ -55,6 +55,7 @@ namespace lsp
 
         static const port_item_t matcher_references[] =
         {
+            { "None",               "matcher.ref.none"              },
             { "Capture",            "matcher.ref.capture"           },
             { "File",               "matcher.ref.file"              },
             { "Envelope",           "matcher.ref.envelope"          },
@@ -64,6 +65,7 @@ namespace lsp
 
         static const port_item_t sc_matcher_references[] =
         {
+            { "None",               "matcher.ref.none"               },
             { "Capture",            "matcher.ref.capture"           },
             { "File",               "matcher.ref.file"              },
             { "Envelope",           "matcher.ref.envelope"          },
@@ -104,18 +106,15 @@ namespace lsp
             IN_GAIN, \
             OUT_GAIN, \
             COMBO("fft_sz", "FFT size", "FFT size", matcher::FFT_RANK_IDX_DFL, matcher_fft_ranks), \
-            SWITCH("rst_in", "Reset input signal profile", "Reset In", 1.0f), \
-            SWITCH("rst_ref", "Reset reference signal profile", "Reset Ref", 1.0f), \
-            SWITCH("rst_cap", "Reset captured signal profile", "Reset Cap", 1.0f), \
             LOG_CONTROL("rct_in", "Input profile reactivity", "React In", U_SEC, matcher::PROFILE_REACT_TIME), \
             LOG_CONTROL("rct_ref", "Reference profile reactivity", "React Ref", U_SEC, matcher::PROFILE_REACT_TIME), \
             COMBO("in_src", "Input source", "Input src", 0, matcher_input_source), \
-            COMBO("ref_src", "Reference source", "Reference src", 0, sources), \
+            COMBO("ref_src", "Reference source", "Reference src", 1, sources), \
             COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \
             PERCENTS("blend", "Blend signal", "Blend signal", 0.0f, 0.05f), \
             SWITCH("profile", "Profile", "Profile", 0.0f), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
-            SWITCH("listen", "Listen capture", "Listen", 1.0f), \
+            SWITCH("listen", "Listen capture", "Listen", 0.0f), \
             SWITCH("hpf_on", "High-pass filter enable", "HPF On", 1.0f), \
             LOG_CONTROL("hpf_f", "High-pass filter frequency", "HPF Freq", U_HZ, matcher::HPF_FREQ), \
             CONTROL("hpf_s", "High-pass filter slope", "HPF Slope", U_DB, matcher::FLT_SLOPE), \
@@ -144,8 +143,6 @@ namespace lsp
             SWITCH("showflt", "Show filters", "Show filters", 0), \
             SWITCH("track", "Enable tracking of dynamic profiles", "Track dynamic", 1), \
             SWITCH("limit", "Enable profile limiting", "Limit", 0), \
-            TRIGGER("reset", "Reset match curves", "Reset"), \
-            TRIGGER("match", "Perform immediate match", "Match"), \
             MATCHER_EQ_BAND(1, "25"), \
             MATCHER_EQ_BAND(2, "50"), \
             MATCHER_EQ_BAND(3, "107"), \

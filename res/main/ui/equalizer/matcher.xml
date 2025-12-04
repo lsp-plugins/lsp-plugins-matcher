@@ -63,11 +63,11 @@
 					<!-- Dynamic input profile -->
 					<mesh id="pmesh" xi="0" yi="2" width="2" color="mono" visibility="(:showpro and :pife) or (:track and (:in_src ieq 1) and not ${hide_cond})" />
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="mono" visibility="(:showpro and :prfe) or (:track and (:ref_src ige 3) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="mono" visibility="(:showpro and :prfe) or (:track and (:ref_src ige 4) and not ${hide_cond})" />
 					<!-- Static input profile -->
 					<mesh id="pmesh" xi="0" yi="4" width="2" color="mono" visibility="(:showpro and :psfe) or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="mono" visibility="(:showpro and :pcfe) or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="mono" visibility="(:showpro and :pcfe) or ((:ref_src ilt 4) and :capture and not ${hide_cond})" />
 					<!-- File profile -->
 					<mesh id="pmesh" xi="0" yi="6" width="2" color="mono" visibility="(:showpro and :pffe) or :showfil" />
 					<!-- Envelope -->
@@ -97,14 +97,14 @@
 					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" visibility="(:showpro and :pife_l) or (:track and (:in_src ieq 1) and not ${hide_cond})" />
 					<mesh id="pmesh" xi="0" yi="11" width="2" color="right" visibility="(:showpro and :pife_r) or (:track and (:in_src ieq 1) and not ${hide_cond})" />
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" visibility="(:showpro and :prfe_l) or (:track and (:ref_src ige 3) and not ${hide_cond})" />
-					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" visibility="(:showpro and :prfe_r) or (:track and (:ref_src ige 3) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" visibility="(:showpro and :prfe_l) or (:track and (:ref_src ige 4) and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" visibility="(:showpro and :prfe_r) or (:track and (:ref_src ige 4) and not ${hide_cond})" />
 					<!-- Static input profile -->
 					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" visibility="(:showpro and :psfe_l) or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
 					<mesh id="pmesh" xi="0" yi="13" width="2" color="right" visibility="(:showpro and :psfe_r) or ((:in_src ieq 0) and :profile and not ${hide_cond})" />
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" visibility="(:showpro and :pcfe_l) or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
-					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" visibility="(:showpro and :pcfe_r) or ((:ref_src ilt 3) and :capture and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" visibility="(:showpro and :pcfe_l) or ((:ref_src ilt 4) and :capture and not ${hide_cond})" />
+					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" visibility="(:showpro and :pcfe_r) or ((:ref_src ilt 4) and :capture and not ${hide_cond})" />
 					<!-- File profile -->
 					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" visibility="(:showpro and :pffe_l) or :showfil" />
 					<mesh id="pmesh" xi="0" yi="15" width="2" color="right" visibility="(:showpro and :pffe_r) or :showfil" />
@@ -320,6 +320,7 @@
 			<label text="labels.capture" />
 			<combo id="cap_src" />
 			<button id="capture" text="actions.record" />
+			<button id="listen" text="actions.listen" />
 			
 			<vsep />
 			
@@ -438,10 +439,10 @@
 		<group text="groups.filters">
 			<grid rows="4" cols="5" heifht.min="96">
 				<cell cols="2">
-					<button id="hpf_on" text="labels.flt.hpf" />
+					<button id="hpf_on" text="labels.flt.HPF" />
 				</cell>
 				<cell cols="2">
-					<button id="lpf_on" text="labels.flt.lpf" />
+					<button id="lpf_on" text="labels.flt.LPF" />
 				</cell>
 				<cell rows="2">
 					<button id="clip_on" text="labels.signal.clip" />
