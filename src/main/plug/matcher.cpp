@@ -21,11 +21,13 @@
 
 #include <lsp-plug.in/common/alloc.h>
 #include <lsp-plug.in/common/debug.h>
+#include <lsp-plug.in/common/endian.h>
 #include <lsp-plug.in/dsp/dsp.h>
 #include <lsp-plug.in/dsp-units/misc/envelope.h>
 #include <lsp-plug.in/dsp-units/misc/fft_crossover.h>
 #include <lsp-plug.in/dsp-units/units.h>
 #include <lsp-plug.in/plug-fw/core/AudioBuffer.h>
+#include <lsp-plug.in/plug-fw/core/KVTStorage.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
 #include <lsp-plug.in/shared/debug.h>
 
@@ -36,6 +38,8 @@ namespace lsp
     namespace plugins
     {
         /* The size of temporary buffer for audio processing */
+        static const char *profile_blob_ctype           = "application/x-lsp-fft-profile";
+
         static constexpr size_t BUFFER_SIZE             = 0x200;
         static constexpr float FFT_TIME_CONST           = -1.2279471773f; // logf(1.0f - float(M_SQRT1_2));
         static constexpr float NORMING_SHIFT            = 100.0f;
@@ -108,6 +112,99 @@ namespace lsp
         }
 
         //-------------------------------------------------------------------------
+        matcher::KVTSync::KVTSync(matcher *core)
+        {
+            pCore       = core;
+            nChanges    = 0;
+        }
+
+        matcher::KVTSync::~KVTSync()
+        {
+            for (size_t i=0; i<SPROF_TOTAL; ++i)
+                free_profile_data(vProfiles[i]);
+
+            pCore       = NULL;
+        }
+
+        status_t matcher::KVTSync::run()
+        {
+            dsp::context_t ctx;
+            dsp::start(&ctx);
+            lsp_finally { dsp::finish(&ctx); };
+
+            // Lock the KVT storage
+            core::KVTStorage *kvt = pCore->kvt_lock();
+            if (kvt == NULL)
+                return STATUS_UNKNOWN_ERR;
+            lsp_finally { pCore->kvt_release(); };
+
+            // Save profiles
+            pCore->save_profile(kvt, "/profile/static", vProfiles[SPROF_STATIC]);
+            pCore->save_profile(kvt, "/profile/capture", vProfiles[SPROF_CAPTURE]);
+
+            // Reset change counter
+            nChanges        = 0;
+
+            return STATUS_OK;
+        }
+
+        status_t matcher::KVTSync::init()
+        {
+            for (size_t i=0; i<SPROF_TOTAL; ++i)
+            {
+                profile_data_t * const prof    = pCore->create_default_profile();
+                if (prof == NULL)
+                    return STATUS_NO_MEM;
+
+                vProfiles[i] = prof;
+            }
+
+            return STATUS_OK;
+        }
+
+        bool matcher::KVTSync::submit_profile(uint32_t type, profile_data_t *profile)
+        {
+            if (type >= SPROF_TOTAL)
+                return false;
+            if (!(profile->nFlags & PFLAGS_DIRTY))
+                return false;
+
+            // Copy profile data
+            profile_data_t * const dst = vProfiles[type];
+            if (dst == NULL)
+                return false;
+
+            dst->nSampleRate    = profile->nSampleRate;
+            dst->nChannels      = profile->nChannels;
+            dst->nRank          = profile->nRank;
+            dst->nFlags         = profile->nFlags;
+            dst->nFrames        = profile->nFrames;
+            dst->fRMS           = profile->fRMS;
+
+            const size_t fft_csize = (1 << (profile->nRank - 1)) + 1;
+            for (size_t i=0; i<profile->nChannels; ++i)
+                dsp::copy(dst->vData[i], profile->vData[i], fft_csize);
+
+            // Reset dirty flag
+            profile->nFlags &= ~PFLAGS_DIRTY;
+
+            // Increment number of changes
+            ++nChanges;
+
+            return true;
+        }
+
+        bool matcher::KVTSync::pending() const
+        {
+            return nChanges > 0;
+        }
+
+        void matcher::KVTSync::dump(dspu::IStateDumper *v) const
+        {
+            v->write("pCore", pCore);
+        }
+
+        //-------------------------------------------------------------------------
         matcher::GCTask::GCTask(matcher *base)
         {
             pCore       = base;
@@ -135,6 +232,7 @@ namespace lsp
             Module(meta),
             sFileLoader(this),
             sFileProcessor(this),
+            sKVTSync(this),
             sGCTask(this)
         {
             // Compute the number of audio channels by the number of inputs
@@ -253,6 +351,13 @@ namespace lsp
             // Remember executor service
             pExecutor       = wrapper->executor();
             lsp_trace("Executor = %p", pExecutor);
+
+            // Initialize KVT sync
+            if (sKVTSync.init() != STATUS_OK)
+            {
+                lsp_warn("Failed to initialize KVT sync");
+                return;
+            }
 
             // Estimate the number of bytes to allocate
             const size_t fft_csize      = (1 << (meta::matcher::FFT_RANK_MAX - 1)) + 1;
@@ -1107,7 +1212,8 @@ namespace lsp
 
         void matcher::free_profile_data(profile_data_t *profile)
         {
-            free(profile);
+            if (profile != NULL)
+                free(profile);
         }
 
         void matcher::analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft)
@@ -1872,6 +1978,7 @@ namespace lsp
             process_listen_events();
             process_gc_tasks();
             update_profiles();
+            process_kvt_sync_tasks();
 
             for (size_t offset=0; offset < samples; )
             {
@@ -2391,6 +2498,38 @@ namespace lsp
             }
         }
 
+        void matcher::process_kvt_sync_tasks()
+        {
+            size_t dirty = 0;
+
+            if (sKVTSync.completed())
+            {
+                ++dirty;
+                sKVTSync.reset();
+            }
+
+            if (sKVTSync.idle())
+            {
+                // Check that we have dirty profiles.
+                for (size_t i=0; i<SPROF_TOTAL; ++i)
+                {
+                    if (sKVTSync.submit_profile(i, vProfileState[i].get()))
+                        ++dirty;
+                }
+
+                if (sKVTSync.pending())
+                {
+                    // Try to submit task
+                    if (pExecutor->submit(&sKVTSync))
+                        lsp_trace("Successfully submitted KVT synchronization task");
+                }
+            }
+
+            // Notify wrapper about state change
+            if (dirty > 0)
+                pWrapper->state_changed();
+        }
+
         void matcher::process_file_processing_tasks()
         {
             // Do nothing if file load is in progress
@@ -2535,6 +2674,170 @@ namespace lsp
         {
             dspu::Sample *gc_list = lsp::atomic_swap(&pGCList, NULL);
             destroy_samples(gc_list);
+        }
+
+        bool matcher::save_profile(core::KVTStorage *kvt, const char *path, profile_data_t *profile)
+        {
+            if (profile == NULL)
+                return false;
+            if (!(profile->nFlags & PFLAGS_DIRTY))
+                return false;
+
+            const size_t fft_csize      = (profile->nFlags & PFLAGS_READY) ? (1 << (profile->nRank - 1)) + 1 : 0;
+            const size_t hdr_size       = align_size(sizeof(kvt_profile_header_t), 0x10);
+            const size_t channel_size   = fft_csize * sizeof(float);
+            const size_t to_alloc       = hdr_size + profile->nChannels * channel_size;
+
+            // Initialize KVT parameter
+            core::kvt_param_t p;
+            p.type                      = core::KVT_BLOB;
+            p.blob.ctype                = strdup(profile_blob_ctype);
+            if (p.blob.ctype == NULL)
+                return false;
+            p.blob.size                 = to_alloc;
+
+            // Allocate memory for BLOB data
+            uint8_t *ptr                = static_cast<uint8_t *>(malloc(to_alloc));
+            if (ptr == NULL)
+            {
+                free(const_cast<char *>(p.blob.ctype));
+                return false;
+            }
+
+            kvt_profile_header_t * const hdr    = advance_ptr_bytes<kvt_profile_header_t>(ptr, hdr_size);
+            p.blob.data                 = hdr;
+            bzero(hdr, hdr_size);
+
+            uint32_t flags      = KVT_PFLAGS_NONE;
+            if (profile->nFlags & PFLAGS_DEFAULT)
+                flags              |= KVT_PFLAGS_DEFAULT;
+            if (profile->nFlags & PFLAGS_READY)
+                flags              |= KVT_PFLAGS_READY;
+
+            hdr->nVersion       = 0;
+            hdr->nChannels      = uint8_t(profile->nChannels);
+            hdr->nRank          = uint8_t(profile->nRank);
+            hdr->nFlags         = flags;
+            hdr->nSampleRate    = profile->nSampleRate;
+            hdr->nFrames        = profile->nFrames;
+            hdr->fRMS           = profile->fRMS;
+
+            // Convert to right endianess
+            hdr->nVersion       = CPU_TO_BE(hdr->nVersion);
+            hdr->nChannels      = CPU_TO_BE(hdr->nChannels);
+            hdr->nRank          = CPU_TO_BE(hdr->nRank);
+            hdr->nFlags         = CPU_TO_BE(hdr->nFlags);
+            hdr->nSampleRate    = CPU_TO_BE(hdr->nSampleRate);
+            hdr->nFrames        = CPU_TO_BE(hdr->nFrames);
+            hdr->fRMS           = CPU_TO_BE(hdr->fRMS);
+
+            for (size_t i=0; i<profile->nChannels; ++i)
+            {
+                float *dst          = advance_ptr_bytes<float>(ptr, channel_size);
+                CPU_TO_VBE_COPY(dst, profile->vData[i], fft_csize);
+            }
+
+            // Submit data to KVT
+            status_t res = kvt->put(path, &p, core::KVT_DELEGATE | core::KVT_TO_UI);
+            if (res != STATUS_OK)
+            {
+                free(const_cast<char *>(p.blob.ctype));
+                free(hdr);
+                return false;
+            }
+
+            // Reset dirty flag
+            profile->nFlags    &= ~PFLAGS_DIRTY;
+
+            lsp_trace("profile '%s' saved to KVT", path);
+
+            return true;
+        }
+
+        matcher::profile_data_t *matcher::load_profile(core::KVTStorage *kvt, const char *path)
+        {
+            const core::kvt_blob_t *blob = NULL;
+            status_t res = kvt->get(path, &blob);
+            if (res != STATUS_OK)
+            {
+                lsp_trace("Could not find KVT blob '%s', code=%d", path, int(res));
+                return NULL;
+            }
+
+            if ((blob == NULL) || (blob->ctype == NULL) || (blob->data == NULL))
+            {
+                lsp_warn("KVT blob for parameter '%s' is NULL", path);
+                return NULL;
+            }
+            if (strcmp(blob->ctype, profile_blob_ctype) != 0)
+            {
+                lsp_warn("Invalid content type for parameter '%s': %s", path, blob->ctype);
+                return NULL;
+            }
+
+            const kvt_profile_header_t * hdr = reinterpret_cast<const kvt_profile_header_t *>(blob->data);
+            const uint16_t version = BE_TO_CPU(hdr->nVersion);
+            if (version != 0)
+            {
+                lsp_warn("Unsupported BLOB version for parameter '%s': %d", path, int(version));
+                return NULL;
+            }
+            const uint8_t channels = BE_TO_CPU(hdr->nChannels);
+            if (channels <= 0)
+            {
+                lsp_warn("Invalid number of audio channels for parameter '%s': %d", path, int(channels));
+                return NULL;
+            }
+            const uint8_t rank = BE_TO_CPU(hdr->nRank);
+            if ((rank < meta::matcher::FFT_RANK_MIN) || (rank > meta::matcher::FFT_RANK_MAX))
+            {
+                lsp_warn("Invalid FFT rank for parameter '%s': %d", path, int(rank));
+                return NULL;
+            }
+            const uint32_t flags = BE_TO_CPU(hdr->nFlags);
+            const uint32_t srate = BE_TO_CPU(hdr->nSampleRate);
+            const uint32_t frames = BE_TO_CPU(hdr->nFrames);
+            const float rms = BE_TO_CPU(hdr->fRMS);
+
+            // Estimate the real size of BLOB
+            const size_t fft_csize      = (1 << (rank - 1)) + 1;
+            const size_t hdr_size       = align_size(sizeof(kvt_profile_header_t), 0x10);
+            const size_t channel_size   = fft_csize * sizeof(float);
+            const float *data           = advance_ptr_bytes<const float>(hdr, hdr_size);
+            const size_t to_alloc       = hdr_size + channels * channel_size;
+            if (blob->size < to_alloc)
+            {
+                lsp_warn("Invalid BLOB size for parameter '%s': %d", path, int(rank));
+                return NULL;
+            }
+
+            // Allocate profile data
+            profile_data_t *profile = allocate_profile_data();
+            if (profile == NULL)
+            {
+                lsp_warn("Out of memory while fetching parameter '%s'", path);
+                return NULL;
+            }
+
+            // Fill profile data
+            profile->nSampleRate        = srate;
+            profile->nChannels          = channels;
+            profile->nRank              = rank;
+            profile->nFlags             = PFLAGS_CHANGED | PFLAGS_SYNC;
+            if (flags & KVT_PFLAGS_DEFAULT)
+                profile->nFlags            |= PFLAGS_DEFAULT;
+            if (flags & KVT_PFLAGS_READY)
+                profile->nFlags            |= PFLAGS_READY;
+            profile->nFrames            = frames;
+            profile->fRMS               = rms;
+
+            for (size_t i=0; i<channels; ++i)
+            {
+                VBE_TO_CPU_COPY(profile->vData[i], data, fft_csize);
+                data                        = advance_ptr_bytes<const float>(hdr, channel_size);
+            }
+
+            return profile;
         }
 
         void matcher::dump(dspu::IStateDumper *v) const

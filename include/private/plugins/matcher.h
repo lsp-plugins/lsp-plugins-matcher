@@ -117,6 +117,13 @@ namespace lsp
                     SPROF_TOTAL
                 };
 
+                enum kvt_profile_flags_t
+                {
+                    KVT_PFLAGS_NONE         = 0,
+                    KVT_PFLAGS_READY        = 1 << 0,
+                    KVT_PFLAGS_DEFAULT      = 1 << 1
+                };
+
                 enum profile_data_flags_t
                 {
                     PFLAGS_NONE             = 0,
@@ -211,6 +218,17 @@ namespace lsp
                     plug::IPort            *pParams[EQP_TOTAL]; // Reference level
                 } match_band_t;
 
+                typedef struct kvt_profile_header_t
+                {
+                    uint16_t                nVersion;           // Version format of the BLOB
+                    uint8_t                 nChannels;          // Number of channels
+                    uint8_t                 nRank;              // FFT rank
+                    uint32_t                nFlags;             // Flags
+                    uint32_t                nSampleRate;        // Sample rate
+                    uint32_t                nFrames;            // Frames
+                    float                   fRMS;               // RMS
+                } kvt_profile_header_t;
+
                 class FileLoader: public ipc::ITask
                 {
                     private:
@@ -234,6 +252,26 @@ namespace lsp
                     public:
                         explicit FileProcessor(matcher *core);
                         virtual ~FileProcessor() override;
+
+                    public:
+                        virtual status_t run() override;
+                        void        dump(dspu::IStateDumper *v) const;
+                };
+
+                class KVTSync: public ipc::ITask
+                {
+                    private:
+                        matcher                *pCore;
+                        profile_data_t         *vProfiles[SPROF_TOTAL];
+                        size_t                  nChanges;
+
+                    public:
+                        explicit KVTSync(matcher *core);
+                        virtual ~KVTSync() override;
+
+                        status_t    init();
+                        bool        submit_profile(uint32_t type, profile_data_t *profile);
+                        bool        pending() const;
 
                     public:
                         virtual status_t run() override;
@@ -291,6 +329,7 @@ namespace lsp
                 af_descriptor_t     sFile;              // Audio file
                 FileLoader          sFileLoader;        // Audio file loader
                 FileProcessor       sFileProcessor;     // Audio file processor task
+                KVTSync             sKVTSync;           // KVT synchronization task
                 GCTask              sGCTask;            // Garbage collection task
                 match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];    // Match bands
                 ipc::IExecutor     *pExecutor;          // Task executor
@@ -376,6 +415,7 @@ namespace lsp
                 status_t            profile_sample(af_descriptor_t *f);
                 void                process_file_loading_tasks();
                 void                process_file_processing_tasks();
+                void                process_kvt_sync_tasks();
                 void                process_gc_tasks();
                 void                process_listen_events();
                 void                perform_gc();
@@ -391,6 +431,8 @@ namespace lsp
                 bool                resample_profile(profile_data_t *profile, size_t srate, size_t rank);
                 void                commit_profiles();
                 void                process_listen_output(channel_t *c, size_t samples);
+                bool                save_profile(core::KVTStorage *kvt, const char *path, profile_data_t *profile);
+                profile_data_t     *load_profile(core::KVTStorage *kvt, const char *path);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
