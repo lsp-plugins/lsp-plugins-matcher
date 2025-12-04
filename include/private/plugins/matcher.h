@@ -258,12 +258,15 @@ namespace lsp
                         void        dump(dspu::IStateDumper *v) const;
                 };
 
-                class KVTSync: public ipc::ITask
+                class KVTSync: public ipc::ITask, public core::KVTListener
                 {
                     private:
                         matcher                *pCore;
                         profile_data_t         *vProfiles[SPROF_TOTAL];
                         size_t                  nChanges;
+
+                    protected:
+                        void        parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type);
 
                     public:
                         explicit KVTSync(matcher *core);
@@ -272,10 +275,15 @@ namespace lsp
                         status_t    init();
                         bool        submit_profile(uint32_t type, profile_data_t *profile);
                         bool        pending() const;
-
-                    public:
-                        virtual status_t run() override;
                         void        dump(dspu::IStateDumper *v) const;
+
+                    public: // ipc::ITask
+                        virtual status_t run() override;
+
+                    public: // core::KVTListener
+                        virtual void created(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending);
+                        virtual void changed(core::KVTStorage *storage, const char *id, const core::kvt_param_t *oval, const core::kvt_param_t *nval, size_t pending);
+                        virtual void commit(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending);
                 };
 
                 class GCTask: public ipc::ITask
@@ -432,7 +440,7 @@ namespace lsp
                 void                commit_profiles();
                 void                process_listen_output(channel_t *c, size_t samples);
                 bool                save_profile(core::KVTStorage *kvt, const char *path, profile_data_t *profile);
-                profile_data_t     *load_profile(core::KVTStorage *kvt, const char *path);
+                profile_data_t     *load_profile(const char *path, const core::kvt_param_t *param);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

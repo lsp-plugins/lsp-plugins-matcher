@@ -60,9 +60,9 @@ namespace lsp
             static constexpr float          BAND_REF_GAIN_DFL           = 0.0f;
             static constexpr float          BAND_REF_GAIN_STEP          = 0.05f;
 
-            static constexpr float          BAND_REACT_MIN              = 0.5f;
+            static constexpr float          BAND_REACT_MIN              = 0.1f;
             static constexpr float          BAND_REACT_MAX              = 10.0f;
-            static constexpr float          BAND_REACT_DFL              = 1.0f;
+            static constexpr float          BAND_REACT_DFL              = 5.0f;
             static constexpr float          BAND_REACT_STEP             = 0.0025f;
 
             static constexpr float          REACT_TIME_MIN              = 0.000f;

@@ -132,7 +132,7 @@ namespace lsp
             CONTROL("ref_" #id, "Reference level " freq "Hz", "Ref " freq "Hz", U_DB, matcher::BAND_REF_GAIN), \
             CONTROL("amp_" #id, "Amplification threshold " freq "Hz", "Amp " freq "Hz", U_DB, matcher::BAND_AMP_GAIN), \
             CONTROL("red_" #id, "Reduction threshold " freq "Hz", "Red " freq "Hz", U_DB, matcher::BAND_RED_GAIN), \
-            CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_MSEC, matcher::BAND_REACT)
+            CONTROL("spd_" #id, "Reactivity " freq "Hz", "Speed " freq "Hz", U_SEC, matcher::BAND_REACT)
 
         #define MATCHER_EQ(channels) \
             SWITCH("showfft", "Show any FFT analysis for all channels", "Show FFT", 1), \

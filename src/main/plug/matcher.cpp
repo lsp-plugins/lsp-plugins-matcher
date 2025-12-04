@@ -120,6 +120,14 @@ namespace lsp
 
         matcher::KVTSync::~KVTSync()
         {
+            // Unbind self as listener
+            core::KVTStorage *kvt = pCore->kvt_lock();
+            if (kvt != NULL)
+            {
+                lsp_finally { pCore->kvt_release(); };
+                kvt->unbind(this);
+            }
+
             for (size_t i=0; i<SPROF_TOTAL; ++i)
                 free_profile_data(vProfiles[i]);
 
@@ -157,6 +165,14 @@ namespace lsp
                     return STATUS_NO_MEM;
 
                 vProfiles[i] = prof;
+            }
+
+            // Bind self as listener
+            core::KVTStorage *kvt = pCore->kvt_lock();
+            if (kvt != NULL)
+            {
+                lsp_finally { pCore->kvt_release(); };
+                kvt->bind(this);
             }
 
             return STATUS_OK;
@@ -202,6 +218,41 @@ namespace lsp
         void matcher::KVTSync::dump(dspu::IStateDumper *v) const
         {
             v->write("pCore", pCore);
+        }
+
+        void matcher::KVTSync::created(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending)
+        {
+            lsp_trace("KVT parameter '%s' has been created", id);
+        }
+
+        void matcher::KVTSync::changed(core::KVTStorage *storage, const char *id, const core::kvt_param_t *oval, const core::kvt_param_t *nval, size_t pending)
+        {
+            lsp_trace("KVT parameter '%s' has been changed", id);
+        }
+
+        void matcher::KVTSync::parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type)
+        {
+            // Load profile
+            profile_data_t *profile = pCore->load_profile(id, param);
+            if (profile == NULL)
+                return;
+
+            // Submit profile to the profile state
+            pCore->vProfileState[type].push(profile);
+        }
+
+        void matcher::KVTSync::commit(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending)
+        {
+            if (!(pending & core::KVT_TO_DSP))
+                return;
+
+            lsp_trace("KVT parameter '%s' has been committed to DSP", id);
+
+            // Here we can parse profile
+            if (strcmp(id, "/profile/static") == 0)
+                parse_profile(id, param, SPROF_STATIC);
+            if (strcmp(id, "/profile/capture") == 0)
+                parse_profile(id, param, SPROF_CAPTURE);
         }
 
         //-------------------------------------------------------------------------
@@ -2754,16 +2805,15 @@ namespace lsp
             return true;
         }
 
-        matcher::profile_data_t *matcher::load_profile(core::KVTStorage *kvt, const char *path)
+        matcher::profile_data_t *matcher::load_profile(const char *path, const core::kvt_param_t *param)
         {
-            const core::kvt_blob_t *blob = NULL;
-            status_t res = kvt->get(path, &blob);
-            if (res != STATUS_OK)
+            if (!(param->type == core::KVT_BLOB))
             {
-                lsp_trace("Could not find KVT blob '%s', code=%d", path, int(res));
+                lsp_warn("KVT parameter '%s' has invalid type, should be BLOB", path);
                 return NULL;
             }
 
+            const core::kvt_blob_t *blob = &param->blob;
             if ((blob == NULL) || (blob->ctype == NULL) || (blob->data == NULL))
             {
                 lsp_warn("KVT blob for parameter '%s' is NULL", path);
@@ -2803,7 +2853,6 @@ namespace lsp
             const size_t fft_csize      = (1 << (rank - 1)) + 1;
             const size_t hdr_size       = align_size(sizeof(kvt_profile_header_t), 0x10);
             const size_t channel_size   = fft_csize * sizeof(float);
-            const float *data           = advance_ptr_bytes<const float>(hdr, hdr_size);
             const size_t to_alloc       = hdr_size + channels * channel_size;
             if (blob->size < to_alloc)
             {
@@ -2831,10 +2880,12 @@ namespace lsp
             profile->nFrames            = frames;
             profile->fRMS               = rms;
 
+            // Copy profile data
+            const float *data           = advance_ptr_bytes<const float>(hdr, hdr_size);
             for (size_t i=0; i<channels; ++i)
             {
-                VBE_TO_CPU_COPY(profile->vData[i], data, fft_csize);
                 data                        = advance_ptr_bytes<const float>(hdr, channel_size);
+                VBE_TO_CPU_COPY(profile->vData[i], data, fft_csize);
             }
 
             return profile;
