@@ -1854,7 +1854,7 @@ namespace lsp
             if (fGainIn != GAIN_AMP_0_DB)
             {
                 for (size_t i=0; i<nChannels; ++i)
-                    dsp::mul_k2(spectrum[i*PC_TOTAL + PC_INPUT], fGainIn, fft_csize);
+                    dsp::mul_k2(spectrum[i*PC_TOTAL + PC_INPUT], fGainIn, fft_half * 4);
             }
 
             // Build filter profile if needed

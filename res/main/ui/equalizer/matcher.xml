@@ -55,10 +55,14 @@
 				<ui:set id="hide_cond_soft" value="(:showfil or :showenv)" />
 				<!-- Meshes -->
 				<ui:if test="!ex :out_r">
+					<!-- Input -->
 					<mesh id="fft" xi="0" yi="1" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife" />
-					<mesh id="fft" xi="0" yi="2" width="2" color="mono_in" visibility=":showfft and :rfe"/>
+					<!-- Capture -->
 					<mesh id="fft" xi="0" yi="3" width="2" color="mono_in" visibility=":showfft and :cfe"/>
-					<mesh id="fft" xi="0" yi="4" width="2" color="mono" visibility=":showfft and :ofe"/>
+					<!-- Reference -->
+					<mesh id="fft" xi="0" yi="4" width="2" color="mono_in" visibility=":showfft and :rfe"/>
+					<!-- Output -->
+					<mesh id="fft" xi="0" yi="2" width="2" color="mono" visibility=":showfft and :ofe"/>
 					
 					<!-- Dynamic input profile -->
 					<mesh id="pmesh" xi="0" yi="2" width="2" color="mono" visibility="(:showpro and :pife) or (:track and (:in_src ieq 1) and not ${hide_cond})" />
@@ -203,8 +207,8 @@
 						<ui:if test="!ex :out_r">
 							<button id="ife" text="labels.chan.input" height="19" width="30" ui:inject="Button_mono_8"/>
 							<button id="ofe" text="labels.chan.output" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="cfe" text="labels.capture" height="19" width="30" ui:inject="Button_mono_8"/>
 							<button id="rfe" text="labels.chan.reference" height="19" width="30" ui:inject="Button_mono_8"/>
-							<button id="cfe" text="labels.chan.capture" height="19" width="30" ui:inject="Button_mono_8"/>
 						</ui:if>
 						<ui:if test="ex :out_r">
 							<grid rows="4" cols="3">
@@ -290,7 +294,7 @@
 						
 						<label text="labels.result" />
 						<ui:if test="!ex :out_r">
-							<button id="prfe" text="labels.signal.match" height="19" width="30" ui:inject="Button_mono_8"/>
+							<button id="pmfe" text="labels.signal.match" height="19" width="30" ui:inject="Button_mono_8"/>
 						</ui:if>
 						<ui:if test="ex :out_r">
 							<grid rows="1" cols="3">
