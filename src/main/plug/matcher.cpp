@@ -1544,11 +1544,31 @@ namespace lsp
         {
             const float norm        = NORMING_SHIFT / float(1 << nRank);
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
-            const size_t frames     = profile->nFrames;
 
+            // Estimate block RMS
+            const float rms_norm    = 1.0f / float(fft_csize);
+            float block_rms         = GAIN_AMP_M_INF_DB;
             for (size_t i=0; i<nChannels; ++i)
             {
                 const float *src        = spectrum[i * PC_TOTAL + channel];
+                if (src == NULL)
+                    continue;
+
+                float *dst              = pTempProfile->vData[i];
+                dsp::pcomplex_mod(dst, src, fft_csize);
+                block_rms              += sqrtf(dsp::h_sqr_sum(pTempProfile->vData[i], fft_csize) * rms_norm);
+            }
+
+            // Skip silent blocks
+            if (block_rms < GAIN_AMP_M_72_DB)
+                return;
+
+            // Apply changes
+            const size_t frames     = profile->nFrames;
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                const float *src        = spectrum[i * PC_TOTAL + channel];
+                const float *tmp        = pTempProfile->vData[i];
                 float *dst              = profile->vData[i];
 
                 // Decide the strategy
@@ -1556,18 +1576,15 @@ namespace lsp
                 {
                     // Append new frame to the profile
                     if (src != NULL)
-                    {
-                        dsp::pcomplex_mod(vBuffer, src, fft_csize);
-                        dsp::mix2(dst, vBuffer, 1.0f - tau, tau * norm, fft_csize);
-                    }
+                        dsp::mix2(dst, tmp, 1.0f - tau, tau * norm, fft_csize);
                     else
-                        dsp::mul_k2(dst, tau, fft_csize);
+                        dsp::mul_k2(dst, 1.0f - tau, fft_csize);
                 }
                 else if (src != NULL)
                 {
                     // Fill empty profile
                     dsp::pcomplex_mod(dst, src, fft_csize);
-                    dsp::mul_k2(dst, norm, fft_csize);
+                    dsp::mul_k3(dst, tmp, norm, fft_csize);
                 }
             }
 
@@ -1579,16 +1596,12 @@ namespace lsp
             profile->nFlags        |= PFLAGS_CHANGED | PFLAGS_SYNC | PFLAGS_DYNAMIC;
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
-            // Compute RMS if needed
-            if (profile->nFrames >= 4)
-            {
-                const float rms_norm        = 1.0f / float(fft_csize);
-                for (size_t i=0; i<nChannels; ++i)
-                    profile->fRMS              += sqrtf(dsp::h_sqr_sum(profile->vData[i], fft_csize) * rms_norm);
+            // Compute RMS for the profile
+            for (size_t i=0; i<nChannels; ++i)
+                profile->fRMS              += sqrtf(dsp::h_sqr_sum(profile->vData[i], fft_csize) * rms_norm);
 
-                if (profile->fRMS >= GAIN_AMP_M_72_DB)
-                    profile->nFlags            |= PFLAGS_READY;
-            }
+            if (profile->fRMS >= GAIN_AMP_M_72_DB)
+                profile->nFlags            |= PFLAGS_READY;
         }
 
         void matcher::sync_profile(profile_data_t *dst, profile_data_t *src)
