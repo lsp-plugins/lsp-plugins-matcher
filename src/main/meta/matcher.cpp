@@ -191,6 +191,12 @@ namespace lsp
             METER_GAIN("clm" id, "Capture level meter" label, GAIN_AMP_P_24_DB), \
             METER_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB)
 
+        #define MATCHER_IR_FILE \
+            PATH("ir_file", "Output IR file name"), \
+            TRIGGER("ir_save", "Save output IR file command", "Save IR"), \
+            STATUS("ir_stat", "Output IR saving status"), \
+            METER_PERCENT("ir_prog", "IR file saving progress")
+
         #define MATCHER_METERS_MONO \
             MATCHER_METERS_COMMON(1), \
             MATCHER_METERS("", "", "")
@@ -213,6 +219,7 @@ namespace lsp
             MATCHER_COMMON(matcher_references, matcher_capture_source, 0),
             MATCHER_FILE_SOURCE(1),
             MATCHER_EQ(1),
+            MATCHER_IR_FILE,
             MATCHER_METERS_MONO,
 
             PORTS_END
@@ -226,6 +233,7 @@ namespace lsp
             MATCHER_COMMON_STEREO,
             MATCHER_FILE_SOURCE(2),
             MATCHER_EQ(2),
+            MATCHER_IR_FILE,
             MATCHER_METERS_STEREO,
 
             PORTS_END
@@ -239,6 +247,7 @@ namespace lsp
             MATCHER_COMMON(sc_matcher_references, sc_matcher_capture_source, 1),
             MATCHER_FILE_SOURCE(1),
             MATCHER_EQ(1),
+            MATCHER_IR_FILE,
             MATCHER_METERS_MONO,
 
             PORTS_END
@@ -253,6 +262,7 @@ namespace lsp
             MATCHER_COMMON_STEREO,
             MATCHER_FILE_SOURCE(2),
             MATCHER_EQ(2),
+            MATCHER_IR_FILE,
             MATCHER_METERS_STEREO,
 
             PORTS_END

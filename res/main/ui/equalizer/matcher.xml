@@ -308,6 +308,17 @@
 			<vsep />
 			
 			<shmlink id="link" pad.v="4" pad.l="2"/>
+			
+			<vsep />
+			
+			<save
+				id="ir_file"
+				command.id="ir_save"
+				progress.id="ir_prog"
+				status=":ir_stat"
+				path.id="_ui_dlg_ir_path"
+				bg.color="bg_schema"
+				format="wav" />
 		</hbox>
 		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
 			<label text="labels.signal.input" />

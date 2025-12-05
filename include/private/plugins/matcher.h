@@ -229,6 +229,7 @@ namespace lsp
                     float                   fRMS;               // RMS
                 } kvt_profile_header_t;
 
+                // File loader
                 class FileLoader: public ipc::ITask
                 {
                     private:
@@ -244,6 +245,7 @@ namespace lsp
                         void        dump(dspu::IStateDumper *v) const;
                 };
 
+                // Preprocessing of audio file
                 class FileProcessor: public ipc::ITask
                 {
                     private:
@@ -258,6 +260,7 @@ namespace lsp
                         void        dump(dspu::IStateDumper *v) const;
                 };
 
+                // Synchronization of profile data with KVT
                 class KVTSync: public ipc::ITask, public core::KVTListener
                 {
                     private:
@@ -272,6 +275,7 @@ namespace lsp
                         explicit KVTSync(matcher *core);
                         virtual ~KVTSync() override;
 
+                    public:
                         status_t    init();
                         bool        submit_profile(uint32_t type, profile_data_t *profile);
                         bool        pending() const;
@@ -286,6 +290,32 @@ namespace lsp
                         virtual void commit(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending) override;
                 };
 
+                // Class to handle saving the IR file
+                class IRSaver: public ipc::ITask
+                {
+                    private:
+                        matcher        *pCore;
+                        profile_data_t *pProfile;           // Profile to save
+                        bool            bPending;           // Pending for save
+                        char            sFile[PATH_MAX];    // The name of file for saving
+
+                    public:
+                        explicit IRSaver(matcher *base);
+                        virtual ~IRSaver() override;
+
+                    public:
+                        status_t    init();
+                        void        submit_command(bool save);
+                        void        submit_profile(const profile_data_t *src);
+                        void        submit_file_name(const char *fname);
+                        bool        pending() const;
+                        void        dump(dspu::IStateDumper *v) const;
+
+                    public:
+                        virtual status_t run() override;
+                };
+
+                // Garbage collection task
                 class GCTask: public ipc::ITask
                 {
                     private:
@@ -339,6 +369,7 @@ namespace lsp
                 FileLoader          sFileLoader;        // Audio file loader
                 FileProcessor       sFileProcessor;     // Audio file processor task
                 KVTSync             sKVTSync;           // KVT synchronization task
+                IRSaver             sIRSaver;           // Impulse response saver
                 GCTask              sGCTask;            // Garbage collection task
                 match_band_t        vMatchBands[meta::matcher::MATCH_BANDS];    // Match bands
                 ipc::IExecutor     *pExecutor;          // Task executor
@@ -382,6 +413,11 @@ namespace lsp
                 plug::IPort        *pFilterMesh;        // Filter mesh
                 plug::IPort        *pStereoLink;        // Stereo link
 
+                plug::IPort        *pIRFile;            // IR file name
+                plug::IPort        *pIRSave;            // IR file save command
+                plug::IPort        *pIRStatus;          // IR file save status
+                plug::IPort        *pIRProgress;        // IR file save progress
+
                 plug::IPort        *pMatchLimit;        // Enable frequency limiting
                 plug::IPort        *pMatchImmediate;    // Perform immediate matching
                 plug::IPort        *pMatchMesh;         // Match mesh
@@ -393,6 +429,8 @@ namespace lsp
                 uint8_t            *pData;              // Allocated data
 
             protected:
+                static void         dump(dspu::IStateDumper *v, const char *name, const profile_data_t * profile);
+                static void         dump(dspu::IStateDumper *v, const profile_data_t * profile);
                 static void         process_block(void *object, void *subject, float * const * spectrum, size_t rank);
                 static void         process_sample_block(void *object, void *subject, float * const * spectrum, size_t rank);
                 static void         free_profile_data(profile_data_t *profile);
@@ -428,6 +466,7 @@ namespace lsp
                 void                process_kvt_sync_tasks();
                 void                process_gc_tasks();
                 void                process_listen_events();
+                void                process_save_ir_events();
                 void                perform_gc();
                 void                update_profiles();
                 void                build_eq_profile(profile_data_t *profile, eq_param_t param, bool envelope);

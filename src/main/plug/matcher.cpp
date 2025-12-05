@@ -25,6 +25,7 @@
 #include <lsp-plug.in/dsp/dsp.h>
 #include <lsp-plug.in/dsp-units/misc/envelope.h>
 #include <lsp-plug.in/dsp-units/misc/fft_crossover.h>
+#include <lsp-plug.in/dsp-units/misc/windows.h>
 #include <lsp-plug.in/dsp-units/units.h>
 #include <lsp-plug.in/plug-fw/core/AudioBuffer.h>
 #include <lsp-plug.in/plug-fw/core/KVTStorage.h>
@@ -116,6 +117,9 @@ namespace lsp
         {
             pCore       = core;
             nChanges    = 0;
+
+            for (size_t i=0; i<SPROF_TOTAL; ++i)
+                vProfiles[i] = NULL;
         }
 
         matcher::KVTSync::~KVTSync()
@@ -158,8 +162,12 @@ namespace lsp
 
         status_t matcher::KVTSync::init()
         {
+            // Allocate profiles
             for (size_t i=0; i<SPROF_TOTAL; ++i)
             {
+                if (i == SPROF_FILE)
+                    continue;
+
                 profile_data_t * const prof    = pCore->create_default_profile();
                 if (prof == NULL)
                     return STATUS_NO_MEM;
@@ -198,8 +206,11 @@ namespace lsp
             dst->fRMS           = profile->fRMS;
 
             const size_t fft_csize = (1 << (profile->nRank - 1)) + 1;
-            for (size_t i=0; i<profile->nChannels; ++i)
-                dsp::copy(dst->vData[i], profile->vData[i], fft_csize);
+            for (size_t i=0; i<dst->nChannels; ++i)
+            {
+                const size_t j              = i % profile->nChannels;
+                dsp::copy(dst->vData[i], profile->vData[j], fft_csize);
+            }
 
             // Reset dirty flag
             profile->nFlags &= ~PFLAGS_DIRTY;
@@ -218,6 +229,14 @@ namespace lsp
         void matcher::KVTSync::dump(dspu::IStateDumper *v) const
         {
             v->write("pCore", pCore);
+            v->begin_array("vProfiles", vProfiles, SPROF_TOTAL);
+
+            for (size_t i=0; i<SPROF_TOTAL; ++i)
+            {
+                profile_data_t * const prof    = vProfiles[i];
+                matcher::dump(v, "pProfile", prof);
+            }
+            v->end_array();
         }
 
         void matcher::KVTSync::created(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending)
@@ -256,6 +275,147 @@ namespace lsp
         }
 
         //-------------------------------------------------------------------------
+        matcher::IRSaver::IRSaver(matcher *core)
+        {
+            pCore       = core;
+            pProfile    = NULL;
+            bPending    = false;
+            sFile[0]    = '\0';
+        }
+
+        matcher::IRSaver::~IRSaver()
+        {
+            if (pProfile != NULL)
+            {
+                free_profile_data(pProfile);
+                pProfile    = NULL;
+            }
+
+            pCore       = NULL;
+        }
+
+        status_t matcher::IRSaver::init()
+        {
+            pProfile    = pCore->create_default_profile();
+            if (pProfile == NULL)
+                return STATUS_NO_MEM;
+
+            return STATUS_OK;
+        }
+
+        void matcher::IRSaver::submit_command(bool save)
+        {
+            lsp_trace("set pending: %s", (save) ? "true" : "false");
+            bPending                    = save;
+        }
+
+        void matcher::IRSaver::submit_profile(const profile_data_t *src)
+        {
+            // Fill profile data
+            profile_data_t * const profile = pProfile;
+            if (profile == NULL)
+                return;
+
+            profile->nSampleRate        = src->nSampleRate;
+            profile->nChannels          = src->nChannels;
+            profile->nRank              = src->nRank;
+            profile->nFlags             = src->nFlags;
+            profile->nFrames            = src->nFrames;
+            profile->fRMS               = src->fRMS;
+
+            // Copy profile data
+            const size_t fft_csize = (1 << (profile->nRank - 1)) + 1;
+            for (size_t i=0; i<profile->nChannels; ++i)
+            {
+                const size_t j              = i % src->nChannels;
+                dsp::copy(profile->vData[i], src->vData[j], fft_csize);
+            }
+        }
+
+        void matcher::IRSaver::submit_file_name(const char *fname)
+        {
+            if (fname != NULL)
+            {
+                strncpy(sFile, fname, PATH_MAX);
+                sFile[PATH_MAX - 1] = '\0';
+            }
+            else
+                sFile[0] = '\0';
+        }
+
+        bool matcher::IRSaver::pending() const
+        {
+            return (bPending) && (sFile[0] != '\0') && (pProfile != NULL);
+        }
+
+        void matcher::IRSaver::dump(dspu::IStateDumper *v) const
+        {
+            v->write("pCore", pCore);
+            v->write("bPending", bPending);
+            v->write("sFile", sFile);
+            matcher::dump(v, "pProfile", pProfile);
+        }
+
+        status_t matcher::IRSaver::run()
+        {
+            // Save IR sample to file
+            LSPString path;
+            if (!path.set_utf8(sFile))
+                return STATUS_NO_MEM;
+
+            lsp_trace("Saving IR sample to file '%s'", path.get_utf8());
+
+            // Compute FFT parameters
+            const size_t fft_size   = 1 << pProfile->nRank;
+            const size_t fft_half   = fft_size >> 1;
+
+            // Initialize detination sample
+            dspu::Sample s;
+            if (!s.init(pProfile->nChannels, fft_size, fft_size))
+                return STATUS_NO_MEM;
+            s.set_sample_rate(pProfile->nSampleRate);
+
+            // Allocate buffers
+            const size_t to_alloc   = fft_size * 2 + fft_size;
+            float *fft              = static_cast<float *>(malloc(to_alloc * sizeof(float)));
+            if (fft == NULL)
+                return STATUS_NO_MEM;
+            lsp_finally { free(fft); };
+            float *tmp              = add_ptr<float>(fft, fft_size * 2);
+
+            // Build the IR sample
+            for (size_t i=0; i<pProfile->nChannels; ++i)
+            {
+                float *dst = s.channel(i);
+                const float *src = pProfile->vData[i];
+
+                // Create symmetric frequency chart
+                dsp::copy(tmp, src, fft_half + 1);
+                dsp::reverse2(&tmp[fft_half + 1], &src[1], fft_half - 1);
+                dsp::pcomplex_r2c(fft, tmp, fft_size);
+
+                // Convert frequency chart to IR
+                dsp::packed_reverse_fft(fft, fft, pProfile->nRank);
+                dsp::pcomplex_c2r(&dst[fft_half], fft, fft_half);
+                dsp::pcomplex_c2r(dst, &fft[fft_size], fft_half);
+
+                // Apply window function
+                dspu::windows::blackman_nuttall(tmp, fft_size);
+                dsp::mul2(dst, tmp, fft_size);
+            }
+
+            const ssize_t saved = s.save(&path);
+            status_t res =
+                (saved < 0) ? status_t(-saved) :
+                (saved == ssize_t(fft_size)) ? STATUS_OK :
+                STATUS_IO_ERROR;
+
+            lsp_trace("Saving IR sample to file '%s' status: %d", path.get_utf8(), int(res));
+
+            return res;
+        }
+
+        //-------------------------------------------------------------------------
         matcher::GCTask::GCTask(matcher *base)
         {
             pCore       = base;
@@ -284,6 +444,7 @@ namespace lsp
             sFileLoader(this),
             sFileProcessor(this),
             sKVTSync(this),
+            sIRSaver(this),
             sGCTask(this)
         {
             // Compute the number of audio channels by the number of inputs
@@ -383,6 +544,11 @@ namespace lsp
             pMatchImmediate = NULL;
             pMatchMesh      = NULL;
 
+            pIRFile         = NULL;
+            pIRSave         = NULL;
+            pIRStatus       = NULL;
+            pIRProgress     = NULL;
+
             pFftReact       = NULL;
             pFftShift       = NULL;
             pFftMesh        = NULL;
@@ -408,6 +574,13 @@ namespace lsp
             if (sKVTSync.init() != STATUS_OK)
             {
                 lsp_warn("Failed to initialize KVT sync");
+                return;
+            }
+
+            // Initialize IR saver
+            if (sIRSaver.init() != STATUS_OK)
+            {
+                lsp_warn("Failed to initialize IR Saver");
                 return;
             }
 
@@ -598,7 +771,7 @@ namespace lsp
             BIND_PORT(f->pThumbs);
             BIND_PORT(f->pPlayPosition);
 
-            // Bind bypass
+            // Bind equalizer setup
             lsp_trace("Binding match equalizer");
             SKIP_PORT("Show FFT");
             SKIP_PORT("Show profiles");
@@ -617,6 +790,12 @@ namespace lsp
                     BIND_PORT(b->pParams[j]);
             }
             BIND_PORT(pMatchMesh);
+
+            // Bind IR file settings
+            BIND_PORT(pIRFile);
+            BIND_PORT(pIRSave);
+            BIND_PORT(pIRStatus);
+            BIND_PORT(pIRProgress);
 
             // Bind meters
             lsp_trace("Binding meter parameters");
@@ -896,6 +1075,7 @@ namespace lsp
             bUpdateMatch            = rebuild_eq_profiles;
 
             sMatchImmediate.submit(pMatchImmediate->value());
+            sIRSaver.submit_command(pIRSave->value() >= 0.5f);
 
             if ((old_ref_source != nRefSource) || (old_cap_source != nCapSource) || (old_in_source != nInSource))
             {
@@ -1714,9 +1894,9 @@ namespace lsp
                     float * const fft = spectrum[i*PC_TOTAL + PC_INPUT];
                     const float * const prof = match->vData[i];
 
-                    dsp::pcomplex_r2c_mul2(fft, prof, fft_half);
-                    dsp::reverse2(tmp, &prof[1], fft_half);
-                    dsp::pcomplex_r2c_mul2(&fft[fft_half * 2], tmp, fft_half);
+                    dsp::pcomplex_r2c_mul2(fft, prof, fft_csize);
+                    dsp::reverse2(tmp, &prof[1], fft_half - 1);
+                    dsp::pcomplex_r2c_mul2(&fft[fft_csize * 2], tmp, fft_half - 1);
                 }
             }
 
@@ -2070,6 +2250,7 @@ namespace lsp
             }
 
             post_process_profiles();
+            process_save_ir_events();
             output_fft_mesh_data();
             output_profile_mesh_data();
             output_file_mesh_data();
@@ -2630,6 +2811,51 @@ namespace lsp
             }
         }
 
+        void matcher::process_save_ir_events()
+        {
+            if (sIRSaver.idle())
+            {
+                // Check that path has changed
+                plug::path_t *path = (pIRFile != NULL) ? pIRFile->buffer<plug::path_t>() : NULL;
+                if ((path != NULL) && (path->pending()))
+                {
+                    // Accept new file name
+                    path->accept();
+                    lsp_trace("set IR file name to %s", path->path());
+                    sIRSaver.submit_file_name(path->path());
+
+                    // Commit path
+                    path->commit();
+                }
+
+                // Check that save command is pending
+                if (sIRSaver.pending())
+                {
+                    const profile_data_t * const match = vProfileData[PROF_MATCH];
+                    if ((match != NULL) && (match->nFlags & PFLAGS_READY))
+                    {
+                        sIRSaver.submit_profile(match);
+                        if (pExecutor->submit(&sIRSaver))
+                        {
+                            lsp_trace("Successfully submitted IR save task");
+                            pIRStatus->set_value(STATUS_IN_PROCESS);
+                        }
+                    }
+                }
+            }
+
+            if (sIRSaver.completed())
+            {
+                // Update save status
+                const status_t code = sIRSaver.code();
+                if (code == STATUS_OK)
+                    pIRProgress->set_value(100.0f);
+                pIRStatus->set_value(code);
+
+                sIRSaver.reset();
+            }
+        }
+
         void matcher::process_gc_tasks()
         {
             if (sGCTask.completed())
@@ -2904,6 +3130,34 @@ namespace lsp
             }
 
             return profile;
+        }
+
+        void matcher::dump(dspu::IStateDumper *v, const char *name, const profile_data_t * profile)
+        {
+            // Check profile for NULL
+            if (profile == NULL)
+            {
+                if (name != NULL)
+                    v->write(name, static_cast<const void *>(NULL));
+                else
+                    v->write(static_cast<const void *>(NULL));
+                return;
+            }
+
+            // Write profile object
+            if (name != NULL)
+                v->begin_object(name, profile, sizeof(profile_data_t));
+            else
+                v->begin_object(profile, sizeof(profile_data_t));
+
+            // TODO
+
+            v->end_object();
+        }
+
+        void matcher::dump(dspu::IStateDumper *v, const profile_data_t * profile)
+        {
+            dump(v, NULL, profile);
         }
 
         void matcher::dump(dspu::IStateDumper *v) const
