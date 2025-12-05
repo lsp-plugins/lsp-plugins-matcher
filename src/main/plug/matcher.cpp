@@ -2045,7 +2045,7 @@ namespace lsp
 
                     process_listen_output(c, to_do);
 
-                    c->sDryDelay.process(vBuffer, c->vIn, samples);
+                    c->sDryDelay.process(vBuffer, c->vIn, to_do);
                     c->sBypass.process(c->vOut, vBuffer, c->vBuffer, to_do);
                 }
 

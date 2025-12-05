@@ -281,9 +281,9 @@ namespace lsp
                         virtual status_t run() override;
 
                     public: // core::KVTListener
-                        virtual void created(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending);
-                        virtual void changed(core::KVTStorage *storage, const char *id, const core::kvt_param_t *oval, const core::kvt_param_t *nval, size_t pending);
-                        virtual void commit(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending);
+                        virtual void created(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending) override;
+                        virtual void changed(core::KVTStorage *storage, const char *id, const core::kvt_param_t *oval, const core::kvt_param_t *nval, size_t pending) override;
+                        virtual void commit(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending) override;
                 };
 
                 class GCTask: public ipc::ITask
