@@ -380,6 +380,7 @@ namespace lsp
             pStereoLink     = NULL;
 
             pMatchLimit     = NULL;
+            pMatchImmediate = NULL;
             pMatchMesh      = NULL;
 
             pFftReact       = NULL;
@@ -608,6 +609,7 @@ namespace lsp
             SKIP_PORT("Show selected profiles");
 
             BIND_PORT(pMatchLimit);
+            BIND_PORT(pMatchImmediate);
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
                 match_band_t *b     = &vMatchBands[i];
@@ -892,6 +894,8 @@ namespace lsp
             fBlend                  = pBlend->value() * 0.01f;
             fStereoLink             = (pStereoLink != NULL) ? pStereoLink->value() * 0.01f : 0.0f;
             bUpdateMatch            = rebuild_eq_profiles;
+
+            sMatchImmediate.submit(pMatchImmediate->value());
 
             if ((old_ref_source != nRefSource) || (old_cap_source != nCapSource) || (old_in_source != nInSource))
             {
@@ -1479,17 +1483,26 @@ namespace lsp
                 }
 
                 const float norm = src->fRMS / in->fRMS;
+                const bool match_immediate = sMatchImmediate.pending();
 
                 // Dynamically changing profile
                 for (size_t i=0; i<nChannels; ++i)
                 {
                     // Compute new profile value
-                    dsp::clamp_kk2(tmp->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
 
-                    // Apply reactivity to the changes
-                    dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                    // Apply reactivity to the changes or perform immediate match
+                    if (match_immediate)
+                    {
+                        dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                        dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                    }
+                    else
+                    {
+                        dsp::clamp_kk2(tmp->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                        dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                        dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                    }
                 }
             }
             else if (need_sync)
@@ -1499,8 +1512,8 @@ namespace lsp
                 // Compute new static profile value
                 for (size_t i=0; i<nChannels; ++i)
                 {
-                    dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                 }
             }
@@ -1718,7 +1731,9 @@ namespace lsp
                 analyze_spectrum(&vChannels[i], SM_OUT, fft);
             }
 
+            // Commit state update
             commit_profiles();
+            sMatchImmediate.commit();
         }
 
         bool matcher::resample_profile(profile_data_t *profile, size_t srate, size_t rank)

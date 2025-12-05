@@ -334,6 +334,7 @@ namespace lsp
                 bool                bMatchLimit;        // Match curve limiting enabled
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
+                dspu::Toggle        sMatchImmediate;    // Perform immediate matching
                 af_descriptor_t     sFile;              // Audio file
                 FileLoader          sFileLoader;        // Audio file loader
                 FileProcessor       sFileProcessor;     // Audio file processor task
@@ -382,6 +383,7 @@ namespace lsp
                 plug::IPort        *pStereoLink;        // Stereo link
 
                 plug::IPort        *pMatchLimit;        // Enable frequency limiting
+                plug::IPort        *pMatchImmediate;    // Perform immediate matching
                 plug::IPort        *pMatchMesh;         // Match mesh
 
                 plug::IPort        *pFftReact;          // FFT reactivity for analysis

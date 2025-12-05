@@ -143,6 +143,7 @@ namespace lsp
             SWITCH("showflt", "Show filters", "Show filters", 0), \
             SWITCH("track", "Enable tracking of dynamic profiles", "Track dynamic", 1), \
             SWITCH("limit", "Enable profile limiting", "Limit", 0), \
+            TRIGGER("match", "Perform immediate matching", "Match"), \
             MATCHER_EQ_BAND(1, "25"), \
             MATCHER_EQ_BAND(2, "50"), \
             MATCHER_EQ_BAND(3, "107"), \
