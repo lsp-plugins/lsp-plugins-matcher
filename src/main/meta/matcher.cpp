@@ -187,9 +187,9 @@ namespace lsp
             SWITCH("prfe" id, "Draw dynamic reference profile", "Ref prof" alias, 0), \
             SWITCH("pmfe" id, "Draw resulting match profile", "Match prof" alias, 1), \
             METER_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_P_24_DB), \
-            METER_GAIN("rlm" id, "Reference level meter" label, GAIN_AMP_P_24_DB), \
+            METER_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB), \
             METER_GAIN("clm" id, "Capture level meter" label, GAIN_AMP_P_24_DB), \
-            METER_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB)
+            METER_GAIN("rlm" id, "Reference level meter" label, GAIN_AMP_P_24_DB)
 
         #define MATCHER_IR_FILE \
             PATH("ir_file", "Output IR file name"), \

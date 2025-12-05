@@ -200,6 +200,7 @@ namespace lsp
                     float                  *vShmIn;             // Shared memory link
                     float                  *vFft[SM_TOTAL];     // FFT data
                     float                  *vBuffer;            // Temporary buffer
+                    float                   vLevel[SM_TOTAL];   // Level meters
 
                     bool                    bFft[SM_TOTAL];     // Perform FFT processing
 
@@ -482,6 +483,8 @@ namespace lsp
                 void                process_listen_output(channel_t *c, size_t samples);
                 bool                save_profile(core::KVTStorage *kvt, const char *path, profile_data_t *profile);
                 profile_data_t     *load_profile(const char *path, const core::kvt_param_t *param);
+                void                init_level_meters();
+                void                output_level_meters();
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

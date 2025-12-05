@@ -1,5 +1,5 @@
 <plugin resizable="true">
-	<grid rows="3" cols="2" spacing="4">
+	<grid rows="3" cols="3" spacing="4">
 		<group ipadding="0" expand="true" fill="true" text="labels.graphs.frequency">
 			<graph ui:id="profile_graph" width.min="640" height.min="380" expand="true">
 				<origin hpos="-1" vpos="-1" visible="false"/>
@@ -154,6 +154,29 @@
 			</graph>
 		</group>
 		
+		<grid rows="2" cols="2">
+			<label text="labels.chan.in" pad.b="3" pad.t="3"/>
+			<label text="labels.chan.out" pad.b="3" pad.t="3"/>
+			<ui:if test="!ex :out_r">
+				<ledmeter vexpand="true" angle="1">
+					<ledchannel id="ilm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+				</ledmeter>
+				<ledmeter vexpand="true" angle="1">
+					<ledchannel id="olm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono"/>
+				</ledmeter>
+			</ui:if>
+			<ui:if test="ex :out_r">
+				<ledmeter vexpand="true" angle="1">
+					<ledchannel id="ilm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+					<ledchannel id="ilm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+				</ledmeter>
+				<ledmeter vexpand="true" angle="1">
+					<ledchannel id="olm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left"/>
+					<ledchannel id="olm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right"/>
+				</ledmeter>
+			</ui:if>
+		</grid>
+		
 		<cell rows="3">
 			<vbox>
 				<!-- Signal -->
@@ -281,81 +304,116 @@
 			</vbox>
 		</cell>
 		
-		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
-			<label text="labels.fft.frame" />
-			<combo id="fft_sz" />
-			<label text="labels.input" />
-			<combo id="in_src" />
-			<label text="labels.signal.reference" />
-			<combo id="ref_src" />
-			<button id="track" text="actions.tracking" />
-			
-			<vsep />
-			
-			<void hexpand="true" />
-			
-			<vsep />
-			<label text="labels.blend" />
-			<knob id="blend" />
-			<value id="blend" />
-			
-			<ui:if test="ex :out_r">
-				<label text="labels.stereo_link" />
-				<knob id="slink" />
-				<value id="slink" />
-			</ui:if>
-			
-			<vsep />
-			
-			<shmlink id="link" pad.v="4" pad.l="2"/>
-			
-			<vsep />
-			
-			<save
-				id="ir_file"
-				command.id="ir_save"
-				progress.id="ir_prog"
-				status=":ir_stat"
-				path.id="_ui_dlg_ir_path"
-				bg.color="bg_schema"
-				format="wav" />
-		</hbox>
-		<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
-			<label text="labels.signal.input" />
-			<knob id="rct_in" />
-			<value id="rct_in" sline="true" />
-			<button id="profile" text="actions.record" />
-			
-			<vsep />
-			
-			<label text="labels.capture" />
-			<combo id="cap_src" />
-			<button id="capture" text="actions.record" />
-			<button id="listen" text="actions.listen" />
-			
-			<vsep />
-			
-			<label text="labels.signal.reference" />
-			<knob id="rct_ref" />
-			<value id="rct_ref" sline="true" />
-			
-			<vsep />
-			
-			<button ui:id="profile_file_trigger" id="showfil" text="labels.file" />
-			
-			<vsep />
-			
-			<button ui:id="profile_envelope_trigger" id="showenv" text="labels.signal.envelope" />
-			
-			<vsep />
-			
-			<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" />
-			<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" />
-			
-			<vsep />
-			
-			<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters" />
-		</hbox>
+		<cell cols="2">
+			<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
+				<label text="labels.fft.frame" />
+				<combo id="fft_sz" />
+				<label text="labels.input" />
+				<combo id="in_src" />
+				<label text="labels.signal.reference" />
+				<combo id="ref_src" />
+				<button id="track" text="actions.tracking" />
+				
+				<vsep />
+				
+				<void hexpand="true" />
+				
+				<vsep />
+				<label text="labels.blend" />
+				<knob id="blend" />
+				<value id="blend" />
+				
+				<ui:if test="ex :out_r">
+					<label text="labels.stereo_link" />
+					<knob id="slink" />
+					<value id="slink" />
+				</ui:if>
+				
+				<vsep />
+				
+				<shmlink id="link" pad.v="4" pad.l="2"/>
+				
+				<vsep />
+				
+				<save
+					id="ir_file"
+					command.id="ir_save"
+					progress.id="ir_prog"
+					status=":ir_stat"
+					path.id="_ui_dlg_ir_path"
+					bg.color="bg_schema"
+					format="wav" />
+			</hbox>
+		</cell>
+		<cell cols="2">
+			<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
+				<label text="labels.signal.input" />
+				<knob id="rct_in" />
+				<value id="rct_in" sline="true" />
+				<button id="profile" text="actions.record" />
+				
+				<vsep />
+				
+				<grid rows="2" cols="4">
+					<label text="labels.capture" />
+					<combo id="cap_src" />
+					<button id="capture" text="actions.record" />
+					<button id="listen" text="actions.listen" />
+					<cell cols="4">
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="clm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+							</ledmeter>
+						</ui:if>
+					</cell>
+				</grid>
+				
+				<vsep />
+				
+				<grid rows="2" cols="3">
+					<label text="labels.signal.reference" />
+					<knob id="rct_ref" />
+					<value id="rct_ref" sline="true" />
+					
+					<cell cols="3">
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="rlm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="rlm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="rlm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+							</ledmeter>
+						</ui:if>
+					</cell>
+				</grid>
+				
+				<vsep />
+				
+				<button ui:id="profile_file_trigger" id="showfil" text="labels.file" />
+				
+				<vsep />
+				
+				<button ui:id="profile_envelope_trigger" id="showenv" text="labels.signal.envelope" />
+				
+				<vsep />
+				
+				<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" />
+				<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" />
+				
+				<vsep />
+				
+				<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters" />
+			</hbox>
+		</cell>
 	</grid>
 	
 	<!-- Profile envelope overlay -->

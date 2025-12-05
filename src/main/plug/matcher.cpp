@@ -657,6 +657,7 @@ namespace lsp
                 for (size_t j=0; j<SM_TOTAL; ++j)
                 {
                     c->vFft[j]              = advance_ptr_bytes<float>(ptr, szof_fft_buf);
+                    c->vLevel[j]            = GAIN_AMP_M_INF_DB;
                     dsp::fill_zero(c->vFft[j], szof_fft_buf / sizeof(float));
 
                     c->bFft[j]              = false;
@@ -1301,6 +1302,7 @@ namespace lsp
                 c->vIn                  = c->pIn->buffer<float>();
                 c->vOut                 = c->pOut->buffer<float>();
                 c->vSc                  = (c->pSc != NULL) ? c->pSc->buffer<float>() : NULL;
+                c->vShmIn               = NULL;
                 core::AudioBuffer *buf  = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
                 if ((buf != NULL) && (buf->active()))
                     c->vShmIn               = buf->buffer();
@@ -1317,22 +1319,24 @@ namespace lsp
                 const size_t base       = i * PC_TOTAL;
 
                 // Route input
-                if (fGainIn != GAIN_AMP_0_DB)
-                {
-                    dsp::mul_k3(c->vBuffer, c->vIn, fGainIn, samples);
-                    sProcessor.bind(base + PC_INPUT, c->vBuffer, c->vBuffer);
-                }
-                else
-                    sProcessor.bind(base + PC_INPUT, c->vBuffer, c->vIn);
+                const float in_level    = dsp::abs_max(c->vIn, samples) * fGainIn;
+                sProcessor.bind(base + PC_INPUT, c->vBuffer, c->vIn);
+                sProcessor.bind(base + PC_REFERENCE, NULL, NULL);
+                sProcessor.bind(base + PC_CAPTURE, NULL, NULL);
 
                 // Route reference input signal
+                float ref_level         = GAIN_AMP_M_INF_DB;
                 switch (nRefSource)
                 {
                     case REF_SIDECHAIN:
                         sProcessor.bind(base + PC_REFERENCE, NULL, c->vSc);
+                        if (c->vSc != NULL)
+                            ref_level       = dsp::abs_max(c->vSc, samples);
                         break;
                     case REF_LINK:
                         sProcessor.bind(base + PC_REFERENCE, NULL, c->vShmIn);
+                        if (c->vShmIn != NULL)
+                            ref_level       = dsp::abs_max(c->vShmIn, samples);
                         break;
 
                     case REF_NONE:
@@ -1340,23 +1344,38 @@ namespace lsp
                     case REF_FILE:
                     case REF_EQUALIZER:
                     default:
-                        sProcessor.bind(base + PC_REFERENCE, NULL, NULL);
                         break;
                 }
 
                 // Route capture input signal
+                float cap_level         = GAIN_AMP_M_INF_DB;
                 switch (nCapSource)
                 {
                     case CAP_SIDECHAIN:
                         sProcessor.bind(base + PC_CAPTURE, NULL, c->vSc);
+                        if (c->vSc != NULL)
+                            cap_level       = dsp::abs_max(c->vSc, samples);
                         break;
                     case CAP_LINK:
                         sProcessor.bind(base + PC_CAPTURE, NULL, c->vShmIn);
+                        if (c->vShmIn != NULL)
+                            cap_level       = dsp::abs_max(c->vShmIn, samples);
+                        break;
+                    case CAP_INPUT:
+                        cap_level           = in_level;
+                        break;
+                    case CAP_REFERENCE:
+                        cap_level           = ref_level;
                         break;
                     default:
-                        sProcessor.bind(base + PC_CAPTURE, NULL, NULL);
+
                         break;
                 }
+
+                // Update levels
+                c->vLevel[SM_IN]        = lsp_max(c->vLevel[SM_IN], in_level);
+                c->vLevel[SM_CAPTURE]   = lsp_max(c->vLevel[SM_CAPTURE], cap_level);
+                c->vLevel[SM_REFERENCE] = lsp_max(c->vLevel[SM_REFERENCE], ref_level);
             }
         }
 
@@ -1818,6 +1837,13 @@ namespace lsp
                     break;
             }
 
+            // Apply input gain
+            if (fGainIn != GAIN_AMP_0_DB)
+            {
+                for (size_t i=0; i<nChannels; ++i)
+                    dsp::mul_k2(spectrum[i*PC_TOTAL + PC_INPUT], fGainIn, fft_csize);
+            }
+
             // Build filter profile if needed
             build_filter_profile();
 
@@ -2208,17 +2234,45 @@ namespace lsp
                     break;
             }
 
+            // Measure input levels
+            if (cap_src != vEmptyBuf)
+                c->vLevel[SM_CAPTURE]   = lsp_max(c->vLevel[SM_CAPTURE], dsp::abs_max(cap_src, samples));
+
             if (bListen)
                 c->sScDelay.process(c->vBuffer, cap_src, samples);
             else
                 c->sScDelay.append(cap_src, samples);
 
             c->sPlayer.process(c->vBuffer, c->vBuffer, samples);
+
+            // Measure output levels
+            c->vLevel[SM_OUT]       = lsp_max(c->vLevel[SM_OUT], dsp::abs_max(c->vBuffer, samples));
+        }
+
+        void matcher::init_level_meters()
+        {
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c        = &vChannels[i];
+                for (size_t j=0; j<SM_TOTAL; ++j)
+                    c->vLevel[j]        = GAIN_AMP_M_INF_DB;
+            }
+        }
+
+        void matcher::output_level_meters()
+        {
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c        = &vChannels[i];
+                for (size_t j=0; j<SM_TOTAL; ++j)
+                    c->pMeter[j]->set_value(c->vLevel[j]);
+            }
         }
 
         void matcher::process(size_t samples)
         {
             init_buffers();
+            init_level_meters();
             process_file_loading_tasks();
             process_file_processing_tasks();
             process_listen_events();
@@ -2240,6 +2294,8 @@ namespace lsp
 
                     process_listen_output(c, to_do);
 
+                    c->vLevel[SM_OUT]   = lsp_max(c->vLevel[SM_OUT], dsp::abs_max(c->vBuffer, to_do));
+
                     c->sDryDelay.process(vBuffer, c->vIn, to_do);
                     c->sBypass.process(c->vOut, vBuffer, c->vBuffer, to_do);
                 }
@@ -2249,6 +2305,7 @@ namespace lsp
                 offset             += to_do;
             }
 
+            output_level_meters();
             post_process_profiles();
             process_save_ir_events();
             output_fft_mesh_data();
