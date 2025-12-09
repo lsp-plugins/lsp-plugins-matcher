@@ -799,6 +799,7 @@ namespace lsp
             BIND_PORT(pMatchBottomLimit);
             BIND_PORT(pMatchLimit);
             BIND_PORT(pMatchImmediate);
+            SKIP_PORT("Morph time linking");
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
                 match_band_t *b     = &vMatchBands[i];

@@ -1,4 +1,18 @@
 <plugin resizable="true">
+	<!-- Control linking -->
+	<ctl:link
+		id.spd_1="spd_1" value.spd_1=":_old_this + :_current - :_old_current"
+		id.spd_2="spd_2" value.spd_2=":_old_this + :_current - :_old_current"
+		id.spd_3="spd_3" value.spd_3=":_old_this + :_current - :_old_current"
+		id.spd_4="spd_4" value.spd_4=":_old_this + :_current - :_old_current"
+		id.spd_5="spd_5" value.spd_5=":_old_this + :_current - :_old_current"
+		id.spd_6="spd_6" value.spd_6=":_old_this + :_current - :_old_current"
+		id.spd_7="spd_7" value.spd_7=":_old_this + :_current - :_old_current"
+		id.spd_8="spd_8" value.spd_8=":_old_this + :_current - :_old_current"
+		id.spd_9="spd_9" value.spd_9=":_old_this + :_current - :_old_current"
+		id.spd_10="spd_10" value.spd_10=":_old_this + :_current - :_old_current"
+		activity=":mrplink"/>
+
 	<grid rows="3" cols="3" spacing="4">
 		<group ipadding="0" expand="true" fill="true" text="labels.graphs.frequency">
 			<graph ui:id="profile_graph" width.min="640" height.min="380" expand="true">
@@ -535,7 +549,10 @@
 				<ui:for id="i" first="1" count="10">
 					<knob id="spd_${i}" />
 				</ui:for>
-				<button id="match" text="actions.match" />
+				<vbox>
+					<button id="match" text="actions.match" />
+					<button id="mrplink" text="labels.chan.link" />
+				</vbox>
 				
 				<ui:for id="i" first="1" count="10">
 					<value id="spd_${i}" />

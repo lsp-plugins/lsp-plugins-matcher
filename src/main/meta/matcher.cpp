@@ -151,6 +151,7 @@ namespace lsp
             SWITCH("blimit", "Enable profile limiting from bottom", "Bottom limit", 1), \
             SWITCH("limit", "Enable profile limiting", "Limit", 0), \
             TRIGGER("match", "Perform immediate matching", "Match"), \
+            SWITCH("mrplink", "Morph time linking", "Morph Link", 0), \
             MATCHER_EQ_BAND(1, "25"), \
             MATCHER_EQ_BAND(2, "50"), \
             MATCHER_EQ_BAND(3, "107"), \
