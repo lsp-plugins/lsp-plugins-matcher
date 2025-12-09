@@ -458,50 +458,51 @@ namespace lsp
                 (!strcmp(meta->uid, meta::sc_matcher_stereo.uid));
 
             // Initialize other parameters
-            vChannels       = NULL;
-            vIndices        = NULL;
-            vFreqs          = NULL;
-            vFilterCurve    = NULL;
-            vEnvelope       = NULL;
-            vRevEnvelope    = NULL;
-            vBuffer         = NULL;
-            vEmptyBuf       = NULL;
-            pExecutor       = NULL;
-            pGCList         = NULL;
-            pReactivity     = NULL;
-            pTempProfile    = NULL;
-            pFilterProfile  = NULL;
-            pMatchProfile   = NULL;
+            vChannels           = NULL;
+            vIndices            = NULL;
+            vFreqs              = NULL;
+            vFilterCurve        = NULL;
+            vEnvelope           = NULL;
+            vRevEnvelope        = NULL;
+            vBuffer             = NULL;
+            vEmptyBuf           = NULL;
+            pExecutor           = NULL;
+            pGCList             = NULL;
+            pReactivity         = NULL;
+            pTempProfile        = NULL;
+            pFilterProfile      = NULL;
+            pMatchProfile       = NULL;
 
-            nInSource       = IN_STATIC;
-            nRefSource      = REF_CAPTURE;
-            nRawCapSource   = RAW_CAP_INPUT;
-            nCapSource      = CAP_NONE;
-            nRank           = 0;
-            fGainIn         = GAIN_AMP_0_DB;
-            fGainOut        = GAIN_AMP_0_DB;
-            fFftTau         = 1.0f;
-            fFftShift       = GAIN_AMP_0_DB;
-            fInTau          = 1.0f;
-            fRefTau         = 1.0f;
-            fBlend          = 0.0f;
-            fHpfFreq        = 0.0f;
-            fHpfSlope       = 0.0f;
-            fLpfFreq        = 0.0f;
-            fLpfSlope       = 0.0f;
-            fClipFreq       = -0.0f;
-            fStereoLink     = 0.0f;
+            nInSource           = IN_STATIC;
+            nRefSource          = REF_CAPTURE;
+            nRawCapSource       = RAW_CAP_INPUT;
+            nCapSource          = CAP_NONE;
+            nRank               = 0;
+            fGainIn             = GAIN_AMP_0_DB;
+            fGainOut            = GAIN_AMP_0_DB;
+            fFftTau             = 1.0f;
+            fFftShift           = GAIN_AMP_0_DB;
+            fInTau              = 1.0f;
+            fRefTau             = 1.0f;
+            fBlend              = 0.0f;
+            fHpfFreq            = 0.0f;
+            fHpfSlope           = 0.0f;
+            fLpfFreq            = 0.0f;
+            fLpfSlope           = 0.0f;
+            fClipFreq           = -0.0f;
+            fStereoLink         = 0.0f;
 
-            nFileProcessReq = 0;
-            nFileProcessResp= 0;
+            nFileProcessReq     = 0;
+            nFileProcessResp    = 0;
 
-            bProfile        = false;
-            bCapture        = false;
-            bListen         = false;
-            bSyncRefFFT     = true;
-            bSyncFilter     = true;
-            bUpdateMatch    = true;
-            bMatchLimit     = false;
+            bProfile            = false;
+            bCapture            = false;
+            bListen             = false;
+            bSyncRefFFT         = true;
+            bSyncFilter         = true;
+            bUpdateMatch        = true;
+            bMatchTopLimit      = true;
+            bMatchBottomLimit   = true;
 
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
             {
@@ -516,49 +517,51 @@ namespace lsp
             for (size_t i=0; i<PROF_TOTAL; ++i)
                 vProfileData[i]     = NULL;
 
-            pBypass         = NULL;
-            pGainIn         = NULL;
-            pGainOut        = NULL;
-            pFftSize        = NULL;
-            pInReactivity   = NULL;
-            pRefReactivity  = NULL;
-            pInSource       = NULL;
-            pRefSource      = NULL;
-            pCapSource      = NULL;
-            pBlend          = NULL;
-            pProfile        = NULL;
-            pCapture        = NULL;
-            pListen         = NULL;
-            pHpfOn          = NULL;
-            pHpfFreq        = NULL;
-            pHpfSlope       = NULL;
-            pLpfOn          = NULL;
-            pLpfFreq        = NULL;
-            pLpfSlope       = NULL;
-            pClipOn         = NULL;
-            pClipFreq       = NULL;
-            pMatchInReady   = NULL;
-            pMatchRefReady  = NULL;
-            pInReady        = NULL;
-            pCapReady       = NULL;
-            pFileReady      = NULL;
-            pFilterMesh     = NULL;
-            pStereoLink     = NULL;
+            pBypass             = NULL;
+            pGainIn             = NULL;
+            pGainOut            = NULL;
+            pFftSize            = NULL;
+            pInReactivity       = NULL;
+            pRefReactivity      = NULL;
+            pInSource           = NULL;
+            pRefSource          = NULL;
+            pCapSource          = NULL;
+            pBlend              = NULL;
+            pProfile            = NULL;
+            pCapture            = NULL;
+            pListen             = NULL;
+            pHpfOn              = NULL;
+            pHpfFreq            = NULL;
+            pHpfSlope           = NULL;
+            pLpfOn              = NULL;
+            pLpfFreq            = NULL;
+            pLpfSlope           = NULL;
+            pClipOn             = NULL;
+            pClipFreq           = NULL;
+            pMatchInReady       = NULL;
+            pMatchRefReady      = NULL;
+            pInReady            = NULL;
+            pCapReady           = NULL;
+            pFileReady          = NULL;
+            pFilterMesh         = NULL;
+            pStereoLink         = NULL;
 
-            pMatchLimit     = NULL;
-            pMatchImmediate = NULL;
-            pMatchMesh      = NULL;
+            pMatchTopLimit      = NULL;
+            pMatchBottomLimit   = NULL;
+            pMatchLimit         = NULL;
+            pMatchImmediate     = NULL;
+            pMatchMesh          = NULL;
 
-            pIRFile         = NULL;
-            pIRSave         = NULL;
-            pIRStatus       = NULL;
-            pIRProgress     = NULL;
+            pIRFile             = NULL;
+            pIRSave             = NULL;
+            pIRStatus           = NULL;
+            pIRProgress         = NULL;
 
-            pFftReact       = NULL;
-            pFftShift       = NULL;
-            pFftMesh        = NULL;
+            pFftReact           = NULL;
+            pFftShift           = NULL;
+            pFftMesh            = NULL;
 
-            pData           = NULL;
+            pData               = NULL;
         }
 
         matcher::~matcher()
@@ -792,6 +795,8 @@ namespace lsp
             SKIP_PORT("Show filters");
             SKIP_PORT("Show selected profiles");
 
+            BIND_PORT(pMatchTopLimit);
+            BIND_PORT(pMatchBottomLimit);
             BIND_PORT(pMatchLimit);
             BIND_PORT(pMatchImmediate);
             for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
@@ -1064,6 +1069,7 @@ namespace lsp
             const float in_react    = pInReactivity->value();
             const float ref_react   = pRefReactivity->value();
             const size_t fft_csize  = fft_period + 1;
+            const bool match_limit  = pMatchLimit->value() >= 0.5f;
             bool rebuild_eq_profiles= false;
 
             fGainIn                 = pGainIn->value();
@@ -1071,15 +1077,18 @@ namespace lsp
 
             const size_t old_ref_source = nRefSource;
             const size_t old_cap_source = nCapSource;
-            const bool old_match_lim    = bMatchLimit;
+            const bool old_match_top    = bMatchTopLimit;
+            const bool old_match_bottom = bMatchBottomLimit;
             const size_t old_in_source  = nInSource;
             const float old_slink       = fStereoLink;
             const float old_blend       = fBlend;
 
+
             nRefSource              = decode_reference_source(pRefSource->value());
             nRawCapSource           = pCapSource->value();
             nCapSource              = decode_capture_source(nRawCapSource, nRefSource);
-            bMatchLimit             = pMatchLimit->value() >= 0.5f;
+            bMatchTopLimit          = (match_limit) && (pMatchTopLimit->value() >= 0.5f);
+            bMatchBottomLimit       = (match_limit) && (pMatchBottomLimit->value() >= 0.5f);
             nInSource               = pInSource->value();
             fBlend                  = pBlend->value() * 0.01f;
             fStereoLink             = (pStereoLink != NULL) ? pStereoLink->value() * 0.01f : 0.0f;
@@ -1097,7 +1106,8 @@ namespace lsp
                 if (old_ref_source != nRefSource)
                     bSyncRefFFT             = true;
             }
-            if ((bMatchLimit != old_match_lim) ||
+            if ((bMatchTopLimit != old_match_top) ||
+                (bMatchBottomLimit != old_match_bottom) ||
                 (fStereoLink != old_slink) ||
                 (fBlend != old_blend))
                 bUpdateMatch            = true;
@@ -1241,13 +1251,13 @@ namespace lsp
                 if (eq_dirty & (1 << EQP_MAX_AMPLIFICATION))
                 {
                     build_eq_profile(vProfileData[PROF_MAX_EQUALIZER], EQP_MAX_AMPLIFICATION, false);
-                    if (bMatchLimit)
+                    if (bMatchTopLimit)
                         bUpdateMatch        = true;
                 }
                 if (eq_dirty & (1 << EQP_MAX_REDUCTION))
                 {
                     build_eq_profile(vProfileData[PROF_MIN_EQUALIZER], EQP_MAX_REDUCTION, false);
-                    if (bMatchLimit)
+                    if (bMatchBottomLimit)
                         bUpdateMatch        = true;
                 }
                 if (eq_dirty & (1 << EQP_REACTIVITY))
@@ -1756,22 +1766,19 @@ namespace lsp
                 }
 
                 // Apply limitations if present
-                if (bMatchLimit)
+                profile_data_t * const min = (bMatchBottomLimit) ? vProfileData[PROF_MIN_EQUALIZER] : NULL;
+                profile_data_t * const max = (bMatchTopLimit) ? vProfileData[PROF_MAX_EQUALIZER] : NULL;
+                for (size_t i=0; i<nChannels; ++i)
                 {
-                    profile_data_t * const min = vProfileData[PROF_MIN_EQUALIZER];
-                    profile_data_t * const max = vProfileData[PROF_MAX_EQUALIZER];
-                    for (size_t i=0; i<nChannels; ++i)
+                    if (min != NULL)
                     {
-                        if (min != NULL)
-                        {
-                            if (max != NULL)
-                                dsp::clamp_vv1(profile->vData[i], min->vData[i], max->vData[i], fft_csize);
-                            else
-                                dsp::pmax2(profile->vData[i], min->vData[i], fft_csize);
-                        }
-                        else if (max != NULL)
-                            dsp::pmin2(profile->vData[i], max->vData[i], fft_csize);
+                        if (max != NULL)
+                            dsp::clamp_vv1(profile->vData[i], min->vData[i], max->vData[i], fft_csize);
+                        else
+                            dsp::pmax2(profile->vData[i], min->vData[i], fft_csize);
                     }
+                    else if (max != NULL)
+                        dsp::pmin2(profile->vData[i], max->vData[i], fft_csize);
                 }
 
                 // Apply filters

@@ -362,7 +362,8 @@ namespace lsp
                 bool                bSyncRefFFT;        // Synchronize reference FFT
                 bool                bSyncFilter;        // Synchronize filter profile
                 bool                bUpdateMatch;       // Update matching profile
-                bool                bMatchLimit;        // Match curve limiting enabled
+                bool                bMatchTopLimit;     // Match limiting from top
+                bool                bMatchBottomLimit;  // Match limiting from bottom
 
                 dspu::MultiSpectralProcessor    sProcessor; // Multi-channel spectral processor
                 dspu::Toggle        sMatchImmediate;    // Perform immediate matching
@@ -424,6 +425,8 @@ namespace lsp
                 plug::IPort        *pIRStatus;          // IR file save status
                 plug::IPort        *pIRProgress;        // IR file save progress
 
+                plug::IPort        *pMatchTopLimit;     // Enable frequency limiting from top
+                plug::IPort        *pMatchBottomLimit;  // Enable frequency limiting from bottom
                 plug::IPort        *pMatchLimit;        // Enable frequency limiting
                 plug::IPort        *pMatchImmediate;    // Perform immediate matching
                 plug::IPort        *pMatchMesh;         // Match mesh

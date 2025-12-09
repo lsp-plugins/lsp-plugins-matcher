@@ -147,6 +147,8 @@ namespace lsp
             SWITCH("showmrp", "Show profile morphing", "Show morph", 0), \
             SWITCH("showflt", "Show filters", "Show filters", 0), \
             SWITCH("track", "Enable tracking of dynamic profiles", "Track dynamic", 1), \
+            SWITCH("tlimit", "Enable profile limiting from top", "Top limit", 1), \
+            SWITCH("blimit", "Enable profile limiting from bottom", "Bottom limit", 1), \
             SWITCH("limit", "Enable profile limiting", "Limit", 0), \
             TRIGGER("match", "Perform immediate matching", "Match"), \
             MATCHER_EQ_BAND(1, "25"), \

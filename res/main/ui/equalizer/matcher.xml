@@ -77,9 +77,9 @@
 					<!-- Envelope -->
 					<mesh id="pmesh" xi="0" yi="7" width="2" color="mono" visibility="(:showpro and :pefe) or :showenv" />
 					<!-- Envelope maximum bounds -->
-					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility=":limit or :showlim" />
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" />
 					<!-- Envelope minimum bounds -->
-					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility=":limit or :showlim" />
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" />
 					<!-- Match profile -->
 					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" visibility=":pmfe and not ${hide_cond_soft}" />
 				</ui:if>
@@ -116,11 +116,11 @@
 					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" visibility="(:showpro and :pefe_l) or :showenv" />
 					<mesh id="pmesh" xi="0" yi="16" width="2" color="right" visibility="(:showpro and :pefe_r) or :showenv" />
 					<!-- Envelope maximum bounds -->
-					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility=":limit or :showlim" />
-					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility=":limit or :showlim" />
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" />
+					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" />
 					<!-- Envelope minimum bounds -->
-					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility=":limit or :showlim" />
-					<mesh id="pmesh" xi="0" yi="18" width="2" color="threshold" visibility=":limit or :showlim" />
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" />
+					<mesh id="pmesh" xi="0" yi="18" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" />
 					<!-- Match profile -->
 					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" visibility=":pmfe_l and not ${hide_cond_soft}" />
 					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" visibility=":pmfe_r and not ${hide_cond_soft}" />
@@ -482,6 +482,8 @@
 				<cell cols="10">
 					<hbox>
 						<void hexpand="true" />
+						<button id="tlimit" text="labels.limiting.top" />
+						<button id="blimit" text="labels.limiting.bottom" />
 						<button id="limit" text="labels.enable" />
 					</hbox>
 				</cell>
