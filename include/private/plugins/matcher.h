@@ -463,7 +463,8 @@ namespace lsp
                 void                process_block(float * const * spectrum, size_t rank);
                 void                analyze_spectrum(channel_t *c, sig_meters_t meter, const float *fft);
                 uint32_t            decode_reference_source(size_t ref) const;
-                uint32_t            decode_capture_source(size_t cap, size_t ref) const;
+                uint32_t            decode_raw_capture_source(size_t cap) const;
+                uint32_t            decode_capture_source(size_t raw_cap, size_t ref) const;
                 bool                check_need_profile_sync();
                 void                record_profile(profile_data_t *profile, float * const * spectrum, size_t channel);
                 void                clear_profile_data(profile_data_t *profile);

@@ -1035,26 +1035,39 @@ namespace lsp
             return REF_NONE;
         }
 
-        uint32_t matcher::decode_capture_source(size_t cap, size_t ref) const
+        uint32_t matcher::decode_raw_capture_source(size_t cap) const
         {
             if (bSidechain)
             {
                 switch (cap)
                 {
-                    case 0: return CAP_INPUT;
-                    case 1: return (ref == REF_SIDECHAIN) ? CAP_REFERENCE : CAP_SIDECHAIN;
-                    case 2: return (ref == REF_LINK) ? CAP_REFERENCE : CAP_LINK;
+                    case 0: return RAW_CAP_INPUT;
+                    case 1: return RAW_CAP_SIDECHAIN;
+                    case 2: return RAW_CAP_LINK;
                     default: break;
                 }
             }
             else
             {
-                switch (ref)
+                switch (cap)
                 {
-                    case 0: return CAP_INPUT;
-                    case 1: return (ref == REF_LINK) ? CAP_REFERENCE : CAP_LINK;
+                    case 0: return RAW_CAP_INPUT;
+                    case 1: return RAW_CAP_LINK;
                     default: break;
                 }
+            }
+
+            return CAP_NONE;
+        }
+
+        uint32_t matcher::decode_capture_source(size_t raw_cap, size_t ref) const
+        {
+            switch (raw_cap)
+            {
+                case RAW_CAP_INPUT: return CAP_INPUT;
+                case RAW_CAP_SIDECHAIN: return (ref == REF_SIDECHAIN) ? CAP_REFERENCE : CAP_SIDECHAIN;
+                case RAW_CAP_LINK: return (ref == REF_LINK) ? CAP_REFERENCE : CAP_LINK;
+                default: break;
             }
 
             return CAP_NONE;
@@ -1085,7 +1098,7 @@ namespace lsp
 
 
             nRefSource              = decode_reference_source(pRefSource->value());
-            nRawCapSource           = pCapSource->value();
+            nRawCapSource           = decode_raw_capture_source(pCapSource->value());
             nCapSource              = decode_capture_source(nRawCapSource, nRefSource);
             bMatchTopLimit          = (match_limit) && (pMatchTopLimit->value() >= 0.5f);
             bMatchBottomLimit       = (match_limit) && (pMatchBottomLimit->value() >= 0.5f);
