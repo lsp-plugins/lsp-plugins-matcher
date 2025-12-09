@@ -312,10 +312,22 @@
 			<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
 				<label text="labels.fft.frame" />
 				<combo id="fft_sz" />
-				<label text="labels.input" />
-				<combo id="in_src" />
-				<label text="labels.signal.reference" />
-				<combo id="ref_src" />
+				<grid rows="2" cols="4">
+					<label text="labels.input" />
+					<combo id="in_src" />
+					<label text="labels.signal.reference" />
+					<combo id="ref_src" />
+					<void />
+					<hbox>
+						<led id="in_rdy" />
+						<label text="labels.ready" />
+					</hbox>
+					<void/>
+					<hbox>
+						<led id="ref_rdy" />
+						<label text="labels.ready" />
+					</hbox>
+				</grid>
 				<button id="track" text="actions.tracking" />
 				
 				<vsep />
@@ -354,14 +366,26 @@
 				<label text="labels.signal.input" />
 				<knob id="rct_in" />
 				<value id="rct_in" sline="true" />
-				<button id="profile" text="actions.record" />
+				<vbox>
+					<button id="profile" text="actions.record" />
+					<hbox>
+						<led id="sprdy" />
+						<label text="labels.ready" />
+					</hbox>
+				</vbox>
 				
 				<vsep />
 				
 				<grid rows="2" cols="4">
 					<label text="labels.capture" />
 					<combo id="cap_src" />
-					<button id="capture" text="actions.record" />
+					<vbox>
+						<button id="capture" text="actions.record" />
+						<hbox>
+							<led id="cprdy" />
+							<label text="labels.ready" />
+						</hbox>
+					</vbox>
 					<button id="listen" text="actions.listen" />
 					<cell cols="4">
 						<ui:if test="!ex :out_r">
@@ -402,7 +426,13 @@
 				
 				<vsep />
 				
-				<button ui:id="profile_file_trigger" id="showfil" text="labels.file" />
+				<vbox>
+					<button ui:id="profile_file_trigger" id="showfil" text="labels.file" />
+					<hbox>
+						<led id="fprdy" />
+						<label text="labels.ready" />
+					</hbox>
+				</vbox>
 				
 				<vsep />
 				

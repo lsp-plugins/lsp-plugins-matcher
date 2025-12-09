@@ -537,6 +537,11 @@ namespace lsp
             pLpfSlope       = NULL;
             pClipOn         = NULL;
             pClipFreq       = NULL;
+            pMatchInReady   = NULL;
+            pMatchRefReady  = NULL;
+            pInReady        = NULL;
+            pCapReady       = NULL;
+            pFileReady      = NULL;
             pFilterMesh     = NULL;
             pStereoLink     = NULL;
 
@@ -752,6 +757,11 @@ namespace lsp
             BIND_PORT(pLpfSlope);
             BIND_PORT(pClipOn);
             BIND_PORT(pClipFreq);
+            BIND_PORT(pMatchInReady);
+            BIND_PORT(pMatchRefReady);
+            BIND_PORT(pInReady);
+            BIND_PORT(pCapReady);
+            BIND_PORT(pFileReady);
             BIND_PORT(pFilterMesh);
             if (nChannels > 1)
             {
@@ -2282,6 +2292,63 @@ namespace lsp
             }
         }
 
+        void matcher::set_profile_ready(plug::IPort *port, ssize_t id)
+        {
+            if (port == NULL)
+                return;
+
+            const profile_data_t * const profile = (id >= 0) ? vProfileData[id] : NULL;
+            const bool ready = (profile != NULL) ? (profile->nFlags & PFLAGS_READY) : false;
+
+            port->set_value((ready) ? 1.0f : 0.0f);
+        }
+
+        void matcher::output_profile_status()
+        {
+            ssize_t profile_id;
+
+            // Input profile readiness
+            switch (nInSource)
+            {
+                case IN_DYNAMIC:
+                    profile_id = PROF_INPUT;
+                    break;
+                case IN_STATIC:
+                default:
+                    profile_id = PROF_STATIC;
+                    break;
+            }
+            set_profile_ready(pMatchInReady, profile_id);
+
+            // Reference profile readiness
+            switch (nRefSource)
+            {
+                case REF_CAPTURE:
+                    profile_id = PROF_CAPTURE;
+                    break;
+                case REF_FILE:
+                    profile_id = PROF_FILE;
+                    break;
+                case REF_EQUALIZER:
+                    profile_id = PROF_ENVELOPE;
+                    break;
+                case REF_SIDECHAIN:
+                case REF_LINK:
+                    profile_id = PROF_REFERENCE;
+                    break;
+                case REF_NONE:
+                default:
+                    profile_id = -1;
+                    break;
+            }
+            set_profile_ready(pMatchRefReady, profile_id);
+
+            // Other static profile readiness
+            set_profile_ready(pInReady, PROF_STATIC);
+            set_profile_ready(pCapReady, PROF_CAPTURE);
+            set_profile_ready(pFileReady, PROF_FILE);
+        }
+
         void matcher::process(size_t samples)
         {
             init_buffers();
@@ -2325,6 +2392,7 @@ namespace lsp
             output_profile_mesh_data();
             output_file_mesh_data();
             output_filter_mesh_data();
+            output_profile_status();
         }
 
         bool matcher::check_need_profile_sync()

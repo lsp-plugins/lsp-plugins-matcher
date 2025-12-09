@@ -411,6 +411,11 @@ namespace lsp
                 plug::IPort        *pLpfSlope;          // Low-pass filter slope
                 plug::IPort        *pClipOn;            // Brickwall clipping enabled
                 plug::IPort        *pClipFreq;          // Brickwall clipping frequency
+                plug::IPort        *pMatchInReady;      // Match input ready
+                plug::IPort        *pMatchRefReady;     // Match reference ready
+                plug::IPort        *pInReady;           // Input ready
+                plug::IPort        *pCapReady;          // Capture ready
+                plug::IPort        *pFileReady;         // Faile ready
                 plug::IPort        *pFilterMesh;        // Filter mesh
                 plug::IPort        *pStereoLink;        // Stereo link
 
@@ -441,6 +446,7 @@ namespace lsp
 
             protected:
                 void                do_destroy();
+                inline void         set_profile_ready(plug::IPort *port, ssize_t id);
                 profile_data_t     *allocate_profile_data(size_t channels = 0);
                 profile_data_t     *create_default_profile(size_t channels = 0);
                 void                init_buffers();
@@ -485,6 +491,7 @@ namespace lsp
                 profile_data_t     *load_profile(const char *path, const core::kvt_param_t *param);
                 void                init_level_meters();
                 void                output_level_meters();
+                void                output_profile_status();
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

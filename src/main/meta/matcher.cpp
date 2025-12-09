@@ -123,6 +123,11 @@ namespace lsp
             CONTROL("lpf_s", "Low-pass filter slope", "LPF Slope", U_DB, matcher::FLT_SLOPE), \
             SWITCH("clip_on", "Enable brickwall clipping of high frequencies", "Clip On", 1.0f), \
             LOG_CONTROL("clip_f", "Brickwall clipping frequency", "Clip Freq", U_HZ, matcher::CLIP_FREQ), \
+            BLINK("in_rdy", "Match input profile ready"), \
+            BLINK("ref_rdy", "Match reference profile ready"), \
+            BLINK("sprdy", "Static input profile ready"), \
+            BLINK("cprdy", "Capture profile ready"), \
+            BLINK("fprdy", "File profile ready"), \
             MESH("fltmesh", "Filter mesh characteristics", 2, matcher::FFT_MESH_SIZE + 4)
 
         #define MATCHER_COMMON_STEREO \
