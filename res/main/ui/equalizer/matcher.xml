@@ -82,24 +82,24 @@
 					<!-- Input -->
 					<mesh id="fft" xi="0" yi="1" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife"/>
 					<!-- Capture -->
-					<mesh id="fft" xi="0" yi="3" width="2" color="mono_in" visibility=":showfft and :cfe"/>
+					<mesh id="fft" xi="0" yi="3" width="2" color="blue_violet" color.a="0.5" visibility=":showfft and :cfe"/>
 					<!-- Reference -->
-					<mesh id="fft" xi="0" yi="4" width="2" color="mono_in" visibility=":showfft and :rfe"/>
+					<mesh id="fft" xi="0" yi="4" width="2" color="cyan_blue" color.a="0.5" visibility=":showfft and :rfe"/>
 					<!-- Output -->
 					<mesh id="fft" xi="0" yi="2" width="2" color="mono" visibility=":showfft and :ofe"/>
 
 					<!-- Dynamic input profile -->
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="mono" visibility="(:showpro and :pife) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility="(:showpro and :pife) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="mono" visibility="(:showpro and :prfe) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility="(:showpro and :prfe) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
 					<!-- Static input profile -->
-					<mesh id="pmesh" xi="0" yi="4" width="2" color="mono" visibility="(:showpro and :psfe) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="mono" visibility="(:showpro and :pcfe) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="(:showpro and :pcfe) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
 					<!-- File profile -->
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="mono" visibility="(:showpro and :pffe) or :showfil"/>
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="(:showpro and :pffe) or :showfil"/>
 					<!-- Envelope -->
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="mono" visibility="(:showpro and :pefe) or :showenv"/>
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe) or :showenv"/>
 					<!-- Envelope maximum bounds -->
 					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim"/>
 					<!-- Envelope minimum bounds -->
@@ -112,33 +112,33 @@
 					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife_l"/>
 					<mesh id="fft" xi="0" yi="5" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":showfft and :ife_r"/>
 					<!-- Capture -->
-					<mesh id="fft" xi="0" yi="3" width="2" color="left_in" visibility=":showfft and :cfe_l"/>
-					<mesh id="fft" xi="0" yi="7" width="2" color="right_in" visibility=":showfft and :cfe_r"/>
+					<mesh id="fft" xi="0" yi="3" width="2" color="blue_violet" color.a="0.5" visibility=":showfft and :cfe_l"/>
+					<mesh id="fft" xi="0" yi="7" width="2" color="bright_blue_violet" color.a="0.5" visibility=":showfft and :cfe_r"/>
 					<!-- Reference -->
-					<mesh id="fft" xi="0" yi="4" width="2" color="left_in" visibility=":showfft and :rfe_l"/>
-					<mesh id="fft" xi="0" yi="8" width="2" color="right_in" visibility=":showfft and :rfe_r"/>
+					<mesh id="fft" xi="0" yi="4" width="2" color="cyan_blue" color.a="0.5" visibility=":showfft and :rfe_l"/>
+					<mesh id="fft" xi="0" yi="8" width="2" color="bright_cyan_blue" color.a="0.5" visibility=":showfft and :rfe_r"/>
 					<!-- Output -->
 					<mesh id="fft" xi="0" yi="2" width="2" color="left_in" visibility=":showfft and :ofe_l"/>
 					<mesh id="fft" xi="0" yi="6" width="2" color="right_in" visibility=":showfft and :ofe_r"/>
 
 					<!-- Dynamic input profile -->
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="left" visibility="(:showpro and :pife_l) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="11" width="2" color="right" visibility="(:showpro and :pife_r) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="2" width="1" color="magenta" color.a="0.5"  visibility="(:showpro and :pife_l) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="11" width="1" color="bright_magenta" color.a="0.5" visibility="(:showpro and :pife_r) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="left" visibility="(:showpro and :prfe_l) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="12" width="2" color="right" visibility="(:showpro and :prfe_r) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility="(:showpro and :prfe_l) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="12" width="2" color="bright_violet_magenta" color.a="0.5" visibility="(:showpro and :prfe_r) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
 					<!-- Static input profile -->
-					<mesh id="pmesh" xi="0" yi="4" width="2" color="left" visibility="(:showpro and :psfe_l) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="13" width="2" color="right" visibility="(:showpro and :psfe_r) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe_l) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="13" width="2" color="bright_green_cyan" color.a="0.5" visibility="(:showpro and :psfe_r) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="left" visibility="(:showpro and :pcfe_l) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="14" width="2" color="right" visibility="(:showpro and :pcfe_r) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="(:showpro and :pcfe_l) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="14" width="2" color="bright_yellow_green" color.a="0.5" visibility="(:showpro and :pcfe_r) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
 					<!-- File profile -->
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="left" visibility="(:showpro and :pffe_l) or :showfil"/>
-					<mesh id="pmesh" xi="0" yi="15" width="2" color="right" visibility="(:showpro and :pffe_r) or :showfil"/>
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="(:showpro and :pffe_l) or :showfil"/>
+					<mesh id="pmesh" xi="0" yi="15" width="2" color="bright_orange_yellow" color.a="0.5" visibility="(:showpro and :pffe_r) or :showfil"/>
 					<!-- Envelope -->
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="left" visibility="(:showpro and :pefe_l) or :showenv"/>
-					<mesh id="pmesh" xi="0" yi="16" width="2" color="right" visibility="(:showpro and :pefe_r) or :showenv"/>
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe_l) or :showenv"/>
+					<mesh id="pmesh" xi="0" yi="16" width="2" color="bright_red_orange" color.a="0.5" visibility="(:showpro and :pefe_r) or :showenv"/>
 					<!-- Envelope maximum bounds -->
 					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim"/>
 					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim"/>
@@ -232,33 +232,34 @@
 				<!-- Analysis -->
 				<group text="groups.analysis" expand="true" ipadding="0">
 					<vbox pad.h="6" pad.v="4" spacing="4" activity=":showfft">
+						<button id="showfft" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8" bg.bright=":showfft ? 1.0 : 0.75"/>
+
 						<ui:with activity=":showfft">
-							<button id="showfft" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8"/>
 							<ui:if test="!ex :out_r">
-								<ui:with pad.h="6" height="19" hfill="true">
+								<ui:with pad.h="6" height="19" hfill="true" hexpand="true">
 									<button id="ife" text="labels.chan.input" ui:inject="Button_midi_8"/>
 									<button id="ofe" text="labels.chan.output" ui:inject="Button_midi_8"/>
-									<button id="cfe" text="labels.capture" ui:inject="Button_yellow_8"/>
-									<button id="rfe" text="labels.chan.reference" ui:inject="Button_orange_8"/>
+									<button id="cfe" text="labels.capture" ui:inject="Button_blue_violet_8"/>
+									<button id="rfe" text="labels.chan.reference" ui:inject="Button_cyan_blue_8"/>
 								</ui:with>
 							</ui:if>
 							<ui:if test="ex :out_r">
 								<grid rows="4" cols="3" vspacing="4">
-									<label text="labels.chan.input" hfill="true"/>
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
 									<button id="ife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
 									<button id="ife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
 
-									<label text="labels.chan.output" hfill="true"/>
+									<label text="labels.chan.output" hfill="true" hexpand="true"/>
 									<button id="ofe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
 									<button id="ofe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
 
-									<label text="labels.capture" hfill="true"/>
-									<button id="cfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_yellow_8" pad.h="4"/>
-									<button id="cfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_yellow_8"/>
+									<label text="labels.capture" hfill="true" hexpand="true"/>
+									<button id="cfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_blue_violet_8" pad.h="4"/>
+									<button id="cfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_blue_violet_8"/>
 
-									<label text="labels.chan.reference" hfill="true"/>
-									<button id="rfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_orange_8" pad.h="4"/>
-									<button id="rfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_orange_8"/>
+									<label text="labels.chan.reference" hfill="true" hexpand="true"/>
+									<button id="rfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_cyan_blue_8" pad.h="4"/>
+									<button id="rfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_cyan_blue_8"/>
 								</grid>
 							</ui:if>
 
@@ -281,62 +282,62 @@
 
 				<!-- Profiles -->
 				<group text="groups.profiles" expand="true" ipadding="0">
-					<ui:with activity=":showpro" pad.b="4">
-						<vbox pad.t="4">
-							<button id="showpro" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8" pad.h="6"/>
-							<hsep bg.color="bg" pad.v="2" vreduce="true"/>
 
-							<ui:with activity=":showpro and :in_src ieq 0">
-								<label text="labels.static_profiles" pad.h="6" pad.t="4"/>
-								<ui:if test="!ex :out_r">
-									<ui:with pad.h="6" height="19" hfill="true" ui:inject="Button_mono_8">
-										<button id="psfe" text="labels.chan.input"/>
-										<button id="pcfe" text="labels.capture"/>
-										<button id="pffe" text="labels.file"/>
-										<button id="pefe" text="labels.signal.envelope"/>
-									</ui:with>
-								</ui:if>
-								<ui:if test="ex :out_r">
-									<grid rows="4" cols="3" pad.h="6">
-										<label text="labels.chan.input" hfill="true"/>
-										<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
-										<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+					<vbox pad.t="4">
+						<button id="showpro" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8" pad.h="6" bg.bright=":showpro ? 1.0 : 0.75" pad.b="4"/>
+						<hsep bg.color="bg" pad.v="2" vreduce="true"/>
+						<ui:with activity=":showpro and :in_src ieq 0" pad.b="4">
+							<label text="labels.static_profiles" pad.h="6" pad.t="4"/>
+							<ui:if test="!ex :out_r">
+								<ui:with pad.h="6" height="19" hfill="true" hexpand="true">
+									<button id="psfe" text="labels.chan.input" ui:inject="Button_green_cyan_8"/>
+									<button id="pcfe" text="labels.capture" ui:inject="Button_yellow_green_8"/>
+									<button id="pffe" text="labels.file" ui:inject="Button_orange_yellow_8"/>
+									<button id="pefe" text="labels.signal.envelope" ui:inject="Button_red_orange_8"/>
+								</ui:with>
+							</ui:if>
+							<ui:if test="ex :out_r">
+								<grid rows="4" cols="3" pad.h="6">
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+									<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_green_cyan_8" pad.h="4"/>
+									<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_green_cyan_8"/>
 
-										<label text="labels.capture" hfill="true"/>
-										<button id="pcfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_red_orange_8" pad.h="4"/>
-										<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_red_orange_8"/>
+									<label text="labels.capture" hfill="true" hexpand="true"/>
+									<button id="pcfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_yellow_green_8" pad.h="4"/>
+									<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_yellow_green_8"/>
 
-										<label text="labels.file" hfill="true"/>
-										<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_green_8" pad.h="4"/>
-										<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_green_8"/>
+									<label text="labels.file" hfill="true" hexpand="true"/>
+									<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_orange_yellow_8" pad.h="4"/>
+									<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_orange_yellow_8"/>
 
-										<label text="labels.signal.envelope" hfill="true"/>
-										<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_violet_8" pad.h="4"/>
-										<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_violet_8"/>
-									</grid>
-								</ui:if>
-							</ui:with>
+									<label text="labels.signal.envelope" hfill="true" hexpand="true"/>
+									<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_red_orange_8" pad.h="4"/>
+									<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_red_orange_8"/>
+								</grid>
+							</ui:if>
+						</ui:with>
 
-							<ui:with activity=":showpro and :in_src ieq 1">
-								<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
-								<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
-								<ui:if test="!ex :out_r">
-									<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="4" ui:inject="Button_mono_8"/>
-									<button id="prfe" text="labels.chan.reference" height="19" hfill="true" pad.h="6" ui:inject="Button_mono_8"/>
-								</ui:if>
-								<ui:if test="ex :out_r">
-									<grid rows="3" cols="3" pad.h="6">
-										<label text="labels.chan.input" hfill="true"/>
-										<button id="pife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
-										<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+						<ui:with activity=":showpro and :in_src ieq 1" pad.b="4">
+							<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
+							<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
+							<ui:if test="!ex :out_r">
+								<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="4" ui:inject="Button_magenta_8"/>
+								<button id="prfe" text="labels.chan.reference" height="19" hfill="true" pad.h="6" ui:inject="Button_violet_magenta_8"/>
+							</ui:if>
+							<ui:if test="ex :out_r">
+								<grid rows="3" cols="3" pad.h="6">
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+									<button id="pife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_magenta_8" pad.h="4"/>
+									<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_magenta_8"/>
 
-										<label text="labels.chan.reference" hfill="true"/>
-										<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
-										<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
-									</grid>
-								</ui:if>
-							</ui:with>
+									<label text="labels.chan.reference" hfill="true" hexpand="true"/>
+									<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_violet_magenta_8" pad.h="4"/>
+									<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_violet_magenta_8"/>
+								</grid>
+							</ui:if>
+						</ui:with>
 
+						<ui:with activity=":showpro" pad.b="4">
 							<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
 							<label text="labels.result" pad.h="6" pad.t="4"/>
 							<ui:if test="!ex :out_r">
@@ -345,13 +346,13 @@
 							<ui:if test="ex :out_r">
 								<grid rows="1" cols="3" pad.h="6">
 									<label text="labels.signal.match" hfill="true" hexpand="true"/>
-									<button id="pmfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_magenta_8" pad.h="4"/>
-									<button id="pmfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_magenta_8"/>
+									<button id="pmfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
+									<button id="pmfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
 								</grid>
 							</ui:if>
-						</vbox>
+						</ui:with>
+					</vbox>
 
-					</ui:with>
 				</group>
 			</vbox>
 		</cell>
@@ -422,10 +423,10 @@
 						<void hexpand="true"/>
 						<value id="rct_in" sline="true"/>
 					</hbox>
-					<fader id="rct_in" angle="0" hfill="true"/>
+					<fader id="rct_in" angle="0" hfill="true" scolor="magenta" activity=":in_src ieq 1"/>
 				</vbox>
 				<vbox>
-					<button id="profile" text="actions.record"/>
+					<button id="profile" text="actions.record" ui:inject="Button_green_cyan"/>
 					<hbox>
 						<led id="sprdy"/>
 						<label text="labels.ready"/>
@@ -438,7 +439,7 @@
 					<label text="labels.capture"/>
 					<combo id="cap_src"/>
 					<vbox>
-						<button id="capture" text="actions.record"/>
+						<button id="capture" text="actions.record" ui:inject="Button_yellow_green"/>
 						<hbox>
 							<led id="cprdy"/>
 							<label text="labels.ready"/>
@@ -464,7 +465,7 @@
 
 				<grid rows="2" cols="3">
 					<label text="labels.signal.reference"/>
-					<knob id="rct_ref"/>
+					<knob id="rct_ref" scolor="violet_magenta"/>
 					<value id="rct_ref" sline="true"/>
 
 					<cell cols="3">
