@@ -43,7 +43,7 @@ namespace lsp
             static constexpr float          PROFILE_REACT_TIME_MIN      = 0.100f;
             static constexpr float          PROFILE_REACT_TIME_MAX      = 10.000f;
             static constexpr float          PROFILE_REACT_TIME_DFL      = 1.000f;
-            static constexpr float          PROFILE_REACT_TIME_STEP     = 0.01f;
+            static constexpr float          PROFILE_REACT_TIME_STEP     = 0.0008f;
 
             static constexpr float          BAND_AMP_GAIN_MIN           = 0.0f;
             static constexpr float          BAND_AMP_GAIN_MAX           = 48.0f;
