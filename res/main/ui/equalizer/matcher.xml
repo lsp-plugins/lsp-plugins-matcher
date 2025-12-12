@@ -23,7 +23,128 @@
 		value.spd_10=":_old_this + :_current - :_old_current"
 		activity=":mrplink"/>
 
-	<grid rows="3" cols="3" spacing="4">
+	<grid rows="2" cols="4" spacing="4">
+		<!-- Left Column -->
+		<group text="groups.controls" hexpand="false" hfill="false" ipadding="0">
+			<grid rows="19" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
+				<!-- Input A -->
+				<ui:with activity=":in_src ieq 1 or :sprdy">
+					<cell cols="2">
+						<label text="labels.signal.input_A" pad.h="6" pad.v="4"/>
+					</cell>
+					<hbox pad.v="4">
+						<knob id="rct_in" size="20" pad.h="4" pad.l="6" pad.b="6" scolor=":in_src ieq 1 ? 'magenta' : 'cycle_inactive'"/>
+						<vbox vfill="false" pad.r="6" pad.b="6">
+							<label text="labels.morph_time" halign="0" bright="(:in_src ieq 1) ? 1.0 : 0.75"/>
+							<value id="rct_in" width.min="50" sline="true" halign="0" bright="(:in_src ieq 1) ? 1.0 : 0.75"/>
+						</vbox>
+					</hbox>
+					<vbox pad.r="6">
+						<button id="profile" text="actions.record" ui:inject="Button_green_cyan"/>
+						<hbox>
+							<led id="sprdy" size="10" ui:inject="Led_green_cyan"/>
+							<label text="labels.ready"/>
+						</hbox>
+					</vbox>
+				</ui:with>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- Input B -->
+				<cell cols="2">
+					<label text="labels.signal.input_B" pad.h="6" pad.v="4"/>
+				</cell>
+				<vbox pad.l="6" pad.r="8">
+					<hbox>
+						<label text="labels.capture" pad.r="4"/>
+						<combo id="cap_src"/>
+					</hbox>
+					<button id="listen" hfill="true" text="actions.listen" pad.v="4"/>
+				</vbox>
+
+				<align valign="-1">
+					<vbox pad.r="6">
+						<button id="capture" text="actions.record" ui:inject="Button_yellow_green" pad.b="7"/>
+						<hbox >
+							<led id="cprdy" size="10" ui:inject="Led_yellow_green"/>
+							<label text="labels.ready"/>
+						</hbox>
+					</vbox>
+				</align>
+				<cell cols="2" vexpand="false" pad.h="6" pad.b="4">
+					<ui:if test="!ex :out_r">
+						<ledmeter vexpand="true" angle="0">
+							<ledchannel id="clm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+						</ledmeter>
+					</ui:if>
+					<ui:if test="ex :out_r">
+						<ledmeter vexpand="true" angle="0">
+							<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+							<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+						</ledmeter>
+					</ui:if>
+				</cell>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- Shared memori link button -->
+				<cell cols="2" pad.v="4">
+					<shmlink id="link" hfill="true" pad.h="6"/>
+				</cell>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- Reference -->
+				<ui:with activity="(:ref_src igt 3)">
+					<cell cols="2">
+						<label text="labels.signal.reference" pad.v="4"/>
+					</cell>
+					<hbox pad.v="4">
+						<knob id="rct_ref" size="20" pad.h="4" pad.l="6" scolor="violet_magenta"/>
+						<vbox vfill="false" pad.r="6">
+							<label text="labels.morph_time" halign="0"/>
+							<value id="rct_ref" width.min="50" sline="true" halign="0"/>
+						</vbox>
+					</hbox>
+					<void activity="(:ref_src igt 3)"/>
+					<cell cols="2" vexpand="false" pad.b="4">
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="rlm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="rlm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="rlm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+							</ledmeter>
+						</ui:if>
+					</cell>
+				</ui:with>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- File -->
+				<ui:with activity=":fprdy">
+					<button ui:id="profile_file_trigger" id="showfil" text="labels.file" hfill="true" pad.h="6" pad.v="4"/>
+					<hbox pad.r="6">
+						<led id="fprdy" size="10" ui:inject="Led_cyan"/>
+						<label text="labels.ready"/>
+					</hbox>
+				</ui:with>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- Envelope -->
+				<cell cols="2">
+					<button ui:id="profile_envelope_trigger" id="showenv" text="labels.signal.envelope" ui:inject="Button_red_orange" hfill="true" pad.h="6" pad.v="4"/>
+				</cell>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- Controls -->
+				<cell cols="2">
+					<vbox pad.h="6" spacing="4" pad.v="4">
+						<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" ui:inject="Button_violet" hfill="true"/>
+						<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" hfill="true"/>
+						<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters" hfill="true"/>
+					</vbox>
+				</cell>
+				<cell cols="2">
+					<void vexpand="true"/>
+				</cell>
+			</grid>
+		</group>
+
+		<!-- Graph -->
 		<group ipadding="0" expand="true" fill="true" text="labels.graphs.frequency">
 			<graph ui:id="profile_graph" width.min="640" height.min="380" expand="true">
 				<origin hpos="-1" vpos="-1" visible="false"/>
@@ -89,9 +210,9 @@
 					<mesh id="fft" xi="0" yi="2" width="2" color="mono" visibility=":showfft and :ofe"/>
 
 					<!-- Dynamic input profile -->
-					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility="(:showpro and :pife) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility=":showpro and :pife and (:track and :in_src ieq 1 and not ${hide_cond})"/>
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility="(:showpro and :prfe) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility=":showpro and :prfe and (:track and :ref_src ige 4 and not ${hide_cond})"/>
 					<!-- Static input profile -->
 					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
 					<!-- Capture input profile -->
@@ -101,9 +222,9 @@
 					<!-- Envelope -->
 					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe) or :showenv"/>
 					<!-- Envelope maximum bounds -->
-					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim"/>
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
 					<!-- Envelope minimum bounds -->
-					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim"/>
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" color.a=":tlimit ? 0.0 : 0.7"/>
 					<!-- Match profile -->
 					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" visibility=":pmfe and not ${hide_cond_soft}"/>
 				</ui:if>
@@ -122,11 +243,11 @@
 					<mesh id="fft" xi="0" yi="6" width="2" color="right_in" visibility=":showfft and :ofe_r"/>
 
 					<!-- Dynamic input profile -->
-					<mesh id="pmesh" xi="0" yi="2" width="1" color="magenta" color.a="0.5"  visibility="(:showpro and :pife_l) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="11" width="1" color="bright_magenta" color.a="0.5" visibility="(:showpro and :pife_r) or (:track and (:in_src ieq 1) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility=":showpro and :pife_l and (:track and :in_src ieq 1 and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="11" width="2" color="bright_magenta" color.a="0.5" visibility=":showpro and :pife_r and (:track and :in_src ieq 1 and not ${hide_cond})"/>
 					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility="(:showpro and :prfe_l) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="12" width="2" color="bright_violet_magenta" color.a="0.5" visibility="(:showpro and :prfe_r) or (:track and (:ref_src ige 4) and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility=":showpro and :prfe_l and (:track and :ref_src ige 4 and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="12" width="2" color="bright_violet_magenta" color.a="0.5" visibility=":showpro and :prfe_r and (:track and :ref_src ige 4 and not ${hide_cond})"/>
 					<!-- Static input profile -->
 					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe_l) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
 					<mesh id="pmesh" xi="0" yi="13" width="2" color="bright_green_cyan" color.a="0.5" visibility="(:showpro and :psfe_r) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
@@ -140,11 +261,11 @@
 					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe_l) or :showenv"/>
 					<mesh id="pmesh" xi="0" yi="16" width="2" color="bright_red_orange" color.a="0.5" visibility="(:showpro and :pefe_r) or :showenv"/>
 					<!-- Envelope maximum bounds -->
-					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim"/>
-					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim"/>
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
+					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
 					<!-- Envelope minimum bounds -->
-					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim"/>
-					<mesh id="pmesh" xi="0" yi="18" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim"/>
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" color.a=":tlimit ? 0.0 : 0.7"/>
+					<mesh id="pmesh" xi="0" yi="18" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" color.a=":tlimit ? 0.0 : 0.7"/>
 					<!-- Match profile -->
 					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" visibility=":pmfe_l and not ${hide_cond_soft}"/>
 					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" visibility=":pmfe_r and not ${hide_cond_soft}"/>
@@ -183,38 +304,53 @@
 		</group>
 
 		<!-- Meters and save -->
-		<vbox>
-			<grid rows="2" cols="2">
-				<label text="labels.chan.in" pad.b="3" pad.t="3"/>
-				<label text="labels.chan.out" pad.b="3" pad.t="3"/>
-				<ui:if test="!ex :out_r">
-					<ledmeter vexpand="true" angle="1">
-						<ledchannel id="ilm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
-					</ledmeter>
-					<ledmeter vexpand="true" angle="1">
-						<ledchannel id="olm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono"/>
-					</ledmeter>
-				</ui:if>
-				<ui:if test="ex :out_r">
-					<ledmeter vexpand="true" angle="1">
-						<ledchannel id="ilm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
-						<ledchannel id="ilm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
-					</ledmeter>
-					<ledmeter vexpand="true" angle="1">
-						<ledchannel id="olm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left"/>
-						<ledchannel id="olm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right"/>
-					</ledmeter>
-				</ui:if>
-			</grid>
-			<save pad.h="6" pad.v="4" id="ir_file" command.id="ir_save" progress.id="ir_prog" status=":ir_stat" path.id="_ui_dlg_ir_path" bg.color="bg_schema" format="wav"/>
-		</vbox>
+		<cell rows="2">
+			<vbox bg.color="bg_schema">
+				<hbox spacing="4" bg.color="bg" vexpand="true">
+					<!-- Signal meters -->
 
-		<cell rows="3">
+					<vbox vexpand="true" bg.color="bg_schema">
+						<label text="labels.chan.in" pad.b="3" pad.t="3"/>
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="ilm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="ilm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="ilm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+							</ledmeter>
+						</ui:if>
+					</vbox>
+
+					<vbox vexpand="true" bg.color="bg_schema">
+						<label text="labels.chan.out" pad.b="3" pad.t="3"/>
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="olm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="olm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left"/>
+								<ledchannel id="olm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right"/>
+							</ledmeter>
+						</ui:if>
+					</vbox>
+				</hbox>
+
+				<hsep bg.color="bg" pad.v="2" vreduce="true"/>
+				<save pad.h="6" pad.v="4" id="ir_file" command.id="ir_save" progress.id="ir_prog" status=":ir_stat" path.id="_ui_dlg_ir_path" bg.color="bg_schema" format="wav"/>
+			</vbox>
+		</cell>
+
+		<!-- Signal, Analysis, Profiles -->
+		<cell rows="2">
 			<vbox spacing="4">
-
 				<!-- Signal -->
 				<group text="groups.signal" expand="true" ipadding="0">
-					<grid rows="2" cols="2" transpose="false" hspacing="4" pad.v="4">
+					<grid rows="2" cols="2" transpose="false" hspacing="4" pad.v="6">
 						<knob id="g_in" size="20" pad.r="4" pad.l="6" pad.b="6"/>
 						<vbox vfill="false" pad.r="6" pad.b="6">
 							<label text="labels.input" halign="0"/>
@@ -236,9 +372,9 @@
 
 						<ui:with activity=":showfft">
 							<ui:if test="!ex :out_r">
-								<ui:with pad.h="6" height="19" hfill="true" hexpand="true">
-									<button id="ife" text="labels.chan.input" ui:inject="Button_midi_8"/>
-									<button id="ofe" text="labels.chan.output" ui:inject="Button_midi_8"/>
+								<ui:with height="19" hfill="true" hexpand="true">
+									<button id="ife" text="labels.chan.input" ui:inject="Button_mono_8"/>
+									<button id="ofe" text="labels.chan.output" ui:inject="Button_mono_8"/>
 									<button id="cfe" text="labels.capture" ui:inject="Button_blue_violet_8"/>
 									<button id="rfe" text="labels.chan.reference" ui:inject="Button_cyan_blue_8"/>
 								</ui:with>
@@ -317,11 +453,11 @@
 							</ui:if>
 						</ui:with>
 
-						<ui:with activity=":showpro and :in_src ieq 1" pad.b="4">
+						<ui:with activity=":showpro and (:in_src ieq 1 or :ref_src ige 4)" pad.b="4">
 							<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
 							<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
 							<ui:if test="!ex :out_r">
-								<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="4" ui:inject="Button_magenta_8"/>
+								<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="6" ui:inject="Button_magenta_8"/>
 								<button id="prfe" text="labels.chan.reference" height="19" hfill="true" pad.h="6" ui:inject="Button_violet_magenta_8"/>
 							</ui:if>
 							<ui:if test="ex :out_r">
@@ -336,56 +472,44 @@
 								</grid>
 							</ui:if>
 						</ui:with>
-
-						<ui:with activity=":showpro" pad.b="4">
-							<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
-							<label text="labels.result" pad.h="6" pad.t="4"/>
-							<ui:if test="!ex :out_r">
-								<button id="pmfe" text="labels.signal.match" height="19" pad.h="6" hfill="true" ui:inject="Button_mono_8"/>
-							</ui:if>
-							<ui:if test="ex :out_r">
-								<grid rows="1" cols="3" pad.h="6">
-									<label text="labels.signal.match" hfill="true" hexpand="true"/>
-									<button id="pmfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
-									<button id="pmfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
-								</grid>
-							</ui:if>
-						</ui:with>
 					</vbox>
+				</group>
 
+				<!-- Result -->
+				<group text="labels.result" expand="true" ipadding="0">
+					<ui:with pad.b="4">
+						<ui:if test="!ex :out_r">
+							<button id="pmfe" text="labels.signal.match" height="19" pad.h="6" hfill="true" ui:inject="Button_mono_8" pad.t="6"/>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="1" cols="3" pad.h="6" pad.t="6">
+								<label text="labels.signal.match" hfill="true" hexpand="true"/>
+								<button id="pmfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
+								<button id="pmfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+							</grid>
+						</ui:if>
+					</ui:with>
 				</group>
 			</vbox>
 		</cell>
 
+		<!-- Bottom part -->
 		<cell cols="2">
-			<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
-				<label text="labels.fft.frame"/>
-				<combo id="fft_sz"/>
-				<grid rows="2" cols="4">
-					<label text="labels.input"/>
-					<combo id="in_src"/>
-					<label text="labels.signal.reference"/>
-					<combo id="ref_src"/>
-					<void/>
-					<hbox>
-						<led id="in_rdy"/>
-						<label text="labels.ready"/>
-					</hbox>
-					<void/>
-					<hbox>
-						<led id="ref_rdy"/>
-						<label text="labels.ready"/>
-					</hbox>
-				</grid>
-				<button id="track" text="actions.tracking"/>
-
-				<vsep/>
-
+			<hbox hfill="true" pad.h="6" bg.color="bg_schema" spacing="4">
+				<label text="labels.fft.frame" pad.v="4"/>
+				<combo id="fft_sz" pad.r="8"/>
+				<label text="labels.input"/>
+				<led id="in_rdy" size="10" ui:inject="Led_magenta" visibility=":in_src"/>
+				<led id="in_rdy" size="10" ui:inject="Led_green_cyan" visibility="!:in_src"/>
+				<combo id="in_src" pad.r="8"/>
+				<label text="labels.signal.reference"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_yellow_green" visibility=":ref_src ilt 2"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_cyan" visibility=":ref_src ieq 2"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_red_orange" visibility=":ref_src ieq 3"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_violet_magenta" visibility=":ref_src igt 3"/>
+				<combo id="ref_src"/>
 				<void hexpand="true"/>
-
-				<vsep/>
-
-				<vbox vreduce="true" pad.b="2" width="120">
+				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
 					<hbox pad.h="2">
 						<label text="labels.blend"/>
 						<void hexpand="true"/>
@@ -401,111 +525,15 @@
 							<void hexpand="true"/>
 							<value id="slink" sline="true"/>
 						</hbox>
-						<fader id="slink" angle="0" hfill="true"/>
+						<fader id="slink" angle="0" hfill="true" scolor="balance"/>
 					</vbox>
 				</ui:if>
 
-				<vsep/>
-
-				<shmlink id="link" pad.v="4" pad.l="2"/>
-
-				<vsep/>
-
-				<!-- <save id="ir_file" command.id="ir_save" progress.id="ir_prog" status=":ir_stat" path.id="_ui_dlg_ir_path" bg.color="bg_schema" format="wav" /> -->
+				<button id="track" text="actions.tracking" pad.l="8"/>
 			</hbox>
 		</cell>
 		<cell cols="2">
-			<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema">
-				<!-- <label text="labels.signal.input" /> <knob id="rct_in" /> <value id="rct_in" sline="true" /> -->
-				<vbox vreduce="true" pad.b="2" width="120">
-					<hbox pad.h="2">
-						<label text="labels.signal.input"/>
-						<void hexpand="true"/>
-						<value id="rct_in" sline="true"/>
-					</hbox>
-					<fader id="rct_in" angle="0" hfill="true" scolor="magenta" activity=":in_src ieq 1"/>
-				</vbox>
-				<vbox>
-					<button id="profile" text="actions.record" ui:inject="Button_green_cyan"/>
-					<hbox>
-						<led id="sprdy"/>
-						<label text="labels.ready"/>
-					</hbox>
-				</vbox>
-
-				<vsep/>
-
-				<grid rows="2" cols="4">
-					<label text="labels.capture"/>
-					<combo id="cap_src"/>
-					<vbox>
-						<button id="capture" text="actions.record" ui:inject="Button_yellow_green"/>
-						<hbox>
-							<led id="cprdy"/>
-							<label text="labels.ready"/>
-						</hbox>
-					</vbox>
-					<button id="listen" text="actions.listen"/>
-					<cell cols="4">
-						<ui:if test="!ex :out_r">
-							<ledmeter vexpand="true" angle="0">
-								<ledchannel id="clm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
-							</ledmeter>
-						</ui:if>
-						<ui:if test="ex :out_r">
-							<ledmeter vexpand="true" angle="0">
-								<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
-								<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
-							</ledmeter>
-						</ui:if>
-					</cell>
-				</grid>
-
-				<vsep/>
-
-				<grid rows="2" cols="3">
-					<label text="labels.signal.reference"/>
-					<knob id="rct_ref" scolor="violet_magenta"/>
-					<value id="rct_ref" sline="true"/>
-
-					<cell cols="3">
-						<ui:if test="!ex :out_r">
-							<ledmeter vexpand="true" angle="0">
-								<ledchannel id="rlm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
-							</ledmeter>
-						</ui:if>
-						<ui:if test="ex :out_r">
-							<ledmeter vexpand="true" angle="0">
-								<ledchannel id="rlm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
-								<ledchannel id="rlm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
-							</ledmeter>
-						</ui:if>
-					</cell>
-				</grid>
-
-				<vsep/>
-
-				<vbox>
-					<button ui:id="profile_file_trigger" id="showfil" text="labels.file"/>
-					<hbox>
-						<led id="fprdy"/>
-						<label text="labels.ready"/>
-					</hbox>
-				</vbox>
-
-				<vsep/>
-
-				<button ui:id="profile_envelope_trigger" id="showenv" text="labels.signal.envelope"/>
-
-				<vsep/>
-
-				<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits"/>
-				<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing"/>
-
-				<vsep/>
-
-				<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters"/>
-			</hbox>
+			<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema"></hbox>
 		</cell>
 	</grid>
 
@@ -525,7 +553,7 @@
 				<label text="labels.flt.x_k" text:value="16"/>
 
 				<ui:for id="i" first="1" count="10">
-					<fader id="ref_${i}" angle="1"/>
+					<fader id="ref_${i}" angle="1" scolor="red_orange"/>
 				</ui:for>
 				<ui:for id="i" first="1" count="10">
 					<value id="ref_${i}"/>
@@ -541,9 +569,9 @@
 				<cell cols="10">
 					<hbox>
 						<void hexpand="true"/>
-						<button id="tlimit" text="labels.limiting.top"/>
-						<button id="blimit" text="labels.limiting.bottom"/>
-						<button id="limit" text="labels.enable"/>
+						<button id="tlimit" text="labels.limiting.top" ui:inject="Button_violet"/>
+						<button id="blimit" text="labels.limiting.bottom" ui:inject="Button_violet"/>
+						<button id="limit" text="labels.enable" ui:inject="Button_violet"/>
 					</hbox>
 				</cell>
 				<label text="25"/>
@@ -558,7 +586,7 @@
 				<label text="labels.flt.x_k" text:value="16"/>
 
 				<ui:for id="i" first="1" count="10">
-					<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1"/>
+					<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1" scolor="threshold"/>
 				</ui:for>
 				<ui:for id="i" first="1" count="10">
 					<value id="red_${i}" detailed="false"/>
@@ -592,7 +620,8 @@
 				<label/>
 
 				<ui:for id="i" first="1" count="10">
-					<knob id="spd_${i}"/>
+					<fader id="spd_${i}" angle="1"/>
+					<!-- <knob id="spd_${i}"/> -->
 				</ui:for>
 				<vbox>
 					<button id="match" text="actions.match"/>
