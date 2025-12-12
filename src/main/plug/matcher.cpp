@@ -2895,6 +2895,15 @@ namespace lsp
                 {
                     // Update file status and set re-rendering flag
                     af->nStatus         = sFileLoader.code();
+                    if (af->nStatus != STATUS_OK)
+                    {
+                        profile_data_t * const profile = vProfileState[SPROF_FILE].get();
+                        if (profile != NULL)
+                        {
+                            profile->nFlags    &= ~PFLAGS_READY;
+                            profile->nFlags    |= PFLAGS_CHANGED | PFLAGS_SYNC;
+                        }
+                    }
                     ++nFileProcessReq;
 
                     // Now we surely can commit changes and reset task state
