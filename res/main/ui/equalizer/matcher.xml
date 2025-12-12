@@ -1,26 +1,16 @@
 <plugin resizable="true">
 	<!-- Control linking -->
 	<ctl:link
-		id.spd_1="spd_1"
-		value.spd_1=":_old_this + :_current - :_old_current"
-		id.spd_2="spd_2"
-		value.spd_2=":_old_this + :_current - :_old_current"
-		id.spd_3="spd_3"
-		value.spd_3=":_old_this + :_current - :_old_current"
-		id.spd_4="spd_4"
-		value.spd_4=":_old_this + :_current - :_old_current"
-		id.spd_5="spd_5"
-		value.spd_5=":_old_this + :_current - :_old_current"
-		id.spd_6="spd_6"
-		value.spd_6=":_old_this + :_current - :_old_current"
-		id.spd_7="spd_7"
-		value.spd_7=":_old_this + :_current - :_old_current"
-		id.spd_8="spd_8"
-		value.spd_8=":_old_this + :_current - :_old_current"
-		id.spd_9="spd_9"
-		value.spd_9=":_old_this + :_current - :_old_current"
-		id.spd_10="spd_10"
-		value.spd_10=":_old_this + :_current - :_old_current"
+		id.spd_1="spd_1" value.spd_1=":_old_this + :_current - :_old_current"
+		id.spd_2="spd_2" value.spd_2=":_old_this + :_current - :_old_current"
+		id.spd_3="spd_3" value.spd_3=":_old_this + :_current - :_old_current"
+		id.spd_4="spd_4" value.spd_4=":_old_this + :_current - :_old_current"
+		id.spd_5="spd_5" value.spd_5=":_old_this + :_current - :_old_current"
+		id.spd_6="spd_6" value.spd_6=":_old_this + :_current - :_old_current"
+		id.spd_7="spd_7" value.spd_7=":_old_this + :_current - :_old_current"
+		id.spd_8="spd_8" value.spd_8=":_old_this + :_current - :_old_current"
+		id.spd_9="spd_9" value.spd_9=":_old_this + :_current - :_old_current"
+		id.spd_10="spd_10" value.spd_10=":_old_this + :_current - :_old_current"
 		activity=":mrplink"/>
 
 	<grid rows="2" cols="4" spacing="4">
@@ -422,56 +412,66 @@
 					<vbox pad.t="4">
 						<button id="showpro" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8" pad.h="6" bg.bright=":showpro ? 1.0 : 0.75" pad.b="4"/>
 						<hsep bg.color="bg" pad.v="2" vreduce="true"/>
-						<ui:with activity=":showpro and :in_src ieq 0" pad.b="4">
-							<label text="labels.static_profiles" pad.h="6" pad.t="4"/>
-							<ui:if test="!ex :out_r">
-								<ui:with pad.h="6" height="19" hfill="true" hexpand="true">
-									<button id="psfe" text="labels.chan.input" ui:inject="Button_green_cyan_8"/>
-									<button id="pcfe" text="labels.capture" ui:inject="Button_yellow_green_8"/>
-									<button id="pffe" text="labels.file" ui:inject="Button_orange_yellow_8"/>
-									<button id="pefe" text="labels.signal.envelope" ui:inject="Button_red_orange_8"/>
-								</ui:with>
-							</ui:if>
-							<ui:if test="ex :out_r">
-								<grid rows="4" cols="3" pad.h="6">
-									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+						
+						<label text="labels.static_profiles" pad.h="6" pad.t="4"/>
+						<ui:if test="!ex :out_r">
+							<ui:with pad.h="6" height="19" hfill="true" hexpand="true">
+								<button id="psfe" text="labels.chan.input" ui:inject="Button_green_cyan_8" activity=":showpro and :in_src ieq 0"/>
+								<button id="pcfe" text="labels.capture" ui:inject="Button_yellow_green_8" activity=":showpro and :ref_src ieq 1"/>
+								<button id="pffe" text="labels.file" ui:inject="Button_orange_yellow_8" activity=":showpro and :ref_src ieq 2"/>
+								<button id="pefe" text="labels.signal.envelope" ui:inject="Button_red_orange_8" activity=":showpro and :ref_src ieq 3"/>
+							</ui:with>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="4" cols="3">
+								<ui:with activity=":showpro and :in_src ieq 0">
+									<label text="labels.chan.input" hfill="true" hexpand="true" pad.l="6"/>
 									<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_green_cyan_8" pad.h="4"/>
-									<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_green_cyan_8"/>
+									<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_green_cyan_8" pad.r="6"/>
+								</ui:with>
 
-									<label text="labels.capture" hfill="true" hexpand="true"/>
+								<ui:with activity=":showpro and :ref_src ieq 1">
+									<label text="labels.capture" hfill="true" hexpand="true" pad.l="6"/>
 									<button id="pcfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_yellow_green_8" pad.h="4"/>
-									<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_yellow_green_8"/>
+									<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_yellow_green_8" pad.r="6"/>
+								</ui:with>
 
-									<label text="labels.file" hfill="true" hexpand="true"/>
+								<ui:with activity=":showpro and :ref_src ieq 2">
+									<label text="labels.file" hfill="true" hexpand="true" pad.l="6"/>
 									<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_orange_yellow_8" pad.h="4"/>
-									<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_orange_yellow_8"/>
+									<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_orange_yellow_8" pad.r="6"/>
+								</ui:with>
 
-									<label text="labels.signal.envelope" hfill="true" hexpand="true"/>
+								<ui:with activity=":showpro and :ref_src ieq 3">
+									<label text="labels.signal.envelope" hfill="true" hexpand="true" pad.l="6"/>
 									<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_red_orange_8" pad.h="4"/>
-									<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_red_orange_8"/>
-								</grid>
-							</ui:if>
-						</ui:with>
+									<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_red_orange_8" pad.r="6"/>
+								</ui:with>
+							</grid>
+						</ui:if>
 
-						<ui:with activity=":showpro and (:in_src ieq 1 or :ref_src ige 4)" pad.b="4">
-							<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
-							<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
-							<ui:if test="!ex :out_r">
-								<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="6" ui:inject="Button_magenta_8"/>
-								<button id="prfe" text="labels.chan.reference" height="19" hfill="true" pad.h="6" ui:inject="Button_violet_magenta_8"/>
-							</ui:if>
-							<ui:if test="ex :out_r">
-								<grid rows="3" cols="3" pad.h="6">
-									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+						<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
+						<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
+						
+						<ui:if test="!ex :out_r">
+							<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="6" ui:inject="Button_magenta_8" activity=":showpro and :in_src ieq 1" />
+							<button id="prfe" text="labels.chan.reference" height="19" hfill="true" pad.h="6" ui:inject="Button_violet_magenta_8" activity=":showpro and :ref_src ige 4" />
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="3" cols="3">
+								<ui:with activity=":showpro and :in_src ieq 1"> 
+									<label text="labels.chan.input" hfill="true" hexpand="true" pad.l="6"/>
 									<button id="pife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_magenta_8" pad.h="4"/>
-									<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_magenta_8"/>
+									<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_magenta_8" pad.r="6"/>
+								</ui:with>
 
-									<label text="labels.chan.reference" hfill="true" hexpand="true"/>
+								<ui:with activity=":showpro and :ref_src ige 4">
+									<label text="labels.chan.reference" hfill="true" hexpand="true" pad.l="6"/>
 									<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_violet_magenta_8" pad.h="4"/>
-									<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_violet_magenta_8"/>
-								</grid>
-							</ui:if>
-						</ui:with>
+									<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_violet_magenta_8" pad.r="6"/>
+								</ui:with>
+							</grid>
+						</ui:if>
 					</vbox>
 				</group>
 
@@ -732,8 +732,8 @@
 
 					<ui:with pad.h="6" pad.v="4">
 						<knob id="fpitch"/>
-						<knob id="fhcut"/>
-						<knob id="ftcut"/>
+						<knob id="fhcut" max=":flength"/>
+						<knob id="ftcut" max=":flength"/>
 						<cell rows="2">
 							<hbox fill="false">
 								<ui:with font.name="lsp-icons" font.size="10" size="32" ui:inject="Button_cyan" toggle="false">
