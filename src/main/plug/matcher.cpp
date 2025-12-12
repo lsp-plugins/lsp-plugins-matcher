@@ -694,12 +694,14 @@ namespace lsp
 
             f->nStatus      = STATUS_UNSPECIFIED;
             f->bSync        = true;
+            f->bCanListen   = false;
             f->fPitch       = 0.0f;
             f->fHeadCut     = 0.0f;
             f->fTailCut     = 0.0f;
 
             f->fDuration    = 0.0f;
 
+            f->pShowOverlay = NULL;
             f->pFile        = NULL;
             f->pPitch       = NULL;
             f->pHeadCut     = NULL;
@@ -773,7 +775,7 @@ namespace lsp
 
             // Bind audio file ports
             lsp_trace("Binding audio file ports");
-            SKIP_PORT("Show file loading");
+            BIND_PORT(f->pShowOverlay);
             BIND_PORT(f->pFile);
             BIND_PORT(f->pPitch);
             BIND_PORT(f->pHeadCut);
@@ -1298,10 +1300,14 @@ namespace lsp
             }
 
             // Listen button pressed?
-            if (af->pListen != NULL)
-                af->sListen.submit(af->pListen->value());
-            if (af->pStop != NULL)
-                af->sStop.submit(af->pStop->value());
+            af->bCanListen          = af->pShowOverlay->value() >= 0.5f;
+            if (af->bCanListen)
+            {
+                if (af->pListen != NULL)
+                    af->sListen.submit(af->pListen->value());
+                if (af->pStop != NULL)
+                    af->sStop.submit(af->pStop->value());
+            }
 
             // Set latency
             const size_t latency    = sProcessor.latency();
@@ -3049,6 +3055,17 @@ namespace lsp
             dspu::PlaySettings ps;
 
             af_descriptor_t * const f  = &sFile;
+
+            // Need to immediately stop playback?
+            if (!f->bCanListen)
+            {
+                for (size_t j=0; j<nChannels; ++j)
+                {
+                    channel_t *c = &vChannels[j];
+                    c->sPlayback.cancel(fadeout, 0);
+                }
+                return;
+            }
 
             // Need to start audio preview playback?
             if (f->sListen.pending())

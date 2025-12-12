@@ -167,18 +167,20 @@ namespace lsp
                     float               fNorm;          // Norming factor
                     status_t            nStatus;
                     bool                bSync;          // Synchronize file
+                    bool                bCanListen;     // Can listen flag
 
                     float               fPitch;         // Pitch amount
                     float               fHeadCut;
                     float               fTailCut;
                     float               fDuration;      // Actual audio file duration
 
+                    plug::IPort        *pShowOverlay;   // Port that shows file overlay
                     plug::IPort        *pFile;          // Port that contains file name
                     plug::IPort        *pPitch;         // Pitching amount in semitones
-                    plug::IPort        *pHeadCut;
-                    plug::IPort        *pTailCut;
-                    plug::IPort        *pListen;
-                    plug::IPort        *pStop;
+                    plug::IPort        *pHeadCut;       // Head cut of file
+                    plug::IPort        *pTailCut;       // Tail cut of file
+                    plug::IPort        *pListen;        // Listen event
+                    plug::IPort        *pStop;          // Stop event
                     plug::IPort        *pStatus;        // Status of file loading
                     plug::IPort        *pLength;        // Length of file
                     plug::IPort        *pThumbs;        // Thumbnails of file
