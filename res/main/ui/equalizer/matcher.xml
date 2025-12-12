@@ -540,7 +540,7 @@
 	<!-- Profile envelope overlay -->
 	<overlay id="showenv" trigger="profile_envelope_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
 		<group text="groups.envelope">
-			<grid rows="3" cols="10" heifht.min="96">
+			<grid rows="3" cols="10" hspacing="4">
 				<label text="25"/>
 				<label text="50"/>
 				<label text="107"/>
@@ -565,12 +565,12 @@
 	<!-- Profile limiting overlay -->
 	<overlay id="showlim" trigger="profile_limit_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
 		<group text="groups.profile_limits">
-			<grid rows="5" cols="10" heifht.min="96">
+			<grid rows="5" cols="10" hspacing="4">
 				<cell cols="10">
-					<hbox>
-						<void hexpand="true"/>
-						<button id="tlimit" text="labels.limiting.top" ui:inject="Button_violet"/>
+					<hbox pad.b="4">
+						<button id="tlimit" text="labels.limiting.top" ui:inject="Button_violet" pad.r="4"/>
 						<button id="blimit" text="labels.limiting.bottom" ui:inject="Button_violet"/>
+						<void hexpand="true"/>
 						<button id="limit" text="labels.enable" ui:inject="Button_violet"/>
 					</hbox>
 				</cell>
@@ -601,11 +601,15 @@
 	<!-- Profile morphing -->
 	<overlay id="showmrp" trigger="profile_morphing_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
 		<group text="groups.profile_morphing">
-			<grid rows="4" cols="11" heifht.min="96">
+			<grid rows="4" cols="10" hspacing="4">
 				<cell cols="10">
+					<hbox pad.b="4">
 					<label text="labels.reactivity"/>
+					<void hexpand="true"/>
+					<button id="mrplink" text="labels.chan.link" pad.r="4"/>
+					<button id="match" text="actions.match"/>
+				</hbox>
 				</cell>
-				<label/>
 
 				<label text="25"/>
 				<label text="50"/>
@@ -617,43 +621,40 @@
 				<label text="labels.flt.x_k" text:value="4.7"/>
 				<label text="labels.flt.x_k" text:value="10"/>
 				<label text="labels.flt.x_k" text:value="16"/>
-				<label/>
 
 				<ui:for id="i" first="1" count="10">
 					<fader id="spd_${i}" angle="1"/>
-					<!-- <knob id="spd_${i}"/> -->
 				</ui:for>
-				<vbox>
-					<button id="match" text="actions.match"/>
-					<button id="mrplink" text="labels.chan.link"/>
-				</vbox>
-
 				<ui:for id="i" first="1" count="10">
 					<value id="spd_${i}"/>
 				</ui:for>
-				<void/>
 			</grid>
 		</group>
 	</overlay>
 
 	<!-- Filters -->
 	<overlay id="showflt" trigger="profile_filters_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
-		<group text="groups.filters">
-			<grid rows="4" cols="5" heifht.min="96">
+		<group text="groups.filters" ipadding="0">
+			<grid rows="4" cols="7" spacing="4" pad.h="6">
 				<cell cols="2">
-					<button id="hpf_on" text="labels.flt.HPF"/>
+					<button id="hpf_on" text="labels.flt.HPF" hfill="true" pad.t="4"/>
+				</cell>
+				<cell rows="4">
+					<vsep bg.color="bg" pad.h="2" hreduce="true"/>
 				</cell>
 				<cell cols="2">
-					<button id="lpf_on" text="labels.flt.LPF"/>
+					<button id="lpf_on" text="labels.flt.LPF" hfill="true" pad.t="4"/>
 				</cell>
-				<cell rows="2">
-					<button id="clip_on" text="labels.signal.clip"/>
+				<cell rows="4">
+					<vsep bg.color="bg" pad.h="2" hreduce="true"/>
 				</cell>
+				<button id="clip_on" text="labels.signal.clip" pad.t="4"/>
 
-				<label text="labels.frequency"/>
+				<label text="labels.freq"/>
 				<label text="labels.slope"/>
-				<label text="labels.frequency"/>
+				<label text="labels.freq"/>
 				<label text="labels.slope"/>
+				<label text="labels.freq"/>
 
 				<knob id="hpf_f"/>
 				<knob id="hpf_s"/>
