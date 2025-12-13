@@ -134,6 +134,7 @@ namespace lsp
                     PFLAGS_SYNC             = 1 << 4,           // Profile needs to be synchronized with UI
                     PFLAGS_NORMAL           = 1 << 5,           // Profile is filled with 0 dB amplification
                     PFLAGS_DYNAMIC          = 1 << 6,           // Profile is dynamically changing
+                    PFLAGS_EMPTY            = 1 << 7,           // Profile is empty (level below the threshold)
                 };
 
                 enum eq_param_t

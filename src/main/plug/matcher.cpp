@@ -1106,7 +1106,7 @@ namespace lsp
             bMatchTopLimit          = (match_limit) && (pMatchTopLimit->value() >= 0.5f);
             bMatchBottomLimit       = (match_limit) && (pMatchBottomLimit->value() >= 0.5f);
             nInSource               = pInSource->value();
-            fBlend                  = pBlend->value() * 0.01f;
+            fBlend                  = (100.0f - pBlend->value()) * 0.01f;
             fStereoLink             = (pStereoLink != NULL) ? pStereoLink->value() * 0.01f : 0.0f;
             bUpdateMatch            = rebuild_eq_profiles;
 
@@ -1580,35 +1580,18 @@ namespace lsp
             }
         }
 
-        void matcher::track_profile(profile_data_t *profile, float * const * spectrum, float tau, size_t channel)
+        void matcher::track_profile(profile_data_t *profile, float * const *spectrum, float tau, size_t channel)
         {
             const float norm        = NORMING_SHIFT / float(1 << nRank);
             const size_t fft_csize  = (1 << (nRank - 1)) + 1;
-
-            // Estimate block RMS
             const float rms_norm    = 1.0f / float(fft_csize);
-            float block_rms         = GAIN_AMP_M_INF_DB;
-            for (size_t i=0; i<nChannels; ++i)
-            {
-                const float *src        = spectrum[i * PC_TOTAL + channel];
-                if (src == NULL)
-                    continue;
-
-                float *dst              = pTempProfile->vData[i];
-                dsp::pcomplex_mod(dst, src, fft_csize);
-                block_rms              += sqrtf(dsp::h_sqr_sum(pTempProfile->vData[i], fft_csize) * rms_norm);
-            }
-
-            // Skip silent blocks
-            if (block_rms < GAIN_AMP_M_72_DB)
-                return;
 
             // Apply changes
+            float * const tmp       = pTempProfile->vData[0];
             const size_t frames     = profile->nFrames;
             for (size_t i=0; i<nChannels; ++i)
             {
                 const float *src        = spectrum[i * PC_TOTAL + channel];
-                const float *tmp        = pTempProfile->vData[i];
                 float *dst              = profile->vData[i];
 
                 // Decide the strategy
@@ -1616,7 +1599,10 @@ namespace lsp
                 {
                     // Append new frame to the profile
                     if (src != NULL)
+                    {
+                        dsp::pcomplex_mod(tmp, src, fft_csize);
                         dsp::mix2(dst, tmp, 1.0f - tau, tau * norm, fft_csize);
+                    }
                     else
                         dsp::mul_k2(dst, 1.0f - tau, fft_csize);
                 }
@@ -1632,7 +1618,7 @@ namespace lsp
             profile->nRank          = nRank;
             if (profile->nFrames < ~uint32_t(0))
                 ++profile->nFrames;
-            profile->nFlags        &= ~PFLAGS_DEFAULT;
+            profile->nFlags        &= ~(PFLAGS_DEFAULT | PFLAGS_EMPTY);
             profile->nFlags        |= PFLAGS_CHANGED | PFLAGS_SYNC | PFLAGS_DYNAMIC;
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
@@ -1642,6 +1628,8 @@ namespace lsp
 
             if (profile->fRMS >= GAIN_AMP_M_72_DB)
                 profile->nFlags            |= PFLAGS_READY;
+            else
+                profile->nFlags            |= PFLAGS_EMPTY;
         }
 
         void matcher::sync_profile(profile_data_t *dst, profile_data_t *src)
@@ -1722,6 +1710,11 @@ namespace lsp
 
                 // Replace reference with blending profile
                 src->fRMS           = ref->fRMS;
+                src->nFlags        &= ~(PFLAGS_READY | PFLAGS_EMPTY);
+                if (src->fRMS >= GAIN_AMP_M_72_DB)
+                    src->nFlags                |= PFLAGS_READY;
+                else
+                    src->nFlags                |= PFLAGS_EMPTY;
             }
 
             if (is_dynamic)
@@ -1735,25 +1728,45 @@ namespace lsp
                 }
 
                 const float norm = src->fRMS / in->fRMS;
-                const bool match_immediate = sMatchImmediate.pending();
+                const bool match_immediate  = sMatchImmediate.pending();
+                const bool towards_0db      = (src->nFlags | in->nFlags) & PFLAGS_EMPTY;
 
-                // Dynamically changing profile
-                for (size_t i=0; i<nChannels; ++i)
+                if (towards_0db)
                 {
-                    // Compute new profile value
-                    dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-
-                    // Apply reactivity to the changes or perform immediate match
-                    if (match_immediate)
+                    // One of the profiles has low RMS, we need to correct the dynamic profile towards 0 dB level.
+                    for (size_t i=0; i<nChannels; ++i)
                     {
-                        dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                        dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                        // Apply reactivity to the changes or perform immediate match
+                        if (match_immediate)
+                            dsp::fill(match->vData[i], GAIN_AMP_0_DB, fft_csize);
+                        else
+                        {
+                            if (i == 0)
+                                dsp::fill(tmp->vData[0], GAIN_AMP_0_DB, fft_csize);
+                            dsp::pmix_v1(match->vData[i], tmp->vData[0], pReactivity->vData[i], fft_csize);
+                        }
                     }
-                    else
+                }
+                else
+                {
+                    // Normally dynamically changing profile
+                    for (size_t i=0; i<nChannels; ++i)
                     {
-                        dsp::clamp_kk2(tmp->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                        dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
-                        dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                        // Compute new profile value
+                        dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+
+                        // Apply reactivity to the changes or perform immediate match
+                        if (match_immediate)
+                        {
+                            dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                        }
+                        else
+                        {
+                            dsp::clamp_kk2(tmp->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                            dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                        }
                     }
                 }
             }

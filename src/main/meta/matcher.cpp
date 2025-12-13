@@ -111,7 +111,7 @@ namespace lsp
             COMBO("in_src", "Input source", "Input src", 0, matcher_input_source), \
             COMBO("ref_src", "Reference source", "Reference src", 1, sources), \
             COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \
-            PERCENTS("blend", "Blend signal", "Blend signal", 0.0f, 0.05f), \
+            PERCENTS("blend", "Blend signal", "Blend signal", 100.0f, 0.05f), \
             SWITCH("profile", "Profile", "Profile", 0.0f), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
             SWITCH("listen", "Listen capture", "Listen", 0.0f), \
