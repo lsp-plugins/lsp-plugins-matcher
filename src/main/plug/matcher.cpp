@@ -3330,10 +3330,10 @@ namespace lsp
             return profile;
         }
 
-        void matcher::dump(dspu::IStateDumper *v, const char *name, const profile_data_t * profile)
+        void matcher::dump(dspu::IStateDumper *v, const char *name, const profile_data_t *p)
         {
             // Check profile for NULL
-            if (profile == NULL)
+            if (p == NULL)
             {
                 if (name != NULL)
                     v->write(name, static_cast<const void *>(NULL));
@@ -3344,25 +3344,230 @@ namespace lsp
 
             // Write profile object
             if (name != NULL)
-                v->begin_object(name, profile, sizeof(profile_data_t));
+                v->begin_object(name, p, sizeof(profile_data_t));
             else
-                v->begin_object(profile, sizeof(profile_data_t));
+                v->begin_object(p, sizeof(profile_data_t));
 
-            // TODO
+            {
+                v->write("nSampleRate", p->nSampleRate);
+                v->write("nChannels", p->nChannels);
+                v->write("nRank", p->nRank);
+                v->write("nFlags", p->nFlags);
+                v->write("nFrames", p->nFrames);
+                v->write("fRMS", p->fRMS);
+                v->writev("vData", p->vData, p->nChannels);
+            }
 
             v->end_object();
-        }
-
-        void matcher::dump(dspu::IStateDumper *v, const profile_data_t * profile)
-        {
-            dump(v, NULL, profile);
         }
 
         void matcher::dump(dspu::IStateDumper *v) const
         {
             plug::Module::dump(v);
 
-            // TODO
+            v->write("nChannels", nChannels);
+
+            v->begin_array("vChannels", vChannels, nChannels);
+            {
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    const channel_t * const c = &vChannels[i];
+
+                    v->write_object("sBypass", &c->sBypass);
+                    v->write_object("sPlayer", &c->sPlayer);
+                    v->write_object("sPlayback", &c->sPlayback);
+                    v->write_object("sDryDelay", &c->sDryDelay);
+                    v->write_object("sScDelay", &c->sScDelay);
+
+                    v->write("vIn", c->vIn);
+                    v->write("vOut", c->vOut);
+                    v->write("vSc", c->vSc);
+                    v->write("vShmIn", c->vShmIn);
+                    v->writev("vFft", c->vFft, SM_TOTAL);
+                    v->write("vBuffer", c->vBuffer);
+                    v->writev("vLevel", c->vLevel, SM_TOTAL);
+
+                    v->writev("bFft", c->bFft, SM_TOTAL);
+
+                    v->write("pIn", c->pIn);
+                    v->write("pOut", c->pOut);
+                    v->write("pSc", c->pSc);
+                    v->write("pShmIn", c->pShmIn);
+
+                    v->writev("pFft", c->pFft, SM_TOTAL);
+                    v->writev("pMeter", c->pMeter, SM_TOTAL);
+                }
+            }
+            v->end_array();
+
+            v->write("nInSource", nInSource);
+            v->write("nRefSource", nRefSource);
+            v->write("nRawCapSource", nRawCapSource);
+            v->write("nCapSource", nCapSource);
+            v->write("nRank", nRank);
+
+            v->write("fGainIn", fGainIn);
+            v->write("fGainOut", fGainOut);
+            v->write("fFftTau", fFftTau);
+            v->write("fFftShift", fFftShift);
+            v->write("fInTau", fInTau);
+            v->write("fRefTau", fRefTau);
+            v->write("fStereoLink", fStereoLink);
+            v->write("fBlend", fBlend);
+            v->write("fHpfFreq", fHpfFreq);
+            v->write("fHpfSlope", fHpfSlope);
+            v->write("fLpfFreq", fLpfFreq);
+            v->write("fLpfSlope", fLpfSlope);
+            v->write("fClipFreq", fClipFreq);
+
+            v->write("nFileProcessReq", nFileProcessReq);
+            v->write("nFileProcessResp", nFileProcessResp);
+
+            v->write("bSidechain", bSidechain);
+            v->write("bProfile", bProfile);
+            v->write("bCapture", bCapture);
+            v->write("bListen", bListen);
+            v->write("bSyncRefFFT", bSyncRefFFT);
+            v->write("bSyncFilter", bSyncFilter);
+            v->write("bUpdateMatch", bUpdateMatch);
+            v->write("bMatchTopLimit", bMatchTopLimit);
+            v->write("bMatchBottomLimit", bMatchBottomLimit);
+
+            v->write_object("sProcessor", &sProcessor);
+            v->write_object("sMatchImmediate", &sMatchImmediate);
+
+            v->begin_object("sFile", &sFile, sizeof(af_descriptor_t));
+            {
+                const af_descriptor_t * const af = &sFile;
+
+                v->write_object("sListen", &af->sListen);
+                v->write_object("sStop", &af->sStop);
+                v->write_object("pOriginal", af->pOriginal);
+                v->write_object("pProcessed", af->pProcessed);
+                v->writev("vThumbs", af->vThumbs, 2);
+
+                v->write("fNorm", af->fNorm);
+                v->write("nStatus", af->nStatus);
+                v->write("bSync", af->bSync);
+                v->write("bCanListen", af->bCanListen);
+
+                v->write("fPitch", af->fPitch);
+                v->write("fHeadCut", af->fHeadCut);
+                v->write("fTailCut", af->fTailCut);
+                v->write("fDuration", af->fDuration);
+
+                v->write("pShowOverlay", af->pShowOverlay);
+                v->write("pFile", af->pFile);
+                v->write("pPitch", af->pPitch);
+                v->write("pHeadCut", af->pHeadCut);
+                v->write("pTailCut", af->pTailCut);
+                v->write("pListen", af->pListen);
+                v->write("pStop", af->pStop);
+                v->write("pStatus", af->pStatus);
+                v->write("pLength", af->pLength);
+                v->write("pThumbs", af->pThumbs);
+                v->write("pPlayPosition", af->pPlayPosition);
+            }
+            v->end_object();
+
+            v->write_object("sFileLoader", &sFileLoader);
+            v->write_object("sFileProcessor", &sFileProcessor);
+            v->write_object("sKVTSync", &sKVTSync);
+            v->write_object("sIRSaver", &sIRSaver);
+            v->write_object("sGCTask", &sGCTask);
+
+            v->begin_array("vMatchBands", vMatchBands, meta::matcher::MATCH_BANDS);
+            {
+                for (size_t i=0; i<meta::matcher::MATCH_BANDS; ++i)
+                {
+                    const match_band_t * const b = &vMatchBands[i];
+
+                    v->writev("vParams", b->vParams, EQP_TOTAL);
+                    v->writev("pParams", b->pParams, EQP_TOTAL);
+                }
+            }
+            v->end_array();
+
+            v->write("pExecutor", pExecutor);
+            v->write("pGCList", &pGCList);
+            dump(v, "pReactivity", pReactivity);
+            dump(v, "pTempProfile", pTempProfile);
+            dump(v, "pFilterProfile", pFilterProfile);
+            dump(v, "pMatchProfile", pMatchProfile);
+
+            v->begin_array("vProfileData", vProfileData, PROF_TOTAL);
+            {
+                for (size_t i=0; i<PROF_TOTAL; ++i)
+                {
+                    const profile_data_t * const p = vProfileData[i];
+                    dump(v, NULL, p);
+                }
+            }
+            v->end_array();
+
+            v->begin_array("vProfileState", vProfileState, SPROF_TOTAL);
+            {
+                for (size_t i=0; i<SPROF_TOTAL; ++i)
+                {
+                    const profile_data_t * const p = vProfileState[i].current();
+                    dump(v, NULL, p);
+                }
+            }
+            v->end_array();
+
+            v->write("vIndices", vIndices);
+            v->write("vFreqs", vFreqs);
+            v->write("vFilterCurve", vFilterCurve);
+            v->write("vEnvelope", vEnvelope);
+            v->write("vRevEnvelope", vRevEnvelope);
+            v->write("vBuffer", vBuffer);
+            v->write("vEmptyBuf", vEmptyBuf);
+
+            v->write("pBypass", pBypass);
+            v->write("pGainIn", pGainIn);
+            v->write("pGainOut", pGainOut);
+            v->write("pFftSize", pFftSize);
+            v->write("pInReactivity", pInReactivity);
+            v->write("pRefReactivity", pRefReactivity);
+            v->write("pInSource", pInSource);
+            v->write("pRefSource", pRefSource);
+            v->write("pCapSource", pCapSource);
+            v->write("pBlend", pBlend);
+            v->write("pProfile", pProfile);
+            v->write("pCapture", pCapture);
+            v->write("pListen", pListen);
+            v->write("pHpfOn", pHpfOn);
+            v->write("pHpfFreq", pHpfFreq);
+            v->write("pHpfSlope", pHpfSlope);
+            v->write("pLpfOn", pLpfOn);
+            v->write("pLpfFreq", pLpfFreq);
+            v->write("pLpfSlope", pLpfSlope);
+            v->write("pClipOn", pClipOn);
+            v->write("pClipFreq", pClipFreq);
+            v->write("pMatchInReady", pMatchInReady);
+            v->write("pMatchRefReady", pMatchRefReady);
+            v->write("pInReady", pInReady);
+            v->write("pCapReady", pCapReady);
+            v->write("pFileReady", pFileReady);
+            v->write("pFilterMesh", pFilterMesh);
+            v->write("pStereoLink", pStereoLink);
+
+            v->write("pIRFile", pIRFile);
+            v->write("pIRSave", pIRSave);
+            v->write("pIRStatus", pIRStatus);
+            v->write("pIRProgress", pIRProgress);
+
+            v->write("pMatchTopLimit", pMatchTopLimit);
+            v->write("pMatchBottomLimit", pMatchBottomLimit);
+            v->write("pMatchLimit", pMatchLimit);
+            v->write("pMatchImmediate", pMatchImmediate);
+            v->write("pMatchMesh", pMatchMesh);
+
+            v->write("pFftReact", pFftReact);
+            v->write("pFftShift", pFftShift);
+            v->write("pFftMesh", pFftMesh);
+
+            v->write("pData", pData);
         }
 
     } /* namespace plugins */

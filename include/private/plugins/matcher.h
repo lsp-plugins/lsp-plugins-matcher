@@ -442,7 +442,6 @@ namespace lsp
 
             protected:
                 static void         dump(dspu::IStateDumper *v, const char *name, const profile_data_t * profile);
-                static void         dump(dspu::IStateDumper *v, const profile_data_t * profile);
                 static void         process_block(void *object, void *subject, float * const * spectrum, size_t rank);
                 static void         process_sample_block(void *object, void *subject, float * const * spectrum, size_t rank);
                 static void         free_profile_data(profile_data_t *profile);
