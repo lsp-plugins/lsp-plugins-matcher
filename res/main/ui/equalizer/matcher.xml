@@ -1,16 +1,26 @@
 <plugin resizable="true">
 	<!-- Control linking -->
 	<ctl:link
-		id.spd_1="spd_1" value.spd_1=":_old_this + :_current - :_old_current"
-		id.spd_2="spd_2" value.spd_2=":_old_this + :_current - :_old_current"
-		id.spd_3="spd_3" value.spd_3=":_old_this + :_current - :_old_current"
-		id.spd_4="spd_4" value.spd_4=":_old_this + :_current - :_old_current"
-		id.spd_5="spd_5" value.spd_5=":_old_this + :_current - :_old_current"
-		id.spd_6="spd_6" value.spd_6=":_old_this + :_current - :_old_current"
-		id.spd_7="spd_7" value.spd_7=":_old_this + :_current - :_old_current"
-		id.spd_8="spd_8" value.spd_8=":_old_this + :_current - :_old_current"
-		id.spd_9="spd_9" value.spd_9=":_old_this + :_current - :_old_current"
-		id.spd_10="spd_10" value.spd_10=":_old_this + :_current - :_old_current"
+		id.spd_1="spd_1"
+		value.spd_1=":_old_this + :_current - :_old_current"
+		id.spd_2="spd_2"
+		value.spd_2=":_old_this + :_current - :_old_current"
+		id.spd_3="spd_3"
+		value.spd_3=":_old_this + :_current - :_old_current"
+		id.spd_4="spd_4"
+		value.spd_4=":_old_this + :_current - :_old_current"
+		id.spd_5="spd_5"
+		value.spd_5=":_old_this + :_current - :_old_current"
+		id.spd_6="spd_6"
+		value.spd_6=":_old_this + :_current - :_old_current"
+		id.spd_7="spd_7"
+		value.spd_7=":_old_this + :_current - :_old_current"
+		id.spd_8="spd_8"
+		value.spd_8=":_old_this + :_current - :_old_current"
+		id.spd_9="spd_9"
+		value.spd_9=":_old_this + :_current - :_old_current"
+		id.spd_10="spd_10"
+		value.spd_10=":_old_this + :_current - :_old_current"
 		activity=":mrplink"/>
 
 	<grid rows="2" cols="4" spacing="4">
@@ -38,49 +48,51 @@
 					</vbox>
 				</ui:with>
 				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
-				
-				<!-- Capture Profile -->
-				<cell cols="2">
-					<label text="labels.profiles.capture_profile" pad.h="6" pad.v="4"/>
-				</cell>
-				<vbox pad.l="6" pad.r="8">
-					<hbox>
-						<label text="labels.source" pad.r="4"/>
-						<combo id="cap_src"/>
-					</hbox>
-					<button id="listen" hfill="true" text="actions.listen" pad.v="4"/>
-				</vbox>
 
-				<align valign="-1">
-					<vbox pad.r="6">
-						<button id="capture" text="actions.record" ui:inject="Button_yellow_green" pad.b="7"/>
-						<hbox >
-							<led id="cprdy" size="10" ui:inject="Led_yellow_green"/>
-							<label text="labels.ready"/>
+				<!-- Capture Profile -->
+				<ui:with activity="(:ref_src ieq 1 and :cprdy) or :listen or :capture">
+					<cell cols="2">
+						<label text="labels.profiles.capture_profile" pad.h="6" pad.v="4"/>
+					</cell>
+					<vbox pad.l="6" pad.r="8">
+						<hbox>
+							<label text="labels.source" pad.r="4"/>
+							<combo id="cap_src"/>
 						</hbox>
+						<button id="listen" hfill="true" text="actions.listen" pad.v="4"/>
 					</vbox>
-				</align>
-				<cell cols="2" vexpand="false" pad.h="6" pad.b="4">
-					<ui:if test="!ex :out_r">
-						<ledmeter vexpand="true" angle="0">
-							<ledchannel id="clm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
-						</ledmeter>
-					</ui:if>
-					<ui:if test="ex :out_r">
-						<ledmeter vexpand="true" angle="0">
-							<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
-							<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
-						</ledmeter>
-					</ui:if>
-				</cell>
+
+					<align valign="-1">
+						<vbox pad.r="6">
+							<button id="capture" text="actions.record" ui:inject="Button_yellow_green" pad.b="7"/>
+							<hbox >
+								<led id="cprdy" size="10" ui:inject="Led_yellow_green" light="(:ref_src ieq 1 and :cprdy) or :listen or :capture"/>
+								<label text="labels.ready"/>
+							</hbox>
+						</vbox>
+					</align>
+					<cell cols="2" vexpand="false" pad.h="6" pad.b="4">
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="clm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+							</ledmeter>
+						</ui:if>
+					</cell>
+				</ui:with>
 				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
-				
+
 				<!-- Shared memory link button -->
 				<cell cols="2" pad.v="4">
 					<shmlink id="link" hfill="true" pad.h="6"/>
 				</cell>
 				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
-				
+
 				<!-- External input profile -->
 				<ui:with activity="(:ref_src igt 3)">
 					<cell cols="2">
@@ -102,7 +114,7 @@
 						</ui:if>
 						<ui:if test="ex :out_r">
 							<ledmeter vexpand="true" angle="0">
-								<ledchannel id="rlm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="rlm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in" activity="true"/>
 								<ledchannel id="rlm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
 							</ledmeter>
 						</ui:if>
@@ -113,7 +125,7 @@
 				<ui:with activity=":fprdy">
 					<button ui:id="profile_file_trigger" id="showfil" text="labels.file" hfill="true" pad.h="6" pad.v="4"/>
 					<hbox pad.r="6">
-						<led id="fprdy" size="10" ui:inject="Led_cyan"/>
+						<led id="fprdy" size="10" ui:inject="Led_orange_yellow"/>
 						<label text="labels.ready"/>
 					</hbox>
 				</ui:with>
@@ -368,7 +380,7 @@
 								<ui:with height="19" hfill="true" hexpand="true">
 									<button id="ife" text="labels.chan.input" ui:inject="Button_mono_8"/>
 									<button id="ofe" text="labels.chan.output" ui:inject="Button_mono_8"/>
-									<button id="cfe" text="labels.capture" ui:inject="Button_blue_violet_8"/>
+									<button id="cfe" text="labels.source" ui:inject="Button_blue_violet_8"/>
 									<button id="rfe" text="labels.chan.reference" ui:inject="Button_cyan_blue_8"/>
 								</ui:with>
 							</ui:if>
@@ -382,7 +394,7 @@
 									<button id="ofe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
 									<button id="ofe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
 
-									<label text="labels.capture" hfill="true" hexpand="true"/>
+									<label text="labels.source" hfill="true" hexpand="true"/>
 									<button id="cfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_blue_violet_8" pad.h="4"/>
 									<button id="cfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_blue_violet_8"/>
 
@@ -415,72 +427,70 @@
 					<vbox pad.t="4">
 						<button id="showpro" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8" pad.h="6" bg.bright=":showpro ? 1.0 : 0.75" pad.b="4"/>
 						<hsep bg.color="bg" pad.v="2" vreduce="true"/>
-						
-						<label text="labels.static_profiles" pad.h="6" pad.t="4"/>
-						<ui:if test="!ex :out_r">
-							<grid rows="4" cols="2" pad.h="6">
-								<led light=":showpro and :in_src ieq 0" />
-								<button id="psfe" text="labels.chan.input" ui:inject="Button_green_cyan_8" />
-								
-								<led light=":showpro and :ref_src ieq 1" />
-								<button id="pcfe" text="labels.capture" ui:inject="Button_yellow_green_8" />
-								
-								<led light=":showpro and :ref_src ieq 2" />
-								<button id="pffe" text="labels.file" ui:inject="Button_orange_yellow_8" />
-								
-								<led light=":showpro and :ref_src ieq 3" />
-								<button id="pefe" text="labels.signal.envelope" ui:inject="Button_red_orange_8" />
-							</grid>
-						</ui:if>
-						<ui:if test="ex :out_r">
-							<grid rows="4" cols="4" pad.h="6">
-								<led light=":showpro and :in_src ieq 0" />
-								<label text="labels.chan.input" hfill="true" hexpand="true" />
-								<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_green_cyan_8" pad.h="4"/>
-								<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_green_cyan_8" />
+						<ui:with pad.b="4">
+							<label text="labels.static_profiles" pad.h="6" pad.t="4"/>
+							<ui:if test="!ex :out_r">
+								<grid rows="4" cols="2" pad.h="6">
+									<led light=":showpro and :in_src ieq 0" size="10" ui:inject="Led_green_cyan" pad.r="6"/>
+									<button id="psfe" text="labels.chan.input" ui:inject="Button_green_cyan_8"/>
+									<led light=":showpro and :ref_src ieq 1" size="10" ui:inject="Led_yellow_green" pad.r="6"/>
+									<button id="pcfe" text="labels.capture" ui:inject="Button_yellow_green_8"/>
+									<led light=":showpro and :ref_src ieq 2" size="10" ui:inject="Led_orange_yellow" pad.r="6"/>
+									<button id="pffe" text="labels.file" ui:inject="Button_orange_yellow_8"/>
+									<led light=":showpro and :ref_src ieq 3" size="10" ui:inject="Led_red_orange" pad.r="6"/>
+									<button id="pefe" text="labels.signal.envelope" ui:inject="Button_red_orange_8"/>
+								</grid>
+							</ui:if>
+							<ui:if test="ex :out_r">
+								<grid rows="4" cols="4" pad.h="6">
+									<led light=":showpro and :in_src ieq 0" size="10" ui:inject="Led_green_cyan" pad.r="6"/>
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+									<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_green_cyan_8" pad.h="4"/>
+									<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_green_cyan_8"/>
 
-								<led light=":showpro and :ref_src ieq 1" />
-								<label text="labels.capture" hfill="true" hexpand="true" />
-								<button id="pcfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_yellow_green_8" pad.h="4"/>
-								<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_yellow_green_8" />
+									<led light=":showpro and :ref_src ieq 1" size="10" ui:inject="Led_yellow_green" pad.r="6"/>
+									<label text="labels.capture" hfill="true" hexpand="true"/>
+									<button id="pcfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_yellow_green_8" pad.h="4"/>
+									<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_yellow_green_8"/>
 
-								<led light=":showpro and :ref_src ieq 2" />
-								<label text="labels.file" hfill="true" hexpand="true" />
-								<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_orange_yellow_8" pad.h="4"/>
-								<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_orange_yellow_8" />
+									<led light=":showpro and :ref_src ieq 2" size="10" ui:inject="Led_orange_yellow" pad.r="6"/>
+									<label text="labels.file" hfill="true" hexpand="true"/>
+									<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_orange_yellow_8" pad.h="4"/>
+									<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_orange_yellow_8"/>
 
-								<led light=":showpro and :ref_src ieq 3" />
-								<label text="labels.signal.envelope" hfill="true" hexpand="true" />
-								<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_red_orange_8" pad.h="4"/>
-								<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_red_orange_8" />
-							</grid>
-						</ui:if>
+									<led light=":showpro and :ref_src ieq 3" size="10" ui:inject="Led_red_orange" pad.r="6"/>
+									<label text="labels.signal.envelope" hfill="true" hexpand="true"/>
+									<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_red_orange_8" pad.h="4"/>
+									<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_red_orange_8"/>
+								</grid>
+							</ui:if>
 
-						<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
-						<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
-						
-						<ui:if test="!ex :out_r">
-							<grid rows="2" cols="2" pad.h="6">
-								<led light=":showpro and :in_src ieq 1" />
-								<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="6" ui:inject="Button_magenta_8" />
-								
-								<led light=":showpro and :ref_src ige 4" />
-								<button id="prfe" text="labels.chan.reference" height="19" hfill="true" pad.h="6" ui:inject="Button_violet_magenta_8" />
-							</grid>
-						</ui:if>
-						<ui:if test="ex :out_r">
-							<grid rows="2" cols="4" pad.h="6">
-								<led light=":showpro and :in_src ieq 1" />
-								<label text="labels.chan.input" hfill="true" hexpand="true" />
-								<button id="pife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_magenta_8" pad.h="4"/>
-								<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_magenta_8" />
+							<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
+							<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
 
-								<led light=":showpro and :ref_src ige 4" />
-								<label text="labels.chan.external_sc" hfill="true" hexpand="true" />
-								<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_violet_magenta_8" pad.h="4"/>
-								<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_violet_magenta_8"/>
-							</grid>
-						</ui:if>
+							<ui:if test="!ex :out_r">
+								<grid rows="2" cols="2" pad.h="6">
+									<led light=":showpro and :in_src ieq 1" size="10" ui:inject="Led_magenta" pad.r="6"/>
+									<button id="pife" text="labels.chan.input" height="19" hfill="true" pad.h="6" ui:inject="Button_magenta_8"/>
+
+									<led light=":showpro and :ref_src ige 4" size="10" ui:inject="Led_violet_magenta" pad.r="6"/>
+									<button id="prfe" text="labels.chan.reference" height="19" hfill="true" pad.h="6" ui:inject="Button_violet_magenta_8"/>
+								</grid>
+							</ui:if>
+							<ui:if test="ex :out_r">
+								<grid rows="2" cols="4" pad.h="6">
+									<led light=":showpro and :in_src ieq 1" size="10" ui:inject="Led_magenta" pad.r="6"/>
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+									<button id="pife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_magenta_8" pad.h="4"/>
+									<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_magenta_8"/>
+
+									<led light=":showpro and :ref_src ige 4" size="10" ui:inject="Led_violet_magenta" pad.r="6"/>
+									<label text="labels.chan.external_sc" hfill="true" hexpand="true"/>
+									<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_violet_magenta_8" pad.h="4"/>
+									<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_violet_magenta_8"/>
+								</grid>
+							</ui:if>
+						</ui:with>
 					</vbox>
 				</group>
 
@@ -513,7 +523,7 @@
 				<combo id="in_src" pad.r="8"/>
 				<label text="labels.signal.reference"/>
 				<led id="ref_rdy" size="10" ui:inject="Led_yellow_green" visibility=":ref_src ilt 2"/>
-				<led id="ref_rdy" size="10" ui:inject="Led_cyan" visibility=":ref_src ieq 2"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_orange_yellow" visibility=":ref_src ieq 2"/>
 				<led id="ref_rdy" size="10" ui:inject="Led_red_orange" visibility=":ref_src ieq 3"/>
 				<led id="ref_rdy" size="10" ui:inject="Led_violet_magenta" visibility=":ref_src igt 3"/>
 				<combo id="ref_src"/>
@@ -613,11 +623,11 @@
 			<grid rows="4" cols="10" hspacing="4">
 				<cell cols="10">
 					<hbox pad.b="4">
-					<label text="labels.reactivity"/>
-					<void hexpand="true"/>
-					<button id="mrplink" text="labels.chan.link" pad.r="4"/>
-					<button id="match" text="actions.match"/>
-				</hbox>
+						<label text="labels.reactivity"/>
+						<void hexpand="true"/>
+						<button id="mrplink" text="labels.chan.link" pad.r="4"/>
+						<button id="match" text="actions.match"/>
+					</hbox>
 				</cell>
 
 				<label text="25"/>
