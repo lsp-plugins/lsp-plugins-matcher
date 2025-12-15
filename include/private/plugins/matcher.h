@@ -28,6 +28,7 @@
 #include <lsp-plug.in/dsp-units/util/MultiSpectralProcessor.h>
 #include <lsp-plug.in/dsp-units/sampling/Sample.h>
 #include <lsp-plug.in/dsp-units/sampling/SamplePlayer.h>
+#include <lsp-plug.in/plug-fw/core/IDBuffer.h>
 #include <lsp-plug.in/plug-fw/plug.h>
 #include <lsp-plug.in/lltl/state.h>
 #include <private/meta/matcher.h>
@@ -438,6 +439,8 @@ namespace lsp
                 plug::IPort        *pFftShift;          // FFT shift
                 plug::IPort        *pFftMesh;           // Mesh for FFT analysis
 
+                core::IDBuffer     *pIDisplay;          // Inline display buffer
+
                 uint8_t            *pData;              // Allocated data
 
             protected:
@@ -517,6 +520,7 @@ namespace lsp
                 virtual void        process(size_t samples) override;
                 virtual void        ui_activated() override;
                 virtual void        dump(dspu::IStateDumper *v) const override;
+                virtual bool        inline_display(plug::ICanvas *cv, size_t width, size_t height) override;
         };
 
     } /* namespace plugins */

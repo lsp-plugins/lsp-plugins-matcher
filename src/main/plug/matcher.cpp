@@ -31,6 +31,7 @@
 #include <lsp-plug.in/plug-fw/core/KVTStorage.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
 #include <lsp-plug.in/shared/debug.h>
+#include <lsp-plug.in/shared/id_colors.h>
 
 #include <private/plugins/matcher.h>
 
@@ -561,6 +562,8 @@ namespace lsp
             pFftShift           = NULL;
             pFftMesh            = NULL;
 
+            pIDisplay           = NULL;
+
             pData               = NULL;
         }
 
@@ -945,6 +948,12 @@ namespace lsp
             }
             for (size_t i=0; i<SPROF_TOTAL; ++i)
                 vProfileState[i].flush();
+
+            if (pIDisplay != NULL)
+            {
+                pIDisplay->destroy();
+                pIDisplay   = NULL;
+            }
 
             // Free previously allocated data chunk
             if (pData != NULL)
@@ -1821,6 +1830,8 @@ namespace lsp
                     for (size_t i=0; i<nChannels; ++i)
                         dsp::mul2(profile->vData[i], flt->vData[0], fft_csize);
                 }
+
+                pWrapper->query_display_draw();
             }
 
             // Update profile flags
@@ -3328,6 +3339,113 @@ namespace lsp
             }
 
             return profile;
+        }
+
+        bool matcher::inline_display(plug::ICanvas *cv, size_t width, size_t height)
+        {
+            // Check proportions
+            if (height > (M_RGOLD_RATIO * width))
+                height  = M_RGOLD_RATIO * width;
+
+            // Init canvas
+            if (!cv->init(width, height))
+                return false;
+            width   = cv->width();
+            height  = cv->height();
+
+            // Clear background
+            bool bypassing = vChannels[0].sBypass.bypassing();
+            cv->set_color_rgb((bypassing) ? CV_DISABLED : CV_BACKGROUND);
+            cv->paint();
+
+            // Draw axis
+            cv->set_line_width(1.0);
+
+            float zx    = 1.0f/SPEC_FREQ_MIN;
+            float zy    = 1.0f/GAIN_AMP_M_48_DB;
+            float dx    = width/(logf(SPEC_FREQ_MAX)-logf(SPEC_FREQ_MIN));
+            float dy    = height/(logf(GAIN_AMP_M_48_DB)-logf(GAIN_AMP_P_48_DB));
+
+            // Draw vertical lines
+            cv->set_color_rgb(CV_YELLOW, 0.5f);
+            for (float i=100.0f; i<SPEC_FREQ_MAX; i *= 10.0f)
+            {
+                float ax = dx*(logf(i*zx));
+                cv->line(ax, 0, ax, height);
+            }
+
+            // Draw horizontal lines
+            cv->set_color_rgb(CV_WHITE, 0.5f);
+            for (float i=GAIN_AMP_M_48_DB; i<GAIN_AMP_P_48_DB; i *= GAIN_AMP_P_12_DB)
+            {
+                const float ay = height + dy*(logf(i*zy));
+                cv->line(0, ay, width, ay);
+            }
+
+            // Allocate buffer: f, x, y, re, im
+            pIDisplay           = core::IDBuffer::reuse(pIDisplay, 4, width+2);
+            core::IDBuffer *b   = pIDisplay;
+            if (b == NULL)
+                return false;
+
+            // Initialize mesh
+            b->v[0][0]          = SPEC_FREQ_MIN * 0.5f;
+            b->v[0][width+1]    = SPEC_FREQ_MAX * 2.0f;
+            b->v[3][0]          = GAIN_AMP_0_DB;
+            b->v[3][width+1]    = GAIN_AMP_0_DB;
+
+            static uint32_t c_colors[] =
+            {
+                CV_MIDDLE_CHANNEL, CV_MIDDLE_CHANNEL,
+                CV_LEFT_CHANNEL, CV_RIGHT_CHANNEL,
+            };
+
+            const bool aa = cv->set_anti_aliasing(true);
+            lsp_finally { cv->set_anti_aliasing(aa); };
+            cv->set_line_width(2);
+
+            const profile_data_t * const profile = vProfileData[PROF_MATCH];
+            if (profile != NULL)
+            {
+                const bool ready = profile->nFlags & PFLAGS_READY;
+
+                for (size_t i=0; i<profile->nChannels; ++i)
+                {
+                    const float * const amp = profile->vData[i];
+
+                    if (ready)
+                    {
+                        for (size_t j=0; j<width; ++j)
+                        {
+                            size_t k        = (j*meta::matcher::FFT_MESH_SIZE)/width;
+                            b->v[0][j+1]    = vFreqs[k];
+                            b->v[3][j+1]    = amp[vIndices[k]];
+                        }
+                    }
+                    else
+                    {
+                        for (size_t j=0; j<width; ++j)
+                        {
+                            size_t k        = (j*meta::matcher::FFT_MESH_SIZE)/width;
+                            b->v[0][j+1]    = vFreqs[k];
+                        }
+
+                        dsp::fill(b->v[3], GAIN_AMP_0_DB, width + 2);
+                    }
+
+                    dsp::fill(b->v[1], 0.0f, width+2);
+                    dsp::fill(b->v[2], height, width+2);
+                    dsp::axis_apply_log1(b->v[1], b->v[0], zx, dx, width+2);
+                    dsp::axis_apply_log1(b->v[2], b->v[3], zy, dy, width+2);
+
+                    // Draw mesh
+                    uint32_t color = (bypassing || !(active())) ? CV_SILVER : c_colors[(nChannels-1)*2 + i];
+                    Color stroke(color), fill(color, 0.5f);
+                    cv->draw_poly(b->v[1], b->v[2], width+2, stroke, fill);
+                }
+            }
+
+            return true;
         }
 
         void matcher::dump(dspu::IStateDumper *v, const char *name, const profile_data_t *p)
