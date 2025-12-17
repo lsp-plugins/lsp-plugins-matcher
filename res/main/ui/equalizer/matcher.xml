@@ -66,7 +66,7 @@
 						<vbox pad.r="6">
 							<button id="capture" text="actions.record" ui:inject="Button_yellow_green" pad.b="7"/>
 							<hbox >
-								<led id="cprdy" size="10" ui:inject="Led_matcher_capture_ready" />
+								<led id="cprdy" size="10" ui:inject="Led_matcher_capture_ready"/>
 								<label text="labels.ready"/>
 							</hbox>
 						</vbox>
@@ -74,9 +74,18 @@
 					<cell cols="2" vexpand="false" pad.h="6" pad.b="4">
 						<ui:if test="!ex :out_r">
 							<ledmeter vexpand="true" angle="0">
-								<ledchannel id="clm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" activity="true" value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'mono_in' : 'cycle_inactive'" balance.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'yellow' : 'cycle_inactive'"
-								red.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'red' : 'cycle_inactive'"
-								yellow.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'meter_yellow' : 'cycle_inactive'"/>
+								<ledchannel
+									id="clm"
+									min="-36 db"
+									max="+6 db"
+									log="true"
+									type="rms_peak"
+									peak.visibility="true"
+									activity="true"
+									value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'mono_in' : 'cycle_inactive'"
+									balance.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'yellow' : 'cycle_inactive'"
+									red.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'red' : 'cycle_inactive'"
+									yellow.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'meter_yellow' : 'cycle_inactive'"/>
 							</ledmeter>
 						</ui:if>
 						<ui:if test="ex :out_r">
@@ -85,9 +94,9 @@
 									balance.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'yellow' : 'cycle_inactive'"
 									red.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'red' : 'cycle_inactive'"
 									yellow.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'meter_yellow' : 'cycle_inactive'">
-								<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" activity="true" value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'left_in' : 'cycle_inactive'"/>
-								<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" activity="true" value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'right_in' : 'cycle_inactive'"/>
-							</ui:with>
+									<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" activity="true" value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'left_in' : 'cycle_inactive'"/>
+									<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" activity="true" value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'right_in' : 'cycle_inactive'"/>
+								</ui:with>
 							</ledmeter>
 						</ui:if>
 					</cell>
@@ -144,14 +153,15 @@
 				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
 				<!-- Controls -->
 				<cell cols="2">
-					<vbox pad.h="6" spacing="4" pad.v="4">
-						<hbox>
-							<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" ui:inject="Button_violet" hfill="true" hexpand="true" pad.r="4"/>
-							<button id="limit" text="labels.enable" ui:inject="Button_violet" hfill="false"/>
-						</hbox>
-						<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" hfill="true"/>
-						<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters" hfill="true"/>
-					</vbox>
+					<grid rows="3" cols="2" pad.h="6" hspacing="4" vspacing="8" pad.v="4">
+						<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" ui:inject="Button_violet" hfill="true" hexpand="true"/>
+						<button id="limit" text="labels.enable" ui:inject="Button_violet" hfill="false"/>
+						<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" hfill="true" hexpand="true"/>
+						<button id="match" text="actions.match" hfill="false"/>
+						<cell cols="2">
+							<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters" hfill="true"/>
+						</cell>
+					</grid>
 				</cell>
 				<cell cols="2">
 					<void vexpand="true"/>
