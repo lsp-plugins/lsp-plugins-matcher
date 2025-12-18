@@ -272,6 +272,7 @@ namespace lsp
                         matcher                *pCore;
                         profile_data_t         *vProfiles[SPROF_TOTAL];
                         size_t                  nChanges;
+                        uatomic_t               nLocks;
 
                     protected:
                         void        parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type);

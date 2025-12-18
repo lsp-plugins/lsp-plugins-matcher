@@ -46,6 +46,9 @@ namespace lsp
         static constexpr float FFT_TIME_CONST           = -1.2279471773f; // logf(1.0f - float(M_SQRT1_2));
         static constexpr float NORMING_SHIFT            = 100.0f;
 
+        static const char *KVT_STATIC_PROFILE           = "/profile/static";
+        static const char *KVT_CAPTURE_PROFILE          = "/profile/capture";
+
         //---------------------------------------------------------------------
         // Plugin factory
         static const meta::plugin_t *plugins[] =
@@ -119,6 +122,8 @@ namespace lsp
             pCore       = core;
             nChanges    = 0;
 
+            atomic_store(&nLocks, 0);
+
             for (size_t i=0; i<SPROF_TOTAL; ++i)
                 vProfiles[i] = NULL;
         }
@@ -152,8 +157,12 @@ namespace lsp
             lsp_finally { pCore->kvt_release(); };
 
             // Save profiles
-            pCore->save_profile(kvt, "/profile/static", vProfiles[SPROF_STATIC]);
-            pCore->save_profile(kvt, "/profile/capture", vProfiles[SPROF_CAPTURE]);
+            {
+                atomic_add(&nLocks, 1);
+                lsp_finally { atomic_add(&nLocks, -1); };
+                pCore->save_profile(kvt, KVT_STATIC_PROFILE, vProfiles[SPROF_STATIC]);
+                pCore->save_profile(kvt, KVT_CAPTURE_PROFILE, vProfiles[SPROF_CAPTURE]);
+            }
 
             // Reset change counter
             nChanges        = 0;
@@ -243,11 +252,29 @@ namespace lsp
         void matcher::KVTSync::created(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending)
         {
             lsp_trace("KVT parameter '%s' has been created", id);
+
+            // Here we can parse profile
+            if (atomic_load(&nLocks) > 0)
+                return;
+
+            if (strcmp(id, KVT_STATIC_PROFILE) == 0)
+                parse_profile(id, param, SPROF_STATIC);
+            if (strcmp(id, KVT_CAPTURE_PROFILE) == 0)
+                parse_profile(id, param, SPROF_CAPTURE);
         }
 
         void matcher::KVTSync::changed(core::KVTStorage *storage, const char *id, const core::kvt_param_t *oval, const core::kvt_param_t *nval, size_t pending)
         {
             lsp_trace("KVT parameter '%s' has been changed", id);
+
+            // Here we can parse profile
+            if (atomic_load(&nLocks) > 0)
+                return;
+
+            if (strcmp(id, KVT_STATIC_PROFILE) == 0)
+                parse_profile(id, nval, SPROF_STATIC);
+            if (strcmp(id, KVT_CAPTURE_PROFILE) == 0)
+                parse_profile(id, nval, SPROF_CAPTURE);
         }
 
         void matcher::KVTSync::parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type)
@@ -263,15 +290,19 @@ namespace lsp
 
         void matcher::KVTSync::commit(core::KVTStorage *storage, const char *id, const core::kvt_param_t *param, size_t pending)
         {
+            lsp_trace("KVT parameter '%s' has been committed", id);
+            if (atomic_load(&nLocks) > 0)
+                return;
+
             if (!(pending & core::KVT_TO_DSP))
                 return;
 
             lsp_trace("KVT parameter '%s' has been committed to DSP", id);
 
             // Here we can parse profile
-            if (strcmp(id, "/profile/static") == 0)
+            if (strcmp(id, KVT_STATIC_PROFILE) == 0)
                 parse_profile(id, param, SPROF_STATIC);
-            if (strcmp(id, "/profile/capture") == 0)
+            if (strcmp(id, KVT_CAPTURE_PROFILE) == 0)
                 parse_profile(id, param, SPROF_CAPTURE);
         }
 
