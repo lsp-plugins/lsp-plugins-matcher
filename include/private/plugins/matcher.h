@@ -136,6 +136,7 @@ namespace lsp
                     PFLAGS_NORMAL           = 1 << 5,           // Profile is filled with 0 dB amplification
                     PFLAGS_DYNAMIC          = 1 << 6,           // Profile is dynamically changing
                     PFLAGS_EMPTY            = 1 << 7,           // Profile is empty (level below the threshold)
+                    PFLAGS_STATE            = 1 << 8,           // Profile is loaded from plugin state
                 };
 
                 enum eq_param_t
@@ -255,6 +256,7 @@ namespace lsp
                 {
                     private:
                         matcher                *pCore;
+                        bool                    bState;
 
                     public:
                         explicit FileProcessor(matcher *core);
@@ -262,7 +264,9 @@ namespace lsp
 
                     public:
                         virtual status_t run() override;
-                        void        dump(dspu::IStateDumper *v) const;
+                        void            dump(dspu::IStateDumper *v) const;
+                        inline void     set_state_flag(bool state)  { bState = state; }
+                        inline bool     state_flag() const          { return bState; }
                 };
 
                 // Synchronization of profile data with KVT
@@ -275,7 +279,7 @@ namespace lsp
                         uatomic_t               nLocks;
 
                     protected:
-                        void        parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type);
+                        void        parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type, bool state);
 
                     public:
                         explicit KVTSync(matcher *core);
@@ -360,6 +364,7 @@ namespace lsp
                 float               fClipFreq;          // Brickwall clipping frequency
                 uint32_t            nFileProcessReq;    // File processing request
                 uint32_t            nFileProcessResp;   // File processing response
+                bool                bFileFromState;     // File from state
                 bool                bSidechain;         // Sidechain flag
                 bool                bProfile;           // Profile capturing is enabled
                 bool                bCapture;           // Capture side signal
@@ -498,7 +503,7 @@ namespace lsp
                 void                commit_profiles();
                 void                process_listen_output(channel_t *c, size_t samples);
                 bool                save_profile(core::KVTStorage *kvt, const char *path, profile_data_t *profile);
-                profile_data_t     *load_profile(const char *path, const core::kvt_param_t *param);
+                profile_data_t     *load_profile(const char *path, const core::kvt_param_t *param, bool state);
                 void                init_level_meters();
                 void                output_level_meters();
                 void                output_profile_status();

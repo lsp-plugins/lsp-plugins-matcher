@@ -95,6 +95,7 @@ namespace lsp
         matcher::FileProcessor::FileProcessor(matcher *core)
         {
             pCore       = core;
+            bState      = false;
         }
 
         matcher::FileProcessor::~FileProcessor()
@@ -114,6 +115,7 @@ namespace lsp
         void matcher::FileProcessor::dump(dspu::IStateDumper *v) const
         {
             v->write("pCore", pCore);
+            v->write("bState", bState);
         }
 
         //-------------------------------------------------------------------------
@@ -257,10 +259,13 @@ namespace lsp
             if (atomic_load(&nLocks) > 0)
                 return;
 
+            if (!(pending & core::KVT_STATE))
+                return;
+
             if (strcmp(id, KVT_STATIC_PROFILE) == 0)
-                parse_profile(id, param, SPROF_STATIC);
+                parse_profile(id, param, SPROF_STATIC, true);
             if (strcmp(id, KVT_CAPTURE_PROFILE) == 0)
-                parse_profile(id, param, SPROF_CAPTURE);
+                parse_profile(id, param, SPROF_CAPTURE, true);
         }
 
         void matcher::KVTSync::changed(core::KVTStorage *storage, const char *id, const core::kvt_param_t *oval, const core::kvt_param_t *nval, size_t pending)
@@ -271,16 +276,19 @@ namespace lsp
             if (atomic_load(&nLocks) > 0)
                 return;
 
+            if (!(pending & core::KVT_STATE))
+                return;
+
             if (strcmp(id, KVT_STATIC_PROFILE) == 0)
-                parse_profile(id, nval, SPROF_STATIC);
+                parse_profile(id, nval, SPROF_STATIC, true);
             if (strcmp(id, KVT_CAPTURE_PROFILE) == 0)
-                parse_profile(id, nval, SPROF_CAPTURE);
+                parse_profile(id, nval, SPROF_CAPTURE, true);
         }
 
-        void matcher::KVTSync::parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type)
+        void matcher::KVTSync::parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type, bool state)
         {
             // Load profile
-            profile_data_t *profile = pCore->load_profile(id, param);
+            profile_data_t *profile = pCore->load_profile(id, param, state);
             if (profile == NULL)
                 return;
 
@@ -301,9 +309,9 @@ namespace lsp
 
             // Here we can parse profile
             if (strcmp(id, KVT_STATIC_PROFILE) == 0)
-                parse_profile(id, param, SPROF_STATIC);
+                parse_profile(id, param, SPROF_STATIC, false);
             if (strcmp(id, KVT_CAPTURE_PROFILE) == 0)
-                parse_profile(id, param, SPROF_CAPTURE);
+                parse_profile(id, param, SPROF_CAPTURE, false);
         }
 
         //-------------------------------------------------------------------------
@@ -527,6 +535,7 @@ namespace lsp
             nFileProcessReq     = 0;
             nFileProcessResp    = 0;
 
+            bFileFromState      = false;
             bProfile            = false;
             bCapture            = false;
             bListen             = false;
@@ -2307,9 +2316,11 @@ namespace lsp
             if (profile->nFlags & PFLAGS_DIRTY)
             {
                 profile->nFlags &= ~PFLAGS_DIRTY;
-                pWrapper->state_changed();
                 lsp_trace("state changed");
+                pWrapper->state_changed();
             }
+
+            profile->nFlags &= ~uint32_t(PFLAGS_STATE);
         }
 
         void matcher::post_process_profiles()
@@ -2966,6 +2977,7 @@ namespace lsp
                         }
                     }
                     ++nFileProcessReq;
+                    bFileFromState          = path->flags() & plug::PF_STATE_IMPORT;
 
                     // Now we surely can commit changes and reset task state
                     path->commit();
@@ -3003,7 +3015,10 @@ namespace lsp
 
             // Notify wrapper about state change
             if (dirty > 0)
+            {
+                lsp_trace("state changed");
                 pWrapper->state_changed();
+            }
         }
 
         void matcher::process_file_processing_tasks()
@@ -3015,6 +3030,7 @@ namespace lsp
             // Check the status and look for a job
             if ((nFileProcessReq != nFileProcessResp) && (sFileProcessor.idle()))
             {
+                sFileProcessor.set_state_flag(bFileFromState);
                 // Try to submit task
                 if (pExecutor->submit(&sFileProcessor))
                 {
@@ -3035,8 +3051,13 @@ namespace lsp
                     bUpdateMatch    = true;
 
                 // Reset configurator task
+                if (!sFileProcessor.state_flag())
+                {
+                    lsp_trace("state changed");
+                    pWrapper->state_changed();
+                }
+
                 sFileProcessor.reset();
-                pWrapper->state_changed();
             }
         }
 
@@ -3286,7 +3307,7 @@ namespace lsp
             return true;
         }
 
-        matcher::profile_data_t *matcher::load_profile(const char *path, const core::kvt_param_t *param)
+        matcher::profile_data_t *matcher::load_profile(const char *path, const core::kvt_param_t *param, bool state)
         {
             if (!(param->type == core::KVT_BLOB))
             {
@@ -3358,6 +3379,8 @@ namespace lsp
                 profile->nFlags            |= PFLAGS_DEFAULT;
             if (flags & KVT_PFLAGS_READY)
                 profile->nFlags            |= PFLAGS_READY;
+            if (state)
+                profile->nFlags            |= PFLAGS_STATE;
             profile->nFrames            = frames;
             profile->fRMS               = rms;
 
@@ -3572,6 +3595,7 @@ namespace lsp
             v->write("nFileProcessReq", nFileProcessReq);
             v->write("nFileProcessResp", nFileProcessResp);
 
+            v->write("bFileFromState", bFileFromState);
             v->write("bSidechain", bSidechain);
             v->write("bProfile", bProfile);
             v->write("bCapture", bCapture);

@@ -65,6 +65,7 @@
 	<li><b>Limits</b> - the button that shows the matching profile limits.</li>
 	<li><b>Enable</b> - the button that enables the limits for matching profile.</li>
 	<li><b>Morphing</b> - the button that shows the overlay with dynamic profile morphing timings.</li>
+	<li><b>Match</b> - perform immediate matching between input and reference profile without morphing stage.</li>
 	<li><b>Filters</b> - the button that shows the overlay with additional post-processing filters.</li>	
 </ul>
 
