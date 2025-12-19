@@ -735,7 +735,7 @@
 
 					<vbox vexpand="true" visibility=":fstatus ine 1">
 						<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
-						<afolder id="file" expand="true" width.min="199"/>
+						<afolder id="file" expand="true" width.min="199" autoplay="false" />
 						<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
 
 						<ui:with fill="true">
