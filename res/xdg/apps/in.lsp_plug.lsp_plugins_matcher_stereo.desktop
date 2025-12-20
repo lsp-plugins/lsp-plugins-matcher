@@ -1,9 +1,9 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=TODO: Template Plugin
-GenericName=TODO: Template Plugin
-Comment=TODO: add description what plugin does
+Name=Matcher Stereo
+GenericName=Matcher
+Comment=This plugins performs static and dynamic spectral matching of the audio signal naccording to the spectrum of the reference signal.
 Exec=lsp-plugins-matcher-stereo
 Icon=lsp-plugins
 Terminal=false

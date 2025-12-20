@@ -285,7 +285,7 @@ namespace lsp
             "matcher",
             "Matcher",
             B_EQUALIZERS,
-            "", // TODO: provide ID of the video on YouTube
+            "PbYuQVKvh44",
             "This plugins performs static and dynamic spectral matching of the audio signal according to the spectrum of the reference signal"
         };
 
