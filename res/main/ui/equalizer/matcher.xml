@@ -1,0 +1,796 @@
+<plugin resizable="true">
+	<!-- Control linking -->
+	<ctl:link
+		id.spd_1="spd_1"
+		value.spd_1=":_old_this + :_current - :_old_current"
+		id.spd_2="spd_2"
+		value.spd_2=":_old_this + :_current - :_old_current"
+		id.spd_3="spd_3"
+		value.spd_3=":_old_this + :_current - :_old_current"
+		id.spd_4="spd_4"
+		value.spd_4=":_old_this + :_current - :_old_current"
+		id.spd_5="spd_5"
+		value.spd_5=":_old_this + :_current - :_old_current"
+		id.spd_6="spd_6"
+		value.spd_6=":_old_this + :_current - :_old_current"
+		id.spd_7="spd_7"
+		value.spd_7=":_old_this + :_current - :_old_current"
+		id.spd_8="spd_8"
+		value.spd_8=":_old_this + :_current - :_old_current"
+		id.spd_9="spd_9"
+		value.spd_9=":_old_this + :_current - :_old_current"
+		id.spd_10="spd_10"
+		value.spd_10=":_old_this + :_current - :_old_current"
+		activity=":mrplink"/>
+
+	<grid rows="2" cols="4" spacing="4">
+		<!-- Left Column -->
+		<group text="groups.controls" hexpand="false" hfill="false" ipadding="0">
+			<grid rows="19" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
+				<!-- Input Profile -->
+				<ui:with activity=":in_src ieq 1 or :sprdy">
+					<cell cols="2">
+						<label text="labels.profiles.input_profile" pad.h="6" pad.v="4"/>
+					</cell>
+					<hbox pad.v="4">
+						<knob id="rct_in" size="20" pad.h="4" pad.l="6" pad.b="6" scolor=":in_src ieq 1 ? 'magenta' : 'cycle_inactive'"/>
+						<vbox vfill="false" pad.r="6" pad.b="6">
+							<label text="labels.morph_time" halign="0" bright="(:in_src ieq 1) ? 1.0 : 0.75"/>
+							<value id="rct_in" width.min="50" sline="true" halign="0" bright="(:in_src ieq 1) ? 1.0 : 0.75"/>
+						</vbox>
+					</hbox>
+					<vbox pad.r="6">
+						<button id="profile" text="actions.record" ui:inject="Button_green_cyan"/>
+						<hbox>
+							<led id="sprdy" size="10" ui:inject="Led_green_cyan"/>
+							<label text="labels.ready"/>
+						</hbox>
+					</vbox>
+				</ui:with>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+
+				<!-- Capture Profile -->
+				<ui:with activity="(:ref_src ieq 1 and :cprdy) or :listen or :capture">
+					<cell cols="2">
+						<label text="labels.profiles.capture_profile" pad.h="6" pad.v="4"/>
+					</cell>
+					<vbox pad.l="6" pad.r="8">
+						<hbox>
+							<label text="labels.source" pad.r="4"/>
+							<combo id="cap_src"/>
+						</hbox>
+						<button id="listen" hfill="true" text="actions.listen" pad.v="4"/>
+					</vbox>
+
+					<align valign="-1">
+						<vbox pad.r="6">
+							<button id="capture" text="actions.record" ui:inject="Button_yellow_green" pad.b="7"/>
+							<hbox >
+								<led id="cprdy" size="10" ui:inject="Led_matcher_capture_ready"/>
+								<label text="labels.ready"/>
+							</hbox>
+						</vbox>
+					</align>
+					<cell cols="2" vexpand="false" pad.h="6" pad.b="4">
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel
+									id="clm"
+									min="-36 db"
+									max="+6 db"
+									log="true"
+									type="rms_peak"
+									peak.visibility="true"
+									activity="true"
+									value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'mono_in' : 'cycle_inactive'"
+									balance.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'yellow' : 'cycle_inactive'"
+									red.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'red' : 'cycle_inactive'"
+									yellow.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'meter_yellow' : 'cycle_inactive'"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ui:with
+									balance.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'yellow' : 'cycle_inactive'"
+									red.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'red' : 'cycle_inactive'"
+									yellow.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'meter_yellow' : 'cycle_inactive'">
+									<ledchannel id="clm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" activity="true" value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'left_in' : 'cycle_inactive'"/>
+									<ledchannel id="clm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" activity="true" value.color="((:ref_src ieq 1 and :cprdy) or :listen or :capture) ? 'right_in' : 'cycle_inactive'"/>
+								</ui:with>
+							</ledmeter>
+						</ui:if>
+					</cell>
+				</ui:with>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+
+				<!-- Shared memory link button -->
+				<cell cols="2" pad.v="4">
+					<shmlink id="link" hfill="true" pad.h="6"/>
+				</cell>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+
+				<!-- External input profile -->
+				<ui:with activity="(:ref_src igt 3)">
+					<cell cols="2">
+						<label text="labels.chan.external_sc" pad.v="4"/>
+					</cell>
+					<hbox pad.v="4">
+						<knob id="rct_ref" size="20" pad.h="4" pad.l="6" scolor="violet_magenta"/>
+						<vbox vfill="false" pad.r="6">
+							<label text="labels.morph_time" halign="0"/>
+							<value id="rct_ref" width.min="50" sline="true" halign="0"/>
+						</vbox>
+					</hbox>
+					<void activity="(:ref_src igt 3)"/>
+					<cell cols="2" vexpand="false" pad.b="4">
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="rlm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="0">
+								<ledchannel id="rlm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="rlm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+							</ledmeter>
+						</ui:if>
+					</cell>
+				</ui:with>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- File -->
+				<ui:with activity=":fprdy">
+					<button ui:id="profile_file_trigger" id="showfil" text="labels.file" hfill="true" pad.h="6" pad.v="4"/>
+					<hbox pad.r="6">
+						<led id="fprdy" size="10" ui:inject="Led_orange_yellow"/>
+						<label text="labels.ready"/>
+					</hbox>
+				</ui:with>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- Envelope -->
+				<cell cols="2">
+					<button ui:id="profile_envelope_trigger" id="showenv" text="labels.signal.envelope" ui:inject="Button_red_orange" hfill="true" pad.h="6" pad.v="4"/>
+				</cell>
+				<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<!-- Controls -->
+				<cell cols="2">
+					<grid rows="3" cols="2" pad.h="6" hspacing="4" vspacing="8" pad.v="4">
+						<button ui:id="profile_limit_trigger" id="showlim" text="actions.limits" ui:inject="Button_violet" hfill="true" hexpand="true"/>
+						<button id="limit" text="labels.enable" ui:inject="Button_violet" hfill="false"/>
+						<button ui:id="profile_morphing_trigger" id="showmrp" text="actions.morphing" hfill="true" hexpand="true"/>
+						<button id="match" text="actions.match" hfill="false"/>
+						<cell cols="2">
+							<button ui:id="profile_filters_trigger" id="showflt" text="labels.filters" hfill="true"/>
+						</cell>
+					</grid>
+				</cell>
+				<cell cols="2">
+					<void vexpand="true"/>
+				</cell>
+			</grid>
+		</group>
+
+		<!-- Graph -->
+		<group ipadding="0" expand="true" fill="true" text="labels.graphs.frequency">
+			<graph ui:id="profile_graph" width.min="640" height.min="380" expand="true">
+				<origin hpos="-1" vpos="-1" visible="false"/>
+
+				<!-- Gray grid -->
+				<ui:for id="g" first="-36" last="36" step="24">
+					<marker v="${g} db" ox="1" oy="0" color="graph_alt_1"/>
+				</ui:for>
+				<ui:with ox="0" oy="1">
+					<ui:for id="f" first="20" last="90" step="10">
+						<marker v="${f}" color="graph_alt_1"/>
+					</ui:for>
+					<ui:for id="f" first="200" last="900" step="100">
+						<marker v="${f}" color="graph_alt_1"/>
+					</ui:for>
+					<ui:for id="f" first="2000" last="9000" step="1000">
+						<marker v="${f}" color="graph_alt_1"/>
+					</ui:for>
+					<marker value="20000" color="graph_alt_1"/>
+				</ui:with>
+
+				<!-- Yellow grid -->
+				<ui:with ox="0" oy="1" color="graph_sec">
+					<marker v="100"/>
+					<marker v="1000"/>
+					<marker v="10000"/>
+				</ui:with>
+				<ui:with ox="1" oy="0" color="graph_sec">
+					<marker v="+24 db"/>
+					<marker v="0 db"/>
+					<marker v="-24 db"/>
+				</ui:with>
+
+				<!-- Piano keys -->
+				<embed oy="2" start.x="midi_freq_start(12, 127)" start.y="20" end.x="midi_freq_end(12, 127)" end.y="44" valign="1" alpha="0" visibility=":_ui_graph_piano_layout">
+					<piano natural="false" note.min="12" note.max="127" height="24" editable="false" selectable="false" border="0"/>
+				</embed>
+
+				<!-- Octave text -->
+				<ui:with ox="0" oy="2" y="44" halign="1" valign="1" pgroup="0" priority="10" visibility=":_ui_graph_piano_layout" pad.b="2">
+					<ui:for id="octave" first="0" last="9">
+						<text x="midi_freq(12 * ${:octave + 1})" text="lists.notes.fmt.c" text:octave="${octave}" valign="1" halign="0"/>
+					</ui:for>
+				</ui:with>
+
+				<!-- Axis -->
+				<axis ui:id="matcher_ox" min="10" max="24000" color="graph_prim" angle="0.0" log="true" visibility="false"/>
+				<axis ui:id="matcher_oy" min="-48 db" max="48 db" color="graph_prim" angle="0.5" log="true" visibility="false"/>
+				<axis min="0" max=":_a_scaled_height" visibility="false" angle="0.5"/>
+				<axis min="0" max="1" visibility="false" angle="0.5"/>
+
+				<ui:set id="hide_cond" value="(:showfil or :showenv or :showlim or :showflt)"/>
+				<ui:set id="hide_cond_soft" value="(:showfil or :showenv)"/>
+				<!-- Meshes -->
+				<ui:if test="!ex :out_r">
+					<!-- Input -->
+					<mesh id="fft" xi="0" yi="1" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife"/>
+					<!-- Source -->
+					<mesh id="fft" xi="0" yi="3" width="2" color="blue_violet" color.a="0.5" visibility=":showfft and :cfe"/>
+					<!-- Reference -->
+					<mesh id="fft" xi="0" yi="4" width="2" color="cyan_blue" color.a="0.5" visibility=":showfft and :rfe and :ref_src ige 1 and (:ref_src ieq 2 and :fprdy)"/>
+					<!-- Output -->
+					<mesh id="fft" xi="0" yi="2" width="2" color="mono" color.a="0.5" visibility=":showfft and :ofe"/>
+
+					<!-- Dynamic input profile -->
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility=":showpro and :pife and (:track and :in_src ieq 1 and not ${hide_cond})"/>
+					<!-- Reference profile -->
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility=":showpro and :prfe and (:track and :ref_src ige 4 and not ${hide_cond})"/>
+					<!-- Static input profile -->
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
+					<!-- Capture input profile -->
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="(:showpro and :pcfe) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<!-- File profile -->
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="(:showpro and :pffe) or :showfil"/>
+					<!-- Envelope -->
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe) or :showenv"/>
+					<!-- Envelope maximum bounds -->
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
+					<!-- Envelope minimum bounds -->
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" color.a=":tlimit ? 0.0 : 0.7"/>
+					<!-- Match profile -->
+					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" visibility=":pmfe and not ${hide_cond_soft}"/>
+				</ui:if>
+				<ui:if test="ex :out_r">
+					<!-- Input -->
+					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife_l"/>
+					<mesh id="fft" xi="0" yi="5" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":showfft and :ife_r"/>
+					<!-- Capture -->
+					<mesh id="fft" xi="0" yi="3" width="2" color="blue_violet" color.a="0.5" visibility=":showfft and :cfe_l"/>
+					<mesh id="fft" xi="0" yi="7" width="2" color="bright_blue_violet" color.a="0.5" visibility=":showfft and :cfe_r"/>
+					<!-- Reference -->
+					<mesh id="fft" xi="0" yi="4" width="2" color="cyan_blue" color.a="0.5" visibility=":showfft and :rfe_l and :ref_src ige 1 and (:ref_src ieq 2 and :fprdy)"/>
+					<mesh id="fft" xi="0" yi="8" width="2" color="bright_cyan_blue" color.a="0.5" visibility=":showfft and :rfe_r and :ref_src ige 1 and (:ref_src ieq 2 and :fprdy)"/>
+					<!-- Output -->
+					<mesh id="fft" xi="0" yi="2" width="2" color="left_in" color.a="0.5" visibility=":showfft and :ofe_l"/>
+					<mesh id="fft" xi="0" yi="6" width="2" color="right_in" color.a="0.5" visibility=":showfft and :ofe_r"/>
+
+					<!-- Dynamic input profile -->
+					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility=":showpro and :pife_l and (:track and :in_src ieq 1 and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="11" width="2" color="bright_magenta" color.a="0.5" visibility=":showpro and :pife_r and (:track and :in_src ieq 1 and not ${hide_cond})"/>
+					<!-- Reference profile -->
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility=":showpro and :prfe_l and (:track and :ref_src ige 4 and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="12" width="2" color="bright_violet_magenta" color.a="0.5" visibility=":showpro and :prfe_r and (:track and :ref_src ige 4 and not ${hide_cond})"/>
+					<!-- Static input profile -->
+					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe_l) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="13" width="2" color="bright_green_cyan" color.a="0.5" visibility="(:showpro and :psfe_r) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
+					<!-- Capture input profile -->
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="(:showpro and :pcfe_l) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="14" width="2" color="bright_yellow_green" color.a="0.5" visibility="(:showpro and :pcfe_r) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<!-- File profile -->
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="(:showpro and :pffe_l) or :showfil"/>
+					<mesh id="pmesh" xi="0" yi="15" width="2" color="bright_orange_yellow" color.a="0.5" visibility="(:showpro and :pffe_r) or :showfil"/>
+					<!-- Envelope -->
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe_l) or :showenv"/>
+					<mesh id="pmesh" xi="0" yi="16" width="2" color="bright_red_orange" color.a="0.5" visibility="(:showpro and :pefe_r) or :showenv"/>
+					<!-- Envelope maximum bounds -->
+					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
+					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
+					<!-- Envelope minimum bounds -->
+					<mesh id="pmesh" xi="0" yi="9" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" color.a=":tlimit ? 0.0 : 0.7"/>
+					<mesh id="pmesh" xi="0" yi="18" width="2" color="threshold" visibility="(:tlimit and :limit) or :showlim" color.a=":tlimit ? 0.0 : 0.7"/>
+					<!-- Match profile -->
+					<mesh id="pmesh" xi="0" yi="1" width="2" color="left" visibility=":pmfe_l and not ${hide_cond_soft}"/>
+					<mesh id="pmesh" xi="0" yi="10" width="2" color="right" visibility=":pmfe_r and not ${hide_cond_soft}"/>
+				</ui:if>
+
+				<mesh id="fltmesh" width="3" color="bright_cyan" smooth="true" visibility=":showflt"/>
+
+				<!-- Text -->
+				<ui:with ox="0" oy="2" y="0" halign="1" valign="1" pgroup="0" priority="0">
+					<text x="10" text="graph.units.hz"/>
+					<text x="20" text="20"/>
+					<text x="30" text="30"/>
+					<text x="50" text="50"/>
+					<text x="100" text="100"/>
+					<text x="200" text="200"/>
+					<text x="300" text="300"/>
+					<text x="500" text="500"/>
+					<text x="1000" text="graph.values.x_k" text:value="1"/>
+					<text x="2000" text="graph.values.x_k" text:value="2"/>
+					<text x="3000" text="graph.values.x_k" text:value="3"/>
+					<text x="5000" text="graph.values.x_k" text:value="5"/>
+					<text x="10000" text="graph.values.x_k" text:value="10"/>
+					<text x="20000" text="graph.values.x_k" text:value="20"/>
+				</ui:with>
+
+				<ui:with x="10" halign="1" pgroup="0" priority="10">
+					<text y="0 db" text="0" valign="1" priority="0"/>
+					<text y="1" ox="0" oy="3" text="graph.units.db" valign="-1" priority="0"/>
+
+					<ui:for id="g" counter="i" list="+36;+24;+12;-12;-24;-36">
+						<text y="${g} db" text="${g}" valign="-1"/>
+					</ui:for>
+				</ui:with>
+
+			</graph>
+		</group>
+
+		<!-- Meters and save -->
+		<cell rows="2">
+			<vbox bg.color="bg_schema">
+				<hbox spacing="4" bg.color="bg" vexpand="true">
+					<!-- Signal meters -->
+
+					<vbox vexpand="true" bg.color="bg_schema">
+						<label text="labels.chan.in" pad.b="3" pad.t="3"/>
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="ilm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono_in"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="ilm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left_in"/>
+								<ledchannel id="ilm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right_in"/>
+							</ledmeter>
+						</ui:if>
+					</vbox>
+
+					<vbox vexpand="true" bg.color="bg_schema">
+						<label text="labels.chan.out" pad.b="3" pad.t="3"/>
+						<ui:if test="!ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="olm" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="mono"/>
+							</ledmeter>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<ledmeter vexpand="true" angle="1">
+								<ledchannel id="olm_l" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="left"/>
+								<ledchannel id="olm_r" min="-36 db" max="+6 db" log="true" type="rms_peak" peak.visibility="true" value.color="right"/>
+							</ledmeter>
+						</ui:if>
+					</vbox>
+				</hbox>
+
+				<hsep bg.color="bg" pad.v="2" vreduce="true"/>
+				<save pad.h="6" pad.v="4" id="ir_file" command.id="ir_save" progress.id="ir_prog" status=":ir_stat" path.id="_ui_dlg_ir_path" bg.color="bg_schema" format="wav"/>
+			</vbox>
+		</cell>
+
+		<!-- Signal, Analysis, Profiles -->
+		<cell rows="2">
+			<vbox spacing="4">
+				<!-- Signal -->
+				<group text="groups.signal" expand="true" ipadding="0">
+					<grid rows="2" cols="2" transpose="false" hspacing="4" pad.v="6">
+						<knob id="g_in" size="20" pad.r="4" pad.l="6" pad.b="6"/>
+						<vbox vfill="false" pad.r="6" pad.b="6">
+							<label text="labels.input" halign="0"/>
+							<value id="g_in" width.min="50" sline="true" halign="0"/>
+						</vbox>
+
+						<knob id="g_out" size="20" pad.r="4" pad.l="6"/>
+						<vbox vfill="false" pad.r="6">
+							<label text="labels.output" halign="0"/>
+							<value id="g_out" width.min="50" sline="true" halign="0"/>
+						</vbox>
+					</grid>
+				</group>
+
+				<!-- Analysis -->
+				<group text="groups.analysis" expand="true" ipadding="0">
+					<vbox pad.h="6" pad.v="4" spacing="4" activity=":showfft">
+						<button id="showfft" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8" bg.bright=":showfft ? 1.0 : 0.75"/>
+
+						<ui:with activity=":showfft">
+							<ui:if test="!ex :out_r">
+								<ui:with height="19" hfill="true" hexpand="true">
+									<button id="ife" text="labels.chan.input" ui:inject="Button_mono_8"/>
+									<button id="ofe" text="labels.chan.output" ui:inject="Button_mono_8"/>
+									<button id="cfe" text="labels.source" ui:inject="Button_blue_violet_8"/>
+									<button id="rfe" text="labels.chan.reference" ui:inject="Button_cyan_blue_8"/>
+								</ui:with>
+							</ui:if>
+							<ui:if test="ex :out_r">
+								<grid rows="4" cols="3" vspacing="4">
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+									<button id="ife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
+									<button id="ife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+
+									<label text="labels.chan.output" hfill="true" hexpand="true"/>
+									<button id="ofe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
+									<button id="ofe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+
+									<label text="labels.source" hfill="true" hexpand="true"/>
+									<button id="cfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_blue_violet_8" pad.h="4"/>
+									<button id="cfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_blue_violet_8"/>
+
+									<label text="labels.chan.reference" hfill="true" hexpand="true"/>
+									<button id="rfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_cyan_blue_8" pad.h="4"/>
+									<button id="rfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_cyan_blue_8"/>
+								</grid>
+							</ui:if>
+
+							<grid rows="2" cols="2" transpose="false" hspacing="4" pad.v="4">
+								<knob id="react" size="20" pad.r="4" pad.l="6" pad.b="6"/>
+								<vbox vfill="false" pad.r="6" pad.b="6">
+									<label text="labels.metering.reactivity" halign="0"/>
+									<value id="react" width.min="50" sline="true" halign="0"/>
+								</vbox>
+
+								<knob id="shift" size="20" pad.r="4" pad.l="6"/>
+								<vbox vfill="false" pad.r="6">
+									<label text="labels.metering.shift" halign="0"/>
+									<value id="shift" width.min="50" sline="true" halign="0"/>
+								</vbox>
+							</grid>
+						</ui:with>
+					</vbox>
+				</group>
+
+				<!-- Profiles -->
+				<group text="groups.profiles" expand="true" ipadding="0">
+
+					<vbox pad.t="4">
+						<button id="showpro" text="actions.show" height="19" hfill="true" ui:inject="Button_cyan_8" pad.h="6" bg.bright=":showpro ? 1.0 : 0.75" pad.b="4"/>
+						<hsep bg.color="bg" pad.v="2" vreduce="true"/>
+						<ui:with pad.b="4">
+							<label text="labels.static_profiles" pad.h="6" pad.t="4"/>
+							<ui:if test="!ex :out_r">
+								<grid rows="4" cols="2" pad.h="6">
+									<led light=":showpro and :in_src ieq 0" size="10" ui:inject="Led_green_cyan" pad.r="6"/>
+									<button id="psfe" text="labels.chan.input" ui:inject="Button_green_cyan_8" hfill="true" hexpand="true"/>
+									<led light=":showpro and :ref_src ieq 1" size="10" ui:inject="Led_yellow_green" pad.r="6"/>
+									<button id="pcfe" text="labels.capture" ui:inject="Button_yellow_green_8" hfill="true" hexpand="true"/>
+									<led light=":showpro and :ref_src ieq 2" size="10" ui:inject="Led_orange_yellow" pad.r="6"/>
+									<button id="pffe" text="labels.file" ui:inject="Button_orange_yellow_8" hfill="true" hexpand="true"/>
+									<led light=":showpro and :ref_src ieq 3" size="10" ui:inject="Led_red_orange" pad.r="6"/>
+									<button id="pefe" text="labels.signal.envelope" ui:inject="Button_red_orange_8" hfill="true" hexpand="true"/>
+								</grid>
+							</ui:if>
+							<ui:if test="ex :out_r">
+								<grid rows="4" cols="4" pad.h="6">
+									<led light=":showpro and :in_src ieq 0" size="10" ui:inject="Led_green_cyan" pad.r="6"/>
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+									<button id="psfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_green_cyan_8" pad.h="4"/>
+									<button id="psfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_green_cyan_8"/>
+
+									<led light=":showpro and :ref_src ieq 1" size="10" ui:inject="Led_yellow_green" pad.r="6"/>
+									<label text="labels.capture" hfill="true" hexpand="true"/>
+									<button id="pcfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_yellow_green_8" pad.h="4"/>
+									<button id="pcfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_yellow_green_8"/>
+
+									<led light=":showpro and :ref_src ieq 2" size="10" ui:inject="Led_orange_yellow" pad.r="6"/>
+									<label text="labels.file" hfill="true" hexpand="true"/>
+									<button id="pffe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_orange_yellow_8" pad.h="4"/>
+									<button id="pffe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_orange_yellow_8"/>
+
+									<led light=":showpro and :ref_src ieq 3" size="10" ui:inject="Led_red_orange" pad.r="6"/>
+									<label text="labels.signal.envelope" hfill="true" hexpand="true"/>
+									<button id="pefe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_red_orange_8" pad.h="4"/>
+									<button id="pefe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_red_orange_8"/>
+								</grid>
+							</ui:if>
+
+							<hsep bg.color="bg" pad.v="2" pad.h="0" vreduce="true"/>
+							<label text="labels.dynamic_profiles" pad.h="6" pad.t="4"/>
+
+							<ui:if test="!ex :out_r">
+								<grid rows="2" cols="2" pad.h="6">
+									<led light=":showpro and :in_src ieq 1" size="10" ui:inject="Led_magenta" pad.r="6"/>
+									<button id="pife" text="labels.chan.input" height="19" hfill="true" ui:inject="Button_magenta_8" hexpand="true"/>
+
+									<led light=":showpro and :ref_src ige 4" size="10" ui:inject="Led_violet_magenta" pad.r="6"/>
+									<button id="prfe" text="labels.chan.reference" height="19" hfill="true" ui:inject="Button_violet_magenta_8" hexpand="true"/>
+								</grid>
+							</ui:if>
+							<ui:if test="ex :out_r">
+								<grid rows="2" cols="4" pad.h="6">
+									<led light=":showpro and :in_src ieq 1" size="10" ui:inject="Led_magenta" pad.r="6"/>
+									<label text="labels.chan.input" hfill="true" hexpand="true"/>
+									<button id="pife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_magenta_8" pad.h="4"/>
+									<button id="pife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_magenta_8"/>
+
+									<led light=":showpro and :ref_src ige 4" size="10" ui:inject="Led_violet_magenta" pad.r="6"/>
+									<label text="labels.chan.external_sc" hfill="true" hexpand="true"/>
+									<button id="prfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_violet_magenta_8" pad.h="4"/>
+									<button id="prfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_violet_magenta_8"/>
+								</grid>
+							</ui:if>
+						</ui:with>
+					</vbox>
+				</group>
+
+				<!-- Result -->
+				<group text="labels.result" expand="true" ipadding="0">
+					<ui:with pad.b="4">
+						<ui:if test="!ex :out_r">
+							<button id="pmfe" text="labels.signal.match" height="19" pad.h="6" hfill="true" ui:inject="Button_mono_8" pad.t="6"/>
+						</ui:if>
+						<ui:if test="ex :out_r">
+							<grid rows="1" cols="3" pad.h="6" pad.t="6">
+								<label text="labels.signal.match" hfill="true" hexpand="true"/>
+								<button id="pmfe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8" pad.h="4"/>
+								<button id="pmfe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+							</grid>
+						</ui:if>
+					</ui:with>
+				</group>
+			</vbox>
+		</cell>
+
+		<!-- Bottom part -->
+		<cell cols="2">
+			<hbox hfill="true" pad.h="6" bg.color="bg_schema" spacing="4">
+				<label text="labels.fft.frame" pad.v="4"/>
+				<combo id="fft_sz" pad.r="8"/>
+				<label text="labels.input"/>
+				<led id="in_rdy" size="10" ui:inject="Led_magenta" visibility=":in_src"/>
+				<led id="in_rdy" size="10" ui:inject="Led_green_cyan" visibility="!:in_src"/>
+				<combo id="in_src" pad.r="8"/>
+				<label text="labels.signal.reference"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_yellow_green" visibility=":ref_src ilt 2"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_orange_yellow" visibility=":ref_src ieq 2"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_red_orange" visibility=":ref_src ieq 3"/>
+				<led id="ref_rdy" size="10" ui:inject="Led_violet_magenta" visibility=":ref_src igt 3"/>
+				<combo id="ref_src"/>
+				<void hexpand="true"/>
+				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
+					<hbox pad.h="2">
+						<label text="labels.blend"/>
+						<void hexpand="true"/>
+						<value id="blend" sline="true"/>
+					</hbox>
+					<fader id="blend" angle="0" hfill="true"/>
+				</vbox>
+
+				<ui:if test="ex :out_r">
+					<vbox vreduce="true" pad.b="2" width="120">
+						<hbox pad.h="2">
+							<label text="labels.stereo_link"/>
+							<void hexpand="true"/>
+							<value id="slink" sline="true"/>
+						</hbox>
+						<fader id="slink" angle="0" hfill="true" scolor="fader_balance"/>
+					</vbox>
+				</ui:if>
+
+				<button id="track" text="actions.tracking" pad.l="8"/>
+			</hbox>
+		</cell>
+		<cell cols="2">
+			<hbox hfill="true" pad.h="6" pad.v="4" bg.color="bg_schema"></hbox>
+		</cell>
+	</grid>
+
+	<!-- Profile envelope overlay -->
+	<overlay id="showenv" trigger="profile_envelope_trigger" hpos="1" vpos="1" halign="-1" valign="1" ipadding.t="4">
+		<group text="groups.envelope">
+			<grid rows="3" cols="10" hspacing="4">
+				<label text="25"/>
+				<label text="50"/>
+				<label text="107"/>
+				<label text="227"/>
+				<label text="484"/>
+				<label text="labels.flt.x_k" text:value="1"/>
+				<label text="labels.flt.x_k" text:value="2.2"/>
+				<label text="labels.flt.x_k" text:value="4.7"/>
+				<label text="labels.flt.x_k" text:value="10"/>
+				<label text="labels.flt.x_k" text:value="16"/>
+
+				<ui:for id="i" first="1" count="10">
+					<fader id="ref_${i}" angle="1" scolor="red_orange"/>
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="ref_${i}"/>
+				</ui:for>
+			</grid>
+		</group>
+	</overlay>
+
+	<!-- Profile limiting overlay -->
+	<overlay id="showlim" trigger="profile_limit_trigger" hpos="1" vpos="1" halign="-1" valign="1" ipadding.t="4">
+		<group text="groups.profile_limits">
+			<grid rows="5" cols="10" hspacing="4">
+				<cell cols="10">
+					<hbox pad.b="4">
+						<button id="tlimit" text="labels.limiting.top" ui:inject="Button_violet" pad.r="4"/>
+						<button id="blimit" text="labels.limiting.bottom" ui:inject="Button_violet"/>
+						<void hexpand="true"/>
+						<button id="limit" text="labels.enable" ui:inject="Button_violet"/>
+					</hbox>
+				</cell>
+				<label text="25"/>
+				<label text="50"/>
+				<label text="107"/>
+				<label text="227"/>
+				<label text="484"/>
+				<label text="labels.flt.x_k" text:value="1"/>
+				<label text="labels.flt.x_k" text:value="2.2"/>
+				<label text="labels.flt.x_k" text:value="4.7"/>
+				<label text="labels.flt.x_k" text:value="10"/>
+				<label text="labels.flt.x_k" text:value="16"/>
+
+				<ui:for id="i" first="1" count="10">
+					<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1" scolor="threshold"/>
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="red_${i}" detailed="false"/>
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="amp_${i}"/>
+				</ui:for>
+			</grid>
+		</group>
+	</overlay>
+
+	<!-- Profile morphing -->
+	<overlay id="showmrp" trigger="profile_morphing_trigger" hpos="1" vpos="1" halign="-1" valign="1" ipadding.t="4">
+		<group text="groups.profile_morphing">
+			<grid rows="4" cols="10" hspacing="4">
+				<cell cols="10">
+					<hbox pad.b="4">
+						<label text="labels.reactivity"/>
+						<void hexpand="true"/>
+						<button id="mrplink" text="labels.chan.link" pad.r="4"/>
+						<button id="match" text="actions.match"/>
+					</hbox>
+				</cell>
+
+				<label text="25"/>
+				<label text="50"/>
+				<label text="107"/>
+				<label text="227"/>
+				<label text="484"/>
+				<label text="labels.flt.x_k" text:value="1"/>
+				<label text="labels.flt.x_k" text:value="2.2"/>
+				<label text="labels.flt.x_k" text:value="4.7"/>
+				<label text="labels.flt.x_k" text:value="10"/>
+				<label text="labels.flt.x_k" text:value="16"/>
+
+				<ui:for id="i" first="1" count="10">
+					<fader id="spd_${i}" angle="1"/>
+				</ui:for>
+				<ui:for id="i" first="1" count="10">
+					<value id="spd_${i}"/>
+				</ui:for>
+			</grid>
+		</group>
+	</overlay>
+
+	<!-- Filters -->
+	<overlay id="showflt" trigger="profile_filters_trigger" hpos="1" vpos="1" halign="-1" valign="1" ipadding.t="4">
+		<group text="groups.filters" ipadding="0">
+			<grid rows="4" cols="7" spacing="4" pad.h="6">
+				<cell cols="2">
+					<button id="hpf_on" text="labels.flt.HPF" hfill="true" pad.t="4"/>
+				</cell>
+				<cell rows="4">
+					<vsep bg.color="bg" pad.h="2" hreduce="true"/>
+				</cell>
+				<cell cols="2">
+					<button id="lpf_on" text="labels.flt.LPF" hfill="true" pad.t="4"/>
+				</cell>
+				<cell rows="4">
+					<vsep bg.color="bg" pad.h="2" hreduce="true"/>
+				</cell>
+				<button id="clip_on" text="labels.signal.clip" pad.t="4"/>
+
+				<label text="labels.freq"/>
+				<label text="labels.slope"/>
+				<label text="labels.freq"/>
+				<label text="labels.slope"/>
+				<label text="labels.freq"/>
+
+				<knob id="hpf_f"/>
+				<knob id="hpf_s"/>
+				<knob id="lpf_f"/>
+				<knob id="lpf_s"/>
+				<knob id="clip_f"/>
+
+				<value id="hpf_f"/>
+				<value id="hpf_s"/>
+				<value id="lpf_f"/>
+				<value id="lpf_s"/>
+				<value id="clip_f"/>
+			</grid>
+		</group>
+	</overlay>
+
+	<!-- File loading -->
+	<overlay id="showfil" trigger="profile_file_trigger" hpos="1" vpos="0" halign="-1" valign="-1" ipadding.b="4">
+		<group text="groups.file" bg.color="bg" spacing="0" ipadding="0">
+			<vbox>
+				<hbox width.min="300" height.min="192" expand="true">
+					<asample
+						expand="true"
+						id="file"
+						mesh_id="fmesh"
+						path.id="_ui_dlg_sample_path"
+						ftype.id="_ui_dlg_sample_ftype"
+						play.position=":fppos"
+						hcut=":fhcut"
+						tcut=":ftcut"
+						length=":flength"
+						status=":fstatus"
+						load.preview="true"
+						clipboard.head_cut="fhcut"
+						clipboard.tail_cut="ftcut"
+						format="audio_lspc,audio,all"/>
+
+					<void bg.color="bg_graph" pad.h="2" hreduce="true" visibility=":fstatus ine 1"/>
+
+					<vbox vexpand="true" visibility=":fstatus ine 1">
+						<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
+						<afolder id="file" expand="true" width.min="199" autoplay="false" />
+						<void bg.color="bg_graph" pad.v="2" vreduce="true"/>
+
+						<ui:with fill="true">
+							<hbox pad.h="6" pad.v="4" spacing="4" bg.color="bg_schema">
+								<ui:with height="22">
+									<anavigator id="file" text="icons.navigation_big.first_alt" action="first"/>
+									<anavigator id="file" text="icons.navigation_big.last_alt" action="last"/>
+									<void hexpand="true"/>
+									<anavigator id="file" text="icons.navigation_big.previous" action="previous"/>
+									<anavigator id="file" text="icons.navigation_big.next" action="next"/>
+									<void hexpand="true"/>
+
+									<anavigator id="file" text="icons.random.dice_fill" action="random"/>
+									<void hexpand="true"/>
+									<anavigator id="file" text="icons.actions.cancel_alt" action="clear"/>
+								</ui:with>
+							</hbox>
+						</ui:with>
+					</vbox>
+				</hbox>
+
+				<void bg.color="bg" pad.v="2" vreduce="true"/>
+
+				<grid rows="4" cols="4" bg.color="bg_schema">
+					<ui:with pad.h="6" pad.v="4" vreduce="true">
+						<label text="labels.sedit.pitch"/>
+						<label text="labels.sedit.head_cut"/>
+						<label text="labels.sedit.tail_cut"/>
+						<label text="labels.listen"/>
+					</ui:with>
+
+					<cell cols="4"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+
+					<ui:with pad.h="6" pad.v="4">
+						<knob id="fpitch"/>
+						<knob id="fhcut" max=":flength"/>
+						<knob id="ftcut" max=":flength"/>
+						<cell rows="2">
+							<hbox fill="false">
+								<ui:with font.name="lsp-icons" font.size="10" size="32" ui:inject="Button_cyan" toggle="false">
+									<button id="fplay" text="icons.playback_big.play"/>
+									<button id="fstop" text="icons.playback_big.stop"/>
+								</ui:with>
+							</hbox>
+						</cell>
+					</ui:with>
+
+					<ui:with pad.h="6" pad.b="4" width.min="48" sline="true">
+						<value id="fpitch"/>
+						<value id="fhcut"/>
+						<value id="ftcut"/>
+					</ui:with>
+
+				</grid>
+			</vbox>
+		</group>
+	</overlay>
+</plugin>

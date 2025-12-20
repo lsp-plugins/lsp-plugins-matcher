@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Matcher Mono
+GenericName=Matcher
+Comment=This plugins performs static and dynamic spectral matching of the audio signal naccording to the spectrum of the reference signal.
+Exec=lsp-plugins-matcher-mono
+Icon=lsp-plugins
+Terminal=false
+StartupNotify=false
+Keywords=audio;sound;jackd;lsp-plugins;
+Categories=X-LSP-Plugins;
+NotShowIn=GNOME;
