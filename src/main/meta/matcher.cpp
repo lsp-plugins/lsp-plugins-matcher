@@ -285,7 +285,7 @@ namespace lsp
             "matcher",
             "Matcher",
             B_EQUALIZERS,
-            "PbYuQVKvh44",
+            "sOlWV0B-dUI",
             "This plugins performs static and dynamic spectral matching of the audio signal according to the spectrum of the reference signal"
         };
 
