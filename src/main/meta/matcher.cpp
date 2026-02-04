@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-matcher
  * Created on: 02 ноя 2025 г.
@@ -21,6 +21,7 @@
 
 #include <lsp-plug.in/common/status.h>
 #include <lsp-plug.in/plug-fw/meta/ports.h>
+#include <lsp-plug.in/plug-fw/meta/registry.h>
 #include <lsp-plug.in/shared/meta/developers.h>
 #include <private/meta/matcher.h>
 
@@ -318,6 +319,7 @@ namespace lsp
             mono_plugin_port_groups,
             &matcher_bundle
         };
+        LSP_REGISTER_METADATA(matcher_mono);
 
         const plugin_t matcher_stereo =
         {
@@ -348,6 +350,7 @@ namespace lsp
             stereo_plugin_port_groups,
             &matcher_bundle
         };
+        LSP_REGISTER_METADATA(matcher_stereo);
 
         const plugin_t sc_matcher_mono =
         {
@@ -378,6 +381,7 @@ namespace lsp
             mono_plugin_port_groups,
             &matcher_bundle
         };
+        LSP_REGISTER_METADATA(sc_matcher_mono);
 
         const plugin_t sc_matcher_stereo =
         {
@@ -408,6 +412,8 @@ namespace lsp
             stereo_plugin_port_groups,
             &matcher_bundle
         };
+        LSP_REGISTER_METADATA(sc_matcher_stereo);
+
     } /* namespace meta */
 } /* namespace lsp */
 
