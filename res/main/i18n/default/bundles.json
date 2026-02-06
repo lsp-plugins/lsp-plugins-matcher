@@ -1,7 +1,13 @@
 {
 	"matcher": {
-		"name": "Matcher",
-		"description": "This plugins performs static and dynamic spectral matching of the audio signal\naccording to the spectrum of the reference signal."
+		"description": "This plugins performs static and dynamic spectral matching of the audio signal\naccording to the spectrum of the reference signal.",
+		"name": "Matcher"
+	},
+	"launcher": {
+		"matcher_mono": "Mono",
+		"matcher_stereo": "Stereo",
+		"sc_matcher_mono": "SC Mono",
+		"sc_matcher_stereo": "SC Stereo"
 	}
 }
 
