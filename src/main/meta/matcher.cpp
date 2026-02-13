@@ -314,7 +314,7 @@ namespace lsp
             clap_features_mono,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             matcher_mono_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             mono_plugin_port_groups,
             &matcher_bundle
@@ -345,7 +345,7 @@ namespace lsp
             clap_features_stereo,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             matcher_stereo_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             stereo_plugin_port_groups,
             &matcher_bundle
@@ -376,7 +376,7 @@ namespace lsp
             clap_features_mono,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             sc_matcher_mono_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             mono_plugin_port_groups,
             &matcher_bundle
@@ -407,7 +407,7 @@ namespace lsp
             clap_features_stereo,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             sc_matcher_stereo_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             stereo_plugin_port_groups,
             &matcher_bundle
