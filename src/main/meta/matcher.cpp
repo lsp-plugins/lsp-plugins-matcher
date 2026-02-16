@@ -317,7 +317,8 @@ namespace lsp
             "plugins/equalizer/matcher.xml",
             NULL,
             mono_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            3
         };
         LSP_REGISTER_METADATA(matcher_mono);
 
@@ -348,7 +349,8 @@ namespace lsp
             "plugins/equalizer/matcher.xml",
             NULL,
             stereo_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            1
         };
         LSP_REGISTER_METADATA(matcher_stereo);
 
@@ -379,7 +381,8 @@ namespace lsp
             "plugins/equalizer/matcher.xml",
             NULL,
             mono_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            4
         };
         LSP_REGISTER_METADATA(sc_matcher_mono);
 
@@ -410,12 +413,10 @@ namespace lsp
             "plugins/equalizer/matcher.xml",
             NULL,
             stereo_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            2
         };
         LSP_REGISTER_METADATA(sc_matcher_stereo);
 
     } /* namespace meta */
 } /* namespace lsp */
-
-
-
