@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-matcher
  * Created on: 02 ноя 2025 г.
@@ -21,12 +21,13 @@
 
 #include <lsp-plug.in/common/status.h>
 #include <lsp-plug.in/plug-fw/meta/ports.h>
+#include <lsp-plug.in/plug-fw/meta/registry.h>
 #include <lsp-plug.in/shared/meta/developers.h>
 #include <private/meta/matcher.h>
 
 #define LSP_PLUGINS_MATCHER_VERSION_MAJOR       1
 #define LSP_PLUGINS_MATCHER_VERSION_MINOR       0
-#define LSP_PLUGINS_MATCHER_VERSION_MICRO       0
+#define LSP_PLUGINS_MATCHER_VERSION_MICRO       1
 
 #define LSP_PLUGINS_MATCHER_VERSION  \
     LSP_MODULE_VERSION( \
@@ -313,11 +314,13 @@ namespace lsp
             clap_features_mono,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             matcher_mono_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             mono_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            3
         };
+        LSP_REGISTER_METADATA(matcher_mono);
 
         const plugin_t matcher_stereo =
         {
@@ -343,11 +346,13 @@ namespace lsp
             clap_features_stereo,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             matcher_stereo_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             stereo_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            1
         };
+        LSP_REGISTER_METADATA(matcher_stereo);
 
         const plugin_t sc_matcher_mono =
         {
@@ -373,11 +378,13 @@ namespace lsp
             clap_features_mono,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             sc_matcher_mono_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             mono_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            4
         };
+        LSP_REGISTER_METADATA(sc_matcher_mono);
 
         const plugin_t sc_matcher_stereo =
         {
@@ -403,13 +410,13 @@ namespace lsp
             clap_features_stereo,
             E_DUMP_STATE | E_KVT_SYNC | E_INLINE_DISPLAY | E_FILE_PREVIEW,
             sc_matcher_stereo_ports,
-            "equalizer/matcher.xml",
+            "plugins/equalizer/matcher.xml",
             NULL,
             stereo_plugin_port_groups,
-            &matcher_bundle
+            &matcher_bundle,
+            2
         };
+        LSP_REGISTER_METADATA(sc_matcher_stereo);
+
     } /* namespace meta */
 } /* namespace lsp */
-
-
-
