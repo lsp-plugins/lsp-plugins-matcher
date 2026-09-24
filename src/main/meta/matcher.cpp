@@ -40,6 +40,10 @@ namespace lsp
 {
     namespace meta
     {
+        // Different revisions
+        #define REV_0           0
+        #define REV_1           1
+
         //-------------------------------------------------------------------------
         // Plugin metadata
         static const port_item_t matcher_fft_ranks[] =
@@ -113,6 +117,7 @@ namespace lsp
             COMBO("ref_src", "Reference source", "Reference src", 1, sources), \
             COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \
             PERCENTS("blend", "Blend signal", "Blend signal", 100.0f, 0.05f), \
+            ADDON_PERCENTS(REV_1, "smooth", "Smooth profile", "Smooth profile", 0.0f, 0.05f), \
             SWITCH("profile", "Profile", "Profile", 0.0f), \
             SWITCH("capture", "Capture", "Capture", 0.0f), \
             SWITCH("listen", "Listen capture", "Listen", 0.0f), \

@@ -548,6 +548,16 @@
 				<led id="ref_rdy" size="10" ui:inject="Led_violet_magenta" visibility=":ref_src igt 3"/>
 				<combo id="ref_src"/>
 				<void hexpand="true"/>
+				
+				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
+					<hbox pad.h="2">
+						<label text="labels.smooth"/>
+						<void hexpand="true"/>
+						<value id="smooth" sline="true"/>
+					</hbox>
+					<fader id="smooth" angle="0" hfill="true"/>
+				</vbox>
+				
 				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
 					<hbox pad.h="2">
 						<label text="labels.blend"/>

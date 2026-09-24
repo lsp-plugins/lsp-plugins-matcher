@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-matcher
  * Created on: 02 ноя 2025 г.
@@ -357,6 +357,7 @@ namespace lsp
                 float               fRefTau;            // Reference profile reactivity
                 float               fStereoLink;        // Stereo linking
                 float               fBlend;             // Blend signal
+                float               fSmooth;            // Smooth signal
                 float               fHpfFreq;           // HPF frequency
                 float               fHpfSlope;          // HPF slope
                 float               fLpfFreq;           // LPF frequency
@@ -411,6 +412,7 @@ namespace lsp
                 plug::IPort        *pRefSource;         // Reference source
                 plug::IPort        *pCapSource;         // Capture source
                 plug::IPort        *pBlend;             // Blend signal
+                plug::IPort        *pSmooth;            // Smooth signal
                 plug::IPort        *pProfile;           // Start profiling
                 plug::IPort        *pCapture;           // Enable capturing
                 plug::IPort        *pListen;            // Listen capture

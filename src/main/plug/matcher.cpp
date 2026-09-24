@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-matcher
  * Created on: 02 ноя 2025 г.
@@ -525,6 +525,7 @@ namespace lsp
             fInTau              = 1.0f;
             fRefTau             = 1.0f;
             fBlend              = 0.0f;
+            fSmooth             = 0.0f;
             fHpfFreq            = 0.0f;
             fHpfSlope           = 0.0f;
             fLpfFreq            = 0.0f;
@@ -568,6 +569,7 @@ namespace lsp
             pRefSource          = NULL;
             pCapSource          = NULL;
             pBlend              = NULL;
+            pSmooth             = NULL;
             pProfile            = NULL;
             pCapture            = NULL;
             pListen             = NULL;
@@ -794,6 +796,7 @@ namespace lsp
             BIND_PORT(pRefSource);
             BIND_PORT(pCapSource);
             BIND_PORT(pBlend);
+            BIND_PORT(pSmooth);
             BIND_PORT(pProfile);
             BIND_PORT(pCapture);
             BIND_PORT(pListen);
@@ -1147,6 +1150,7 @@ namespace lsp
             const size_t old_in_source  = nInSource;
             const float old_slink       = fStereoLink;
             const float old_blend       = fBlend;
+            const float old_smooth      = fSmooth;
 
 
             nRefSource              = decode_reference_source(pRefSource->value());
@@ -1156,6 +1160,7 @@ namespace lsp
             bMatchBottomLimit       = (match_limit) && (pMatchBottomLimit->value() >= 0.5f);
             nInSource               = pInSource->value();
             fBlend                  = (100.0f - pBlend->value()) * 0.01f;
+            fSmooth                 = pSmooth->value() * 0.01f;
             fStereoLink             = (pStereoLink != NULL) ? pStereoLink->value() * 0.01f : 0.0f;
             bUpdateMatch            = rebuild_eq_profiles;
 
@@ -1174,7 +1179,8 @@ namespace lsp
             if ((bMatchTopLimit != old_match_top) ||
                 (bMatchBottomLimit != old_match_bottom) ||
                 (fStereoLink != old_slink) ||
-                (fBlend != old_blend))
+                (fBlend != old_blend) ||
+                (fSmooth != old_smooth))
                 bUpdateMatch            = true;
 
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
@@ -1402,7 +1408,7 @@ namespace lsp
         {
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c            = &vChannels[i];
+                channel_t * const c     = &vChannels[i];
 
                 // Bind processor buffers
                 const size_t base       = i * PC_TOTAL;
@@ -1484,7 +1490,7 @@ namespace lsp
 
         void matcher::process_block(void *object, void *subject, float * const * spectrum, size_t rank)
         {
-            matcher *self = static_cast<matcher *>(object);
+            matcher * const self            = static_cast<matcher *>(object);
             self->process_block(spectrum, rank);
         }
 
@@ -2463,7 +2469,7 @@ namespace lsp
 
                 for (size_t i=0; i<nChannels; ++i)
                 {
-                    channel_t *c        = &vChannels[i];
+                    channel_t * const c     = &vChannels[i];
 
                     process_listen_output(c, to_do);
 
@@ -3586,6 +3592,7 @@ namespace lsp
             v->write("fRefTau", fRefTau);
             v->write("fStereoLink", fStereoLink);
             v->write("fBlend", fBlend);
+            v->write("fSmooth", fSmooth);
             v->write("fHpfFreq", fHpfFreq);
             v->write("fHpfSlope", fHpfSlope);
             v->write("fLpfFreq", fLpfFreq);
@@ -3706,6 +3713,7 @@ namespace lsp
             v->write("pRefSource", pRefSource);
             v->write("pCapSource", pCapSource);
             v->write("pBlend", pBlend);
+            v->write("pSmooth", pSmooth);
             v->write("pProfile", pProfile);
             v->write("pCapture", pCapture);
             v->write("pListen", pListen);
