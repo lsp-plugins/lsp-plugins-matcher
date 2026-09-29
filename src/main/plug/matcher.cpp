@@ -504,6 +504,8 @@ namespace lsp
             vFilterCurve        = NULL;
             vEnvelope           = NULL;
             vRevEnvelope        = NULL;
+            vSmoothEnvelope     = NULL;
+            vRevSmoothEnvelope  = NULL;
             vBuffer             = NULL;
             vEmptyBuf           = NULL;
             pExecutor           = NULL;
@@ -653,6 +655,8 @@ namespace lsp
                 szof_freqs +        // vFilterCurve
                 szof_fft_buf +      // vEnvelope
                 szof_fft_buf +      // vRevEnvelope
+                szof_fft_buf +      // vSmoothEnvelope
+                szof_fft_buf +      // vRevSmoothEnvelope
                 szof_idx +          // vIndices
                 szof_tmp_buf +      // vBuffer
                 szof_buf +          // vEmptyBuf
@@ -674,13 +678,15 @@ namespace lsp
             vFilterCurve            = advance_ptr_bytes<float>(ptr, szof_freqs);
             vEnvelope               = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vRevEnvelope            = advance_ptr_bytes<float>(ptr, szof_fft_buf);
+            vSmoothEnvelope         = advance_ptr_bytes<float>(ptr, szof_fft_buf);
+            vRevSmoothEnvelope      = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vIndices                = advance_ptr_bytes<uint16_t>(ptr, szof_idx);
             vBuffer                 = advance_ptr_bytes<float>(ptr, szof_tmp_buf);
             vEmptyBuf               = advance_ptr_bytes<float>(ptr, szof_buf);
 
             for (size_t i=0; i < nChannels; ++i)
             {
-                channel_t *c            = &vChannels[i];
+                channel_t * const c     = &vChannels[i];
 
                 // Construct in-place DSP processors
                 c->sBypass.construct();
@@ -928,6 +934,8 @@ namespace lsp
 
             dsp::fill(vFilterCurve, GAIN_AMP_0_DB, meta::matcher::FFT_MESH_SIZE);
             dsp::fill_zero(vEmptyBuf, BUFFER_SIZE);
+            dsp::fill_zero(vSmoothEnvelope, fft_csize);
+            dsp::fill_zero(vRevSmoothEnvelope, fft_csize);
         }
 
         void matcher::destroy()
@@ -1011,7 +1019,7 @@ namespace lsp
             // Update sample rate for the bypass processors
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c    = &vChannels[i];
+                channel_t * const c     = &vChannels[i];
                 c->sBypass.init(sr);
             }
 
@@ -1056,6 +1064,16 @@ namespace lsp
                 vRevEnvelope,
                 0, fSampleRate * 0.5f, SPEC_FREQ_CENTER,
                 fft_csize,
+                dspu::envelope::PINK_NOISE);
+
+            // Compute direct and reverse envelopes for smoothing
+            dspu::envelope::noise_real_fft(
+                vSmoothEnvelope,
+                nRank,
+                dspu::envelope::PINK_NOISE);
+            dspu::envelope::reverse_noise_real_fft(
+                vRevSmoothEnvelope,
+                nRank,
                 dspu::envelope::PINK_NOISE);
         }
 
@@ -1234,7 +1252,7 @@ namespace lsp
                 // Mark source profiles as being changed
                 for (size_t i=0; i<SPROF_TOTAL; ++i)
                 {
-                    profile_data_t * const profile = vProfileState[SPROF_STATIC].get();
+                    profile_data_t * const profile = vProfileState[i].get();
                     if (profile != NULL)
                         profile->nFlags            |= PFLAGS_CHANGED;
                 }
@@ -1517,7 +1535,7 @@ namespace lsp
             const size_t szof_header    = align_size(szof_data_hdr + table_size * 2, OPTIMAL_ALIGN);
             const size_t prof_data_size = align_size(sizeof(float) * fft_citems, OPTIMAL_ALIGN);
 
-            const size_t to_alloc       = szof_header + nChannels * prof_data_size;
+            const size_t to_alloc       = szof_header + nChannels * prof_data_size * 2;
 
             // Allocate memory
             uint8_t *ptr                = static_cast<uint8_t *>(malloc(to_alloc));
@@ -1526,19 +1544,27 @@ namespace lsp
             lsp_guard_assert(uint8_t * const base = ptr);
 
             // Initialize profile data
-            profile_data_t *profile     = advance_ptr_bytes<profile_data_t>(ptr, szof_header);
+            profile_data_t * const profile  = advance_ptr_bytes<profile_data_t>(ptr, szof_header);
 
             profile->nSampleRate        = 0;
             profile->nChannels          = channels;
             profile->nRank              = 0;
             profile->nFlags             = PFLAGS_NONE;
             profile->nFrames            = 0;
-            profile->vData              = add_ptr_bytes<float *>(profile, szof_data_hdr);
+            profile->nSmooth            = ~uint32_t(0);
             profile->fRMS               = GAIN_AMP_M_INF_DB;
+            profile->vData              = add_ptr_bytes<float *>(profile, szof_data_hdr);
+            profile->vSmoothed          = add_ptr_bytes<float *>(profile, szof_data_hdr + table_size);
 
             for (size_t i=0; i<channels; ++i)
             {
                 profile->vData[i]           = advance_ptr_bytes<float>(ptr, prof_data_size);
+                dsp::fill_zero(profile->vData[i], fft_citems);
+            }
+
+            for (size_t i=0; i<channels; ++i)
+            {
+                profile->vSmoothed[i]       = advance_ptr_bytes<float>(ptr, prof_data_size);
                 dsp::fill_zero(profile->vData[i], fft_citems);
             }
 
@@ -1549,7 +1575,7 @@ namespace lsp
 
         matcher::profile_data_t *matcher::create_default_profile(size_t channels)
         {
-            profile_data_t *res = allocate_profile_data(channels);
+            profile_data_t * const res  = allocate_profile_data(channels);
             if (res == NULL)
                 return res;
 
@@ -1622,6 +1648,7 @@ namespace lsp
             profile->nFrames        = lsp_min(frames + 1, size_t(0x100));
             profile->nFlags        &= ~PFLAGS_DEFAULT;
             profile->nFlags        |= PFLAGS_DIRTY | PFLAGS_CHANGED | PFLAGS_SYNC;
+            profile->nSmooth        = ~uint32_t(0);
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
             if (profile->nFrames >= 8)
@@ -1675,6 +1702,7 @@ namespace lsp
                 ++profile->nFrames;
             profile->nFlags        &= ~(PFLAGS_DEFAULT | PFLAGS_EMPTY);
             profile->nFlags        |= PFLAGS_CHANGED | PFLAGS_SYNC | PFLAGS_DYNAMIC;
+            profile->nSmooth        = ~uint32_t(0);
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
             // Compute RMS for the profile
@@ -1708,6 +1736,7 @@ namespace lsp
             dst->nRank              = src->nRank;
             dst->nFlags             = src->nFlags & (~PFLAGS_DYNAMIC);
             dst->nFrames            = src->nFrames;
+            dst->nSmooth            = ~uint32_t(0);
             dst->fRMS               = src->fRMS;
 
             for (size_t i=0; i<dst->nChannels; ++i)
@@ -1715,6 +1744,59 @@ namespace lsp
 
             // Reset dirty flag for the original profile
             src->nFlags            &= ~PFLAGS_CHANGED;
+        }
+
+        void matcher::smooth_profile(profile_data_t *profile, float smooth)
+        {
+            const uint32_t fft_csize    = (1 << (profile->nRank - 1)) + 1;
+            const uint32_t nsmooth      = lsp_min(truncf(fft_csize * smooth), fft_csize);
+
+            if (profile->nSmooth == nsmooth)
+                return;
+
+            if (nsmooth > 0)
+            {
+                const float norm    = 1.0f / nsmooth;
+
+                for (size_t i=0; i<profile->nChannels; ++i)
+                {
+                    // Limit profile, compensate envelope and apply logarithmic scale
+                    float * const buf   = vBuffer;
+                    dsp::mul3(buf, profile->vData[i], vRevSmoothEnvelope, fft_csize);
+                    dsp::clamp_kk1(buf, GAIN_AMP_ZERO, GAIN_AMP_MAX, fft_csize);
+                    dsp::loge1(buf, fft_csize);
+
+                    // Prepare filter
+                    float sum           = buf[0] * nsmooth;
+
+                    // Pass 1
+                    float *dst          = profile->vSmoothed[i];
+                    uint32_t j          = 0;
+                    for ( ; j<nsmooth; ++j)
+                    {
+                        sum                += buf[j] - buf[0];
+                        dst[j]              = sum * norm;
+                    }
+
+                    // Pass 2
+                    for (; j<fft_csize; ++j)
+                    {
+                        sum                += buf[j] - buf[j - nsmooth];
+                        dst[j]              = sum * norm;
+                    }
+
+                    // Return back to linear scale and apply envelope back
+                    dsp::exp1(dst, fft_csize);
+                    dsp::mul2(dst, vSmoothEnvelope, fft_csize);
+                }
+            }
+            else
+            {
+                for (size_t i=0; i<profile->nChannels; ++i)
+                    dsp::copy(profile->vSmoothed[i], profile->vData[i], fft_csize);
+            }
+
+            profile->nSmooth    = nsmooth;
         }
 
         void matcher::build_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic)
@@ -1837,6 +1919,9 @@ namespace lsp
                     dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                 }
             }
+
+//            // Apply smoothing to the profile
+//            smooth_profile(match, fSmooth, true);
 
             // Synchronize state of computed profile with filters
             if ((is_dynamic) || (need_sync))
@@ -1975,13 +2060,17 @@ namespace lsp
                 {
                     record_profile(static_profile, spectrum, PC_INPUT);
                     sync_profile(vProfileData[PROF_STATIC], static_profile);
+                    smooth_profile(vProfileData[PROF_STATIC], fSmooth);
                 }
             }
 
             // Track dynamic input profile
             profile_data_t * const input_profile  = vProfileData[PROF_INPUT];
             if (input_profile != NULL)
+            {
                 track_profile(input_profile, spectrum, fInTau, PC_INPUT);
+//                smooth_profile(input_profile, fSmooth);
+            }
 
             // Record capture if enabled
             if ((bCapture) && (cap_channel >= 0))
@@ -1991,6 +2080,7 @@ namespace lsp
                 {
                     record_profile(capture_profile, spectrum, cap_channel);
                     sync_profile(vProfileData[PROF_CAPTURE], capture_profile);
+                    smooth_profile(vProfileData[PROF_CAPTURE], fSmooth);
                 }
             }
 
@@ -1999,7 +2089,10 @@ namespace lsp
             {
                 profile_data_t * const reference_profile  = vProfileData[PROF_REFERENCE];
                 if (input_profile != NULL)
+                {
                     track_profile(reference_profile, spectrum, fRefTau, ref_channel);
+                    smooth_profile(reference_profile, fSmooth);
+                }
             }
 
             // Compute the new profile state
@@ -2130,6 +2223,7 @@ namespace lsp
 
             profile->nSampleRate    = srate;
             profile->nRank          = rank;
+            profile->nSmooth        = ~uint32_t(0);
             profile->fRMS           = 0.0f;
 
             const float rms_norm        = 1.0f / float(dst_fft_csize);
@@ -2161,17 +2255,26 @@ namespace lsp
             sync_profile(vProfileData[PROF_CAPTURE], vProfileState[SPROF_CAPTURE].get());
             sync_profile(vProfileData[PROF_FILE], vProfileState[SPROF_FILE].get());
 
-            // Check that profile needs to be resampled
+            // Check that profile needs to be resampled or smoothed
             bool resampled;
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
+                // Resample profile if needed
                 resampled = resample_profile(vProfileData[i], fSampleRate, nRank);
                 if (resampled)
-                    lsp_trace("profile id=%d was resampled", int(i));
+                    lsp_trace("profile id=%d has been resampled", int(i));
+
+                // Smooth profile if needed
+                if (i != PROF_INPUT) // dbg
+                    smooth_profile(vProfileData[i], fSmooth);
             }
+
+            // Resample and smooth matching profile if needed
             resampled = resample_profile(pMatchProfile, fSampleRate, nRank);
             if (resampled)
-                lsp_trace("match profile was resampled");
+                lsp_trace("match profile has been resampled");
+
+            smooth_profile(pMatchProfile, fSmooth);
         }
 
         void matcher::commit_profiles()
@@ -2600,7 +2703,7 @@ namespace lsp
                     const bool relative_profile = profile_is_relative(j);
 
                     // Copy profile data
-                    const float * const fft     = profile->vData[i];
+                    const float * const fft     = profile->vSmoothed[i];
                     dst                += 2;
 
                     if (relative_profile)
@@ -3700,6 +3803,8 @@ namespace lsp
             v->write("vFilterCurve", vFilterCurve);
             v->write("vEnvelope", vEnvelope);
             v->write("vRevEnvelope", vRevEnvelope);
+            v->write("vSmoothEnvelope", vSmoothEnvelope);
+            v->write("vRevSmoothEnvelope", vRevSmoothEnvelope);
             v->write("vBuffer", vBuffer);
             v->write("vEmptyBuf", vEmptyBuf);
 

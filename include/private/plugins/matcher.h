@@ -156,8 +156,10 @@ namespace lsp
                     uint32_t                nRank;              // FFT rank of the profile
                     uint32_t                nFlags;             // Profile data flags
                     uint32_t                nFrames;            // Number of frames collected
+                    uint32_t                nSmooth;            // Transient: smoothing coefficient
                     float                   fRMS;               // Profile loudness
                     float                 **vData;              // Sample data
+                    float                 **vSmoothed;          // Smoothed sample data
                 } profile_data_t;
 
                 typedef struct af_descriptor_t
@@ -399,6 +401,8 @@ namespace lsp
                 float              *vFilterCurve;       // Filter curve
                 float              *vEnvelope;          // FFT envelope
                 float              *vRevEnvelope;       // FFT reverse envelope
+                float              *vSmoothEnvelope;    // Profile smoothing envelope
+                float              *vRevSmoothEnvelope; // Reverse profile smoothingenvelope
                 float              *vBuffer;            // Temporary buffer
                 float              *vEmptyBuf;          // Empty
 
@@ -509,6 +513,7 @@ namespace lsp
                 void                init_level_meters();
                 void                output_level_meters();
                 void                output_profile_status();
+                void                smooth_profile(profile_data_t *profile, float smooth);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);
