@@ -156,10 +156,10 @@ namespace lsp
                     uint32_t                nRank;              // FFT rank of the profile
                     uint32_t                nFlags;             // Profile data flags
                     uint32_t                nFrames;            // Number of frames collected
-                    uint32_t                nSmooth;            // Transient: smoothing coefficient
+                    float                   fSmooth;            // Transient: smoothing coefficient
                     float                   fRMS;               // Profile loudness
                     float                 **vData;              // Sample data
-                    float                 **vSmoothed;          // Smoothed sample data
+                    float                 **vSmoothed;          // Transient: smoothed sample data
                 } profile_data_t;
 
                 typedef struct af_descriptor_t
@@ -403,6 +403,7 @@ namespace lsp
                 float              *vRevEnvelope;       // FFT reverse envelope
                 float              *vSmoothEnvelope;    // Profile smoothing envelope
                 float              *vRevSmoothEnvelope; // Reverse profile smoothingenvelope
+                float              *vSmoothFreqs;       // Smooth frequency coefficients
                 float              *vBuffer;            // Temporary buffer
                 float              *vEmptyBuf;          // Empty
 

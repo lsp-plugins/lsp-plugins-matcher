@@ -506,6 +506,7 @@ namespace lsp
             vRevEnvelope        = NULL;
             vSmoothEnvelope     = NULL;
             vRevSmoothEnvelope  = NULL;
+            vSmoothFreqs        = NULL;
             vBuffer             = NULL;
             vEmptyBuf           = NULL;
             pExecutor           = NULL;
@@ -657,6 +658,7 @@ namespace lsp
                 szof_fft_buf +      // vRevEnvelope
                 szof_fft_buf +      // vSmoothEnvelope
                 szof_fft_buf +      // vRevSmoothEnvelope
+                szof_fft_buf +      // vSmoothFreqs
                 szof_idx +          // vIndices
                 szof_tmp_buf +      // vBuffer
                 szof_buf +          // vEmptyBuf
@@ -680,6 +682,7 @@ namespace lsp
             vRevEnvelope            = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vSmoothEnvelope         = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vRevSmoothEnvelope      = advance_ptr_bytes<float>(ptr, szof_fft_buf);
+            vSmoothFreqs            = advance_ptr_bytes<float>(ptr, szof_fft_buf);
             vIndices                = advance_ptr_bytes<uint16_t>(ptr, szof_idx);
             vBuffer                 = advance_ptr_bytes<float>(ptr, szof_tmp_buf);
             vEmptyBuf               = advance_ptr_bytes<float>(ptr, szof_buf);
@@ -936,6 +939,7 @@ namespace lsp
             dsp::fill_zero(vEmptyBuf, BUFFER_SIZE);
             dsp::fill_zero(vSmoothEnvelope, fft_csize);
             dsp::fill_zero(vRevSmoothEnvelope, fft_csize);
+            dsp::fill_zero(vSmoothFreqs, fft_csize);
         }
 
         void matcher::destroy()
@@ -1075,6 +1079,13 @@ namespace lsp
                 vRevSmoothEnvelope,
                 nRank,
                 dspu::envelope::PINK_NOISE);
+            dsp::lin_inter_set(
+                vSmoothFreqs,
+                0, 0.0f,
+                fft_size, fft_size,
+                0, fft_csize);
+            vSmoothFreqs[0] = 0.01f;
+            dsp::loge1(vSmoothFreqs, fft_csize);
         }
 
         uint32_t matcher::decode_reference_source(size_t ref) const
@@ -1551,7 +1562,7 @@ namespace lsp
             profile->nRank              = 0;
             profile->nFlags             = PFLAGS_NONE;
             profile->nFrames            = 0;
-            profile->nSmooth            = ~uint32_t(0);
+            profile->fSmooth            = -1.0f;
             profile->fRMS               = GAIN_AMP_M_INF_DB;
             profile->vData              = add_ptr_bytes<float *>(profile, szof_data_hdr);
             profile->vSmoothed          = add_ptr_bytes<float *>(profile, szof_data_hdr + table_size);
@@ -1648,7 +1659,7 @@ namespace lsp
             profile->nFrames        = lsp_min(frames + 1, size_t(0x100));
             profile->nFlags        &= ~PFLAGS_DEFAULT;
             profile->nFlags        |= PFLAGS_DIRTY | PFLAGS_CHANGED | PFLAGS_SYNC;
-            profile->nSmooth        = ~uint32_t(0);
+            profile->fSmooth        = -1.0f;
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
             if (profile->nFrames >= 8)
@@ -1702,7 +1713,7 @@ namespace lsp
                 ++profile->nFrames;
             profile->nFlags        &= ~(PFLAGS_DEFAULT | PFLAGS_EMPTY);
             profile->nFlags        |= PFLAGS_CHANGED | PFLAGS_SYNC | PFLAGS_DYNAMIC;
-            profile->nSmooth        = ~uint32_t(0);
+            profile->fSmooth        = -1.0f;
             profile->fRMS           = GAIN_AMP_M_INF_DB;
 
             // Compute RMS for the profile
@@ -1736,7 +1747,7 @@ namespace lsp
             dst->nRank              = src->nRank;
             dst->nFlags             = src->nFlags & (~PFLAGS_DYNAMIC);
             dst->nFrames            = src->nFrames;
-            dst->nSmooth            = ~uint32_t(0);
+            dst->fSmooth            = -1.0f;
             dst->fRMS               = src->fRMS;
 
             for (size_t i=0; i<dst->nChannels; ++i)
@@ -1748,53 +1759,66 @@ namespace lsp
 
         void matcher::smooth_profile(profile_data_t *profile, float smooth)
         {
-            const uint32_t fft_csize    = (1 << (profile->nRank - 1)) + 1;
-            const uint32_t nsmooth      = lsp_min(truncf(fft_csize * smooth), fft_csize);
-
-            if (profile->nSmooth == nsmooth)
+            if (profile->fSmooth == smooth)
                 return;
 
-            if (nsmooth > 0)
+            const uint32_t fft_size     = (1 << (profile->nRank - 1));
+            const uint32_t fft_csize    = fft_size + 1;
+
+            if (smooth > 0.0f)
             {
-                const float norm    = 1.0f / nsmooth;
+                const float fsmooth         = logf(1.0f + 0.5f * smooth); // The size of smoothing kernel
 
                 for (size_t i=0; i<profile->nChannels; ++i)
                 {
                     // Limit profile, compensate envelope and apply logarithmic scale
                     float * const buf   = vBuffer;
+                    float * const freq  = vSmoothFreqs;
+
+                    // Apply vertical logarithmic scale
                     dsp::mul3(buf, profile->vData[i], vRevSmoothEnvelope, fft_csize);
                     dsp::clamp_kk1(buf, GAIN_AMP_ZERO, GAIN_AMP_MAX, fft_csize);
                     dsp::loge1(buf, fft_csize);
 
-                    // Apply filter
-                    const uint32_t nleft    = nsmooth >> 1;
-                    const uint32_t nright   = nsmooth - nleft;
-
-                    // Prepare filter
-                    // Pass 1: collect sum for the first sample
-                    float sum           = buf[0] * nleft + dsp::h_sum(buf, nright);
-
-                    // Pass 1: collect sum for the left outer part
+                    float sum           = 0.0f;
+                    float dist          = 0.0f;
+                    uint32_t sum_is     = 1;
+                    uint32_t sum_ie     = 1;
                     float *dst          = profile->vSmoothed[i];
-                    uint32_t j          = 0;
-                    for (; j<nleft; ++j)
-                    {
-                        dst[j]              = sum * norm;
-                        sum                += buf[j + nright] - buf[0];
-                    }
+                    const float log_fl  = freq[fft_size];
 
-                    // Pass 2: collect sum for the middle part
-                    for (const uint32_t count = fft_csize - nright; j<count; ++j)
+                    dst[0]              = buf[0];
+                    dst[fft_size]       = buf[fft_size];
+                    for (uint32_t j=1; j<fft_size; ++j)
                     {
-                        dst[j]              = sum * norm;
-                        sum                += buf[j + nright] - buf[j - nleft];
-                    }
+                        // Obtain current frequency and compute start and end frequency
+                        const float log_f   = freq[j];
+                        const float log_fs  = lsp_min(log_f - fsmooth, log_fl);
+                        const float log_fe  = lsp_min(log_f + fsmooth, log_fl);
 
-                    // Pass 3: collect sum for the right part
-                    for (; j<fft_csize; ++j)
-                    {
-                        dst[j]              = sum * norm;
-                        sum                += buf[fft_csize-1] - buf[j - nleft];
+                        // Subtract values from sum
+                        float pf            = freq[sum_is-1];
+                        for ( ; freq[sum_is] <= log_fs; ++sum_is)
+                        {
+                            const float nf      = freq[sum_is];
+                            const float df      = nf - pf;
+                            sum                -= buf[sum_is] * df;
+                            dist               -= df;
+                            pf                  = nf;
+                        }
+                        // Add values to sum
+                        pf            = freq[sum_ie-1];
+                        for ( ; freq[sum_ie] < log_fe; ++sum_ie)
+                        {
+                            const float nf      = freq[sum_ie];
+                            const float df      = nf - pf;
+                            sum                += buf[sum_ie] * df;
+                            dist               += df;
+                            pf                  = nf;
+                        }
+
+                        // Compute the average value over the integrated range
+                        dst[j]              = sum / dist;
                     }
 
                     // Return back to linear scale and apply envelope back
@@ -1808,7 +1832,7 @@ namespace lsp
                     dsp::copy(profile->vSmoothed[i], profile->vData[i], fft_csize);
             }
 
-            profile->nSmooth    = nsmooth;
+            profile->fSmooth    = smooth;
         }
 
         void matcher::build_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic)
@@ -1851,8 +1875,8 @@ namespace lsp
                 for (size_t i=0; i<nChannels; ++i)
                 {
                     dsp::mix_copy2(
-                        src->vData[i],
-                        in->vData[i], ref->vData[i],
+                        src->vSmoothed[i],
+                        in->vSmoothed[i], ref->vSmoothed[i],
                         fBlend * norm, 1.0f - fBlend,
                         fft_csize); // Blend with reference
                 }
@@ -1902,17 +1926,17 @@ namespace lsp
                     for (size_t i=0; i<nChannels; ++i)
                     {
                         // Compute new profile value
-                        dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                        dsp::clamp_kk2(vBuffer, in->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
 
                         // Apply reactivity to the changes or perform immediate match
                         if (match_immediate)
                         {
-                            dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::clamp_kk2(match->vData[i], src->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                             dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                         }
                         else
                         {
-                            dsp::clamp_kk2(tmp->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::clamp_kk2(tmp->vData[i], src->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                             dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                             dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
                         }
@@ -1926,14 +1950,11 @@ namespace lsp
                 // Compute new static profile value
                 for (size_t i=0; i<nChannels; ++i)
                 {
-                    dsp::clamp_kk2(vBuffer, in->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::clamp_kk2(match->vData[i], src->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(vBuffer, in->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(match->vData[i], src->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                 }
             }
-
-//            // Apply smoothing to the profile
-//            smooth_profile(match, fSmooth, true);
 
             // Synchronize state of computed profile with filters
             if ((is_dynamic) || (need_sync))
@@ -1973,6 +1994,10 @@ namespace lsp
                     for (size_t i=0; i<nChannels; ++i)
                         dsp::mul2(profile->vData[i], flt->vData[0], fft_csize);
                 }
+
+                // Copy data for view
+                for (size_t i=0; i<nChannels; ++i)
+                    dsp::copy(profile->vSmoothed[i], profile->vData[i], fft_csize);
 
                 pWrapper->query_display_draw();
             }
@@ -2081,7 +2106,7 @@ namespace lsp
             if (input_profile != NULL)
             {
                 track_profile(input_profile, spectrum, fInTau, PC_INPUT);
-//                smooth_profile(input_profile, fSmooth);
+                smooth_profile(input_profile, fSmooth);
             }
 
             // Record capture if enabled
@@ -2235,7 +2260,7 @@ namespace lsp
 
             profile->nSampleRate    = srate;
             profile->nRank          = rank;
-            profile->nSmooth        = ~uint32_t(0);
+            profile->fSmooth        = -1.0f;
             profile->fRMS           = 0.0f;
 
             const float rms_norm        = 1.0f / float(dst_fft_csize);
@@ -2277,8 +2302,7 @@ namespace lsp
                     lsp_trace("profile id=%d has been resampled", int(i));
 
                 // Smooth profile if needed
-                if (i != PROF_INPUT) // dbg
-                    smooth_profile(vProfileData[i], fSmooth);
+                smooth_profile(vProfileData[i], fSmooth);
             }
 
             // Resample and smooth matching profile if needed
@@ -3817,6 +3841,7 @@ namespace lsp
             v->write("vRevEnvelope", vRevEnvelope);
             v->write("vSmoothEnvelope", vSmoothEnvelope);
             v->write("vRevSmoothEnvelope", vRevSmoothEnvelope);
+            v->write("vSmoothFreqs", vSmoothFreqs);
             v->write("vBuffer", vBuffer);
             v->write("vEmptyBuf", vEmptyBuf);
 
