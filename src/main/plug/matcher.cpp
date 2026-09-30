@@ -1766,23 +1766,35 @@ namespace lsp
                     dsp::clamp_kk1(buf, GAIN_AMP_ZERO, GAIN_AMP_MAX, fft_csize);
                     dsp::loge1(buf, fft_csize);
 
-                    // Prepare filter
-                    float sum           = buf[0] * nsmooth;
+                    // Apply filter
+                    const uint32_t nleft    = nsmooth >> 1;
+                    const uint32_t nright   = nsmooth - nleft;
 
-                    // Pass 1
+                    // Prepare filter
+                    // Pass 1: collect sum for the first sample
+                    float sum           = buf[0] * nleft + dsp::h_sum(buf, nright);
+
+                    // Pass 1: collect sum for the left outer part
                     float *dst          = profile->vSmoothed[i];
                     uint32_t j          = 0;
-                    for ( ; j<nsmooth; ++j)
+                    for (; j<nleft; ++j)
                     {
-                        sum                += buf[j] - buf[0];
                         dst[j]              = sum * norm;
+                        sum                += buf[j + nright] - buf[0];
                     }
 
-                    // Pass 2
+                    // Pass 2: collect sum for the middle part
+                    for (const uint32_t count = fft_csize - nright; j<count; ++j)
+                    {
+                        dst[j]              = sum * norm;
+                        sum                += buf[j + nright] - buf[j - nleft];
+                    }
+
+                    // Pass 3: collect sum for the right part
                     for (; j<fft_csize; ++j)
                     {
-                        sum                += buf[j] - buf[j - nsmooth];
                         dst[j]              = sum * norm;
+                        sum                += buf[fft_csize-1] - buf[j - nleft];
                     }
 
                     // Return back to linear scale and apply envelope back
