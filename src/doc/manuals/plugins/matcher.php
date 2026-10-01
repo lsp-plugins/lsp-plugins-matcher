@@ -128,11 +128,13 @@
 	<?php } ?>
 	<li><b>Link</b> - the dynamic external profile is used based on the input of the shared memory link.</li>
 
+	<li><b>Smooth</b> - applies smoothing to profiles to reduce extra peaks and sparks in the spectrum.</li>
 	<li><b>Blend</b> - the mix proportion between the reference profile and the input profile before the matching profile
 	is computed.</li>
 	<?php if ($m == 's') { ?>
 	<li><b>Stereo link</b> - the stereo link between the left channel and right channel of the matching profile.</li>
 	<?php } ?>
+	<li><b>Track</b> - enable tracking of dynamic profiles in the UI.</li>
 	
 	<li><b>Save</b> - the button that allows to save the impulse response of the matching profile to the separate audio file.</li>
 </ul>

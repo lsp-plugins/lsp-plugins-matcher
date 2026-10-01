@@ -3,7 +3,8 @@
 *******************************************************************************
 
 === 1.0.7 ===
-
+* Implemented profile smoothing to reduce extra peaks and sparks in the spectrum.
+* Some UI improvements.
 
 === 1.0.6 ===
 * Updated build scripts and dependencies.

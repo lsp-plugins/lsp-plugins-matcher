@@ -180,7 +180,7 @@ namespace lsp
                 if (i == SPROF_FILE)
                     continue;
 
-                profile_data_t * const prof    = pCore->create_default_profile();
+                profile_data_t * const prof     = pCore->create_default_profile(pCore->nChannels, false);
                 if (prof == NULL)
                     return STATUS_NO_MEM;
 
@@ -188,7 +188,7 @@ namespace lsp
             }
 
             // Bind self as listener
-            core::KVTStorage *kvt = pCore->kvt_lock();
+            core::KVTStorage * const kvt = pCore->kvt_lock();
             if (kvt != NULL)
             {
                 lsp_finally { pCore->kvt_release(); };
@@ -288,7 +288,7 @@ namespace lsp
         void matcher::KVTSync::parse_profile(const char *id, const core::kvt_param_t *param, uint32_t type, bool state)
         {
             // Load profile
-            profile_data_t *profile = pCore->load_profile(id, param, state);
+            profile_data_t * const profile = pCore->load_profile(id, param, state);
             if (profile == NULL)
                 return;
 
@@ -336,7 +336,7 @@ namespace lsp
 
         status_t matcher::IRSaver::init()
         {
-            pProfile    = pCore->create_default_profile();
+            pProfile    = pCore->create_default_profile(pCore->nChannels, false);
             if (pProfile == NULL)
                 return STATUS_NO_MEM;
 
@@ -901,25 +901,25 @@ namespace lsp
             }
 
             // Create empty profiles with highest resolution
-            pReactivity         = create_default_profile();
+            pReactivity         = create_default_profile(nChannels, false);
             if (pReactivity == NULL)
                 return;
 
-            pTempProfile        = create_default_profile();
+            pTempProfile        = create_default_profile(nChannels, false);
             if (pTempProfile == NULL)
                 return;
 
-            pFilterProfile      = create_default_profile(1);
+            pFilterProfile      = create_default_profile(1, false);
             if (pFilterProfile == NULL)
                 return;
 
-            pMatchProfile       = create_default_profile();
+            pMatchProfile       = create_default_profile(nChannels, false);
             if (pMatchProfile == NULL)
                 return;
 
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
-                profile_data_t *prof    = create_default_profile();
+                profile_data_t * const prof = create_default_profile(nChannels, profile_needs_smoothing(i));
                 if (prof == NULL)
                     return;
                 vProfileData[i] = prof;
@@ -927,7 +927,7 @@ namespace lsp
 
             for (size_t i=0; i<SPROF_TOTAL; ++i)
             {
-                profile_data_t *prof    = create_default_profile();
+                profile_data_t *const prof  = create_default_profile(nChannels, false);
                 if (prof == NULL)
                     return;
 
@@ -1016,6 +1016,21 @@ namespace lsp
                 free_aligned(pData);
                 pData       = NULL;
             }
+        }
+
+        bool matcher::profile_needs_smoothing(size_t type)
+        {
+            switch (type)
+            {
+                case PROF_MATCH:
+                case PROF_ENVELOPE:
+                case PROF_MIN_EQUALIZER:
+                case PROF_MAX_EQUALIZER:
+                    return false;
+                default:
+                    break;
+            }
+            return true;
         }
 
         void matcher::update_sample_rate(long sr)
@@ -1536,17 +1551,18 @@ namespace lsp
             ++profile->nFrames;
         }
 
-        matcher::profile_data_t *matcher::allocate_profile_data(size_t channels)
+        matcher::profile_data_t *matcher::allocate_profile_data(size_t channels, bool smooth)
         {
             if (channels == 0)
                 channels                    = nChannels;
+            const size_t buf_count      = (smooth) ? 2 : 1;
             const size_t fft_citems     = (1 << (meta::matcher::FFT_RANK_MAX - 1)) + 1;
             const size_t table_size     = sizeof(float *) * channels;
             const size_t szof_data_hdr  = align_size(sizeof(profile_data_t), DEFAULT_ALIGN);
-            const size_t szof_header    = align_size(szof_data_hdr + table_size * 2, OPTIMAL_ALIGN);
+            const size_t szof_header    = align_size(szof_data_hdr + table_size * buf_count, OPTIMAL_ALIGN);
             const size_t prof_data_size = align_size(sizeof(float) * fft_citems, OPTIMAL_ALIGN);
 
-            const size_t to_alloc       = szof_header + nChannels * prof_data_size * 2;
+            const size_t to_alloc       = szof_header + nChannels * buf_count * prof_data_size;
 
             // Allocate memory
             uint8_t *ptr                = static_cast<uint8_t *>(malloc(to_alloc));
@@ -1565,7 +1581,7 @@ namespace lsp
             profile->fSmooth            = -1.0f;
             profile->fRMS               = GAIN_AMP_M_INF_DB;
             profile->vData              = add_ptr_bytes<float *>(profile, szof_data_hdr);
-            profile->vSmoothed          = add_ptr_bytes<float *>(profile, szof_data_hdr + table_size);
+            profile->vSmoothed          = (smooth) ? add_ptr_bytes<float *>(profile, szof_data_hdr + table_size) : NULL;
 
             for (size_t i=0; i<channels; ++i)
             {
@@ -1573,10 +1589,13 @@ namespace lsp
                 dsp::fill_zero(profile->vData[i], fft_citems);
             }
 
-            for (size_t i=0; i<channels; ++i)
+            if (smooth)
             {
-                profile->vSmoothed[i]       = advance_ptr_bytes<float>(ptr, prof_data_size);
-                dsp::fill_zero(profile->vData[i], fft_citems);
+                for (size_t i=0; i<channels; ++i)
+                {
+                    profile->vSmoothed[i]       = advance_ptr_bytes<float>(ptr, prof_data_size);
+                    dsp::fill_zero(profile->vData[i], fft_citems);
+                }
             }
 
             lsp_assert(ptr <= &base[to_alloc]);
@@ -1584,9 +1603,9 @@ namespace lsp
             return profile;
         }
 
-        matcher::profile_data_t *matcher::create_default_profile(size_t channels)
+        matcher::profile_data_t *matcher::create_default_profile(size_t channels, bool smooth)
         {
-            profile_data_t * const res  = allocate_profile_data(channels);
+            profile_data_t * const res  = allocate_profile_data(channels, smooth);
             if (res == NULL)
                 return res;
 
@@ -1759,6 +1778,8 @@ namespace lsp
 
         void matcher::smooth_profile(profile_data_t *profile, float smooth)
         {
+            if (profile->vSmoothed == NULL)
+                return;
             if (profile->fSmooth == smooth)
                 return;
 
@@ -1833,6 +1854,7 @@ namespace lsp
             }
 
             profile->fSmooth    = smooth;
+            profile->nFlags    |= PFLAGS_SMOOTHED;
         }
 
         void matcher::build_match_profile(profile_data_t *in, profile_data_t *ref, bool dynamic)
@@ -1890,6 +1912,9 @@ namespace lsp
                     src->nFlags                |= PFLAGS_EMPTY;
             }
 
+            const float * const * in_data   = (in->vSmoothed != NULL)   ? in->vSmoothed  : in->vData;
+            const float * const * src_data  = (src->vSmoothed != NULL)  ? src->vSmoothed : src->vData;
+
             if (is_dynamic)
             {
                 // Check that temporary profile is present
@@ -1926,17 +1951,17 @@ namespace lsp
                     for (size_t i=0; i<nChannels; ++i)
                     {
                         // Compute new profile value
-                        dsp::clamp_kk2(vBuffer, in->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                        dsp::clamp_kk2(vBuffer, in_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
 
                         // Apply reactivity to the changes or perform immediate match
                         if (match_immediate)
                         {
-                            dsp::clamp_kk2(match->vData[i], src->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::clamp_kk2(match->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                             dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                         }
                         else
                         {
-                            dsp::clamp_kk2(tmp->vData[i], src->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::clamp_kk2(tmp->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                             dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                             dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
                         }
@@ -1950,8 +1975,8 @@ namespace lsp
                 // Compute new static profile value
                 for (size_t i=0; i<nChannels; ++i)
                 {
-                    dsp::clamp_kk2(vBuffer, in->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::clamp_kk2(match->vData[i], src->vSmoothed[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(vBuffer, in_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                    dsp::clamp_kk2(match->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
                     dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
                 }
             }
@@ -1994,10 +2019,6 @@ namespace lsp
                     for (size_t i=0; i<nChannels; ++i)
                         dsp::mul2(profile->vData[i], flt->vData[0], fft_csize);
                 }
-
-                // Copy data for view
-                for (size_t i=0; i<nChannels; ++i)
-                    dsp::copy(profile->vSmoothed[i], profile->vData[i], fft_csize);
 
                 pWrapper->query_display_draw();
             }
@@ -2142,19 +2163,20 @@ namespace lsp
             // Analyze input signal
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c = &vChannels[i];
+                channel_t * const c = &vChannels[i];
                 const size_t base = i*PC_TOTAL;
 
                 analyze_spectrum(c, SM_IN, spectrum[base + PC_INPUT]);
                 if (cap_channel >= 0)
                     analyze_spectrum(c, SM_CAPTURE, spectrum[base + cap_channel]);
-                if (ref_channel >= 0)
-                    analyze_spectrum(c, SM_REFERENCE, spectrum[base + ref_channel]);
-                else if (ref_profile >= 0)
+                if (ref_profile >= 0)
                 {
                     profile_data_t * const profile = vProfileData[ref_profile];
-                    if ((profile != NULL) && ((profile->nFlags & PFLAGS_CHANGED) || (bSyncRefFFT)))
-                        dsp::copy(c->vFft[SM_REFERENCE], profile->vData[i], fft_csize);
+                    if ((profile != NULL) && ((profile->nFlags & (PFLAGS_CHANGED | PFLAGS_SMOOTHED)) || (bSyncRefFFT)))
+                    {
+                        const float * const pdata = (profile->vSmoothed) ? profile->vSmoothed[i] : profile->vData[i];
+                        dsp::copy(c->vFft[SM_REFERENCE], pdata, fft_csize);
+                    }
                 }
             }
             bSyncRefFFT     = false;
@@ -2318,7 +2340,7 @@ namespace lsp
             for (size_t i=0; i<PROF_TOTAL; ++i)
             {
                 profile_data_t * const profile = vProfileData[i];
-                profile->nFlags        &= ~PFLAGS_CHANGED;
+                profile->nFlags        &= ~(PFLAGS_CHANGED | PFLAGS_SMOOTHED);
             }
         }
 
@@ -2377,12 +2399,20 @@ namespace lsp
             dsp::fill(&dst[i_prev], v_prev, fft_csize - i_prev);
             if (envelope)
                 dsp::mul2(dst, vEnvelope, fft_csize);
+
             for (size_t i=1; i<nChannels; ++i)
                 dsp::copy(profile->vData[i], profile->vData[0], fft_csize);
+
+            if (profile->vSmoothed != NULL)
+            {
+                for (size_t i=0; i<nChannels; ++i)
+                    dsp::copy(profile->vSmoothed[i], profile->vData[i], fft_csize);
+            }
 
             profile->nSampleRate    = fSampleRate;
             profile->nRank          = nRank;
             profile->fRMS           = GAIN_AMP_0_DB;
+            profile->fSmooth        = (profile->vSmoothed != NULL) ? fSmooth : -1.0f;
             profile->nFlags         = PFLAGS_READY | PFLAGS_SYNC | PFLAGS_CHANGED;
             profile->nFrames        = 0;
             if (param != EQP_REACTIVITY)
@@ -2739,7 +2769,7 @@ namespace lsp
                     const bool relative_profile = profile_is_relative(j);
 
                     // Copy profile data
-                    const float * const fft     = profile->vSmoothed[i];
+                    const float * const fft     = (profile->vSmoothed != NULL) ? profile->vSmoothed[i] : profile->vData[i];
                     dst                += 2;
 
                     if (relative_profile)
@@ -2999,7 +3029,7 @@ namespace lsp
             const size_t channels       = s->channels();
 
             // Allocate profile
-            profile_data_t *profile     = allocate_profile_data();
+            profile_data_t * profile    = allocate_profile_data(nChannels, true);
             if (profile == NULL)
                 return STATUS_NO_MEM;
             lsp_finally { free_profile_data(profile); };
@@ -3508,7 +3538,7 @@ namespace lsp
             }
 
             // Allocate profile data
-            profile_data_t *profile = allocate_profile_data();
+            profile_data_t * const profile = allocate_profile_data(nChannels, true);
             if (profile == NULL)
             {
                 lsp_warn("Out of memory while fetching parameter '%s'", path);
