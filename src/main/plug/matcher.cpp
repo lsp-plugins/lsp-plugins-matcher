@@ -1896,9 +1896,12 @@ namespace lsp
                 // Compute blending profile
                 for (size_t i=0; i<nChannels; ++i)
                 {
+                    float * const pdst  = (src->vSmoothed != NULL) ? src->vSmoothed[i] : src->vData[i];
+                    const float *pin    = (in->vSmoothed != NULL) ? in->vSmoothed[i] : in->vData[i];
+                    const float *pref   = (ref->vSmoothed != NULL) ? ref->vSmoothed[i] : ref->vData[i];
+
                     dsp::mix_copy2(
-                        src->vSmoothed[i],
-                        in->vSmoothed[i], ref->vSmoothed[i],
+                        pdst, pin, pref,
                         fBlend * norm, 1.0f - fBlend,
                         fft_csize); // Blend with reference
                 }
