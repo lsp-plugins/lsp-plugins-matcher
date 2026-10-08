@@ -679,13 +679,13 @@
 				<label text="labels.flt.x_k" text:value="16"/>
 
 				<ui:for id="i" first="1" count="10">
-					<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1" scolor="threshold"/>
+					<range ui:tag="${100 + :i}" end.id="amp_${i}" start.id="red_${i}" angle="1" scolor="threshold"/>
 				</ui:for>
 				<ui:for id="i" first="1" count="10">
-					<value id="red_${i}" detailed="false"/>
+					<value id="amp_${i}" detailed="false"/>
 				</ui:for>
 				<ui:for id="i" first="1" count="10">
-					<value id="amp_${i}"/>
+					<value id="red_${i}"/>
 				</ui:for>
 			</grid>
 		</group>
