@@ -60,44 +60,52 @@ namespace lsp
 
         static const port_item_t matcher_references[] =
         {
-            { "None",               "matcher.ref.none"              },
-            { "Capture",            "matcher.ref.capture"           },
-            { "File",               "matcher.ref.file"              },
-            { "Envelope",           "matcher.ref.envelope"          },
-            { "Link",               "matcher.ref.link"              },
+            { "None",               "matcher.ref.none"                  },
+            { "Capture",            "matcher.ref.capture"               },
+            { "File",               "matcher.ref.file"                  },
+            { "Envelope",           "matcher.ref.envelope"              },
+            { "Link",               "matcher.ref.link"                  },
             { NULL, NULL }
         };
 
         static const port_item_t sc_matcher_references[] =
         {
-            { "None",               "matcher.ref.none"               },
-            { "Capture",            "matcher.ref.capture"           },
-            { "File",               "matcher.ref.file"              },
-            { "Envelope",           "matcher.ref.envelope"          },
-            { "Sidechain",          "matcher.ref.sidechain"         },
-            { "Link",               "matcher.ref.link"              },
+            { "None",               "matcher.ref.none"                  },
+            { "Capture",            "matcher.ref.capture"               },
+            { "File",               "matcher.ref.file"                  },
+            { "Envelope",           "matcher.ref.envelope"              },
+            { "Sidechain",          "matcher.ref.sidechain"             },
+            { "Link",               "matcher.ref.link"                  },
             { NULL, NULL }
         };
 
         static const port_item_t matcher_capture_source[] =
         {
-            { "In",                 "matcher.capture.in"            },
-            { "Link",               "matcher.capture.link"          },
+            { "In",                 "matcher.capture.in"                },
+            { "Link",               "matcher.capture.link"              },
             { NULL, NULL }
         };
 
         static const port_item_t sc_matcher_capture_source[] =
         {
-            { "In",                 "matcher.capture.in"            },
-            { "Sidehcain",          "matcher.capture.sidechain"     },
-            { "Link",               "matcher.capture.link"          },
+            { "In",                 "matcher.capture.in"                },
+            { "Sidehcain",          "matcher.capture.sidechain"         },
+            { "Link",               "matcher.capture.link"              },
             { NULL, NULL }
         };
 
         static const port_item_t matcher_input_source[] =
         {
-            { "Static",             "matcher.mode.static"           },
-            { "Dynamic",            "matcher.mode.dynamic"          },
+            { "Static",             "matcher.mode.static"               },
+            { "Dynamic",            "matcher.mode.dynamic"              },
+            { NULL, NULL }
+        };
+
+        static const port_item_t matcher_matching[] =
+        {
+            { "Bidirectional",      "matcher.matching.exact"            },
+            { "Reduction",          "matcher.matching.reduce"           },
+            { "Amplification",      "matcher.matching.amplify"          },
             { NULL, NULL }
         };
 
@@ -113,6 +121,8 @@ namespace lsp
             COMBO("fft_sz", "FFT size", "FFT size", matcher::FFT_RANK_IDX_DFL, matcher_fft_ranks), \
             LOG_CONTROL("rct_in", "Input profile reactivity", "React In", U_SEC, matcher::PROFILE_REACT_TIME), \
             LOG_CONTROL("rct_ref", "Reference profile reactivity", "React Ref", U_SEC, matcher::PROFILE_REACT_TIME), \
+            ADDON_COMBO(REV_1, "mmatch", "Matching mode", "Matching", 0, matcher_matching), \
+            ADDON_CONTROL(REV_1, "mthresh", "Matching threshold", "Match thresh", U_DB, matcher::MATCH_THRESH), \
             COMBO("in_src", "Input source", "Input src", 0, matcher_input_source), \
             COMBO("ref_src", "Reference source", "Reference src", 1, sources), \
             COMBO("cap_src", "Capture source", "Capture src", cap_default, captures), \

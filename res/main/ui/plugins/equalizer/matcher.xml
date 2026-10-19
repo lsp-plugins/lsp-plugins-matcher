@@ -26,7 +26,7 @@
 	<grid rows="2" cols="4" spacing="4">
 		<!-- Left Column -->
 		<group text="groups.controls" hexpand="false" hfill="false" ipadding="0">
-			<grid rows="19" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
+			<grid rows="22" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
 				<!-- Input Profile -->
 				<ui:with activity=":in_src ieq 1 or :sprdy">
 					<cell cols="2">
@@ -166,6 +166,20 @@
 				<cell cols="2">
 					<void vexpand="true"/>
 				</cell>
+
+				<cell cols="2">
+					<label text="labels.matching" pad.h="6" pad.v="4" />
+				</cell>
+				<cell cols="2">
+					<combo id="mmatch" pad.h="6" pad.v="4" />
+				</cell>
+				<hbox pad.v="4">
+					<knob id="mthresh" size="20" pad.h="4" pad.l="6" activity=":mmatch ine 0" />
+					<vbox vfill="false" pad.r="6">
+						<label text="labels.threshold" halign="0" activity=":mmatch ine 0"/>
+						<value id="mthresh" width.min="50" sline="true" halign="0" activity=":mmatch ine 0"/>
+					</vbox>
+				</hbox>
 			</grid>
 		</group>
 

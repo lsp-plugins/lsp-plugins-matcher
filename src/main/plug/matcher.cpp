@@ -521,6 +521,8 @@ namespace lsp
             nRawCapSource       = RAW_CAP_INPUT;
             nCapSource          = CAP_NONE;
             nRank               = 0;
+            nMatching           = MATCH_EXACT;
+            fMatchThresh        = GAIN_AMP_0_DB;
             fGainIn             = GAIN_AMP_0_DB;
             fGainOut            = GAIN_AMP_0_DB;
             fFftTau             = 1.0f;
@@ -568,6 +570,8 @@ namespace lsp
             pFftSize            = NULL;
             pInReactivity       = NULL;
             pRefReactivity      = NULL;
+            pMatching           = NULL;
+            pMatchThresh        = NULL;
             pInSource           = NULL;
             pRefSource          = NULL;
             pCapSource          = NULL;
@@ -801,6 +805,8 @@ namespace lsp
             BIND_PORT(pFftSize);
             BIND_PORT(pInReactivity);
             BIND_PORT(pRefReactivity);
+            BIND_PORT(pMatching);
+            BIND_PORT(pMatchThresh);
             BIND_PORT(pInSource);
             BIND_PORT(pRefSource);
             BIND_PORT(pCapSource);
@@ -1195,6 +1201,8 @@ namespace lsp
             const float old_slink       = fStereoLink;
             const float old_blend       = fBlend;
             const float old_smooth      = fSmooth;
+            const uint32_t old_match    = nMatching;
+            const float old_match_th    = fMatchThresh;
 
 
             nRefSource              = decode_reference_source(pRefSource->value());
@@ -1207,6 +1215,8 @@ namespace lsp
             fSmooth                 = pSmooth->value() * 0.01f;
             fStereoLink             = (pStereoLink != NULL) ? pStereoLink->value() * 0.01f : 0.0f;
             bUpdateMatch            = rebuild_eq_profiles;
+            nMatching               = pMatching->value();
+            fMatchThresh            = dspu::db_to_gain(pMatchThresh->value());
 
             sMatchImmediate.submit(pMatchImmediate->value());
             sIRSaver.submit_command(pIRSave->value() >= 0.5f);
@@ -1224,7 +1234,9 @@ namespace lsp
                 (bMatchBottomLimit != old_match_bottom) ||
                 (fStereoLink != old_slink) ||
                 (fBlend != old_blend) ||
-                (fSmooth != old_smooth))
+                (fSmooth != old_smooth) ||
+                (nMatching != old_match) ||
+                (fMatchThresh != old_match_th))
                 bUpdateMatch            = true;
 
             fFftTau                 = 1.0f - expf(FFT_TIME_CONST / dspu::seconds_to_samples(float(fSampleRate) / float(fft_period), reactivity));
@@ -1435,7 +1447,7 @@ namespace lsp
         {
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c            = &vChannels[i];
+                channel_t * const c     = &vChannels[i];
 
                 // Get input and output buffers
                 c->vIn                  = c->pIn->buffer<float>();
@@ -1928,7 +1940,6 @@ namespace lsp
                     return;
                 }
 
-                const float norm = src->fRMS / in->fRMS;
                 const bool match_immediate  = sMatchImmediate.pending();
                 const bool towards_0db      = (src->nFlags | in->nFlags) & PFLAGS_EMPTY;
 
@@ -1951,36 +1962,148 @@ namespace lsp
                 else
                 {
                     // Normally dynamically changing profile
-                    for (size_t i=0; i<nChannels; ++i)
+                    switch (nMatching)
                     {
-                        // Compute new profile value
-                        dsp::clamp_kk2(vBuffer, in_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                        case MATCH_AMPLIFY:
+                        {
+                            const float norm_in     = 1.0f / in->fRMS;
+                            const float norm_src    = fMatchThresh / src->fRMS;
 
-                        // Apply reactivity to the changes or perform immediate match
-                        if (match_immediate)
-                        {
-                            dsp::clamp_kk2(match->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                            dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                            for (size_t i=0; i<nChannels; ++i)
+                            {
+                                // Normalize values first
+                                dsp::mul_k3(vBuffer, in_data[i], norm_in, fft_csize);
+                                dsp::clamp_kk1(vBuffer, GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                // Apply reactivity to the changes or perform immediate match
+                                if (match_immediate)
+                                {
+                                    dsp::mul_k3(match->vData[i], src_data[i], norm_src, fft_csize);
+                                    dsp::clamp_kk1(match->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                    dsp::pmin2(vBuffer, match->vData[i], fft_csize);
+                                    dsp::div2(match->vData[i], vBuffer, fft_csize);
+                                }
+                                else
+                                {
+                                    dsp::mul_k3(tmp->vData[i], src_data[i], norm_src, fft_csize);
+                                    dsp::clamp_kk1(tmp->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                    dsp::pmin2(vBuffer, tmp->vData[i], fft_csize);
+                                    dsp::div2(tmp->vData[i], vBuffer, fft_csize);
+                                    dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                                }
+                            }
+                            break;
                         }
-                        else
+                        case MATCH_REDUCE:
                         {
-                            dsp::clamp_kk2(tmp->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                            dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
-                            dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                            const float norm_in     = 1.0f / in->fRMS;
+                            const float norm_src    = fMatchThresh / src->fRMS;
+
+                            for (size_t i=0; i<nChannels; ++i)
+                            {
+                                // Normalize values first
+                                dsp::mul_k3(vBuffer, in_data[i], norm_in, fft_csize);
+                                dsp::clamp_kk1(vBuffer, GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                // Apply reactivity to the changes or perform immediate match
+                                if (match_immediate)
+                                {
+                                    dsp::mul_k3(match->vData[i], src_data[i], norm_src, fft_csize);
+                                    dsp::clamp_kk1(match->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                    dsp::pmax2(vBuffer, match->vData[i], fft_csize);
+                                    dsp::div2(match->vData[i], vBuffer, fft_csize);
+                                }
+                                else
+                                {
+                                    dsp::mul_k3(tmp->vData[i], src_data[i], norm_src, fft_csize);
+                                    dsp::clamp_kk1(tmp->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                    dsp::pmax2(vBuffer, tmp->vData[i], fft_csize);
+                                    dsp::div2(tmp->vData[i], vBuffer, fft_csize);
+                                    dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                                }
+                            }
+                            break;
+                        }
+                        case MATCH_EXACT:
+                        default:
+                        {
+                            const float norm = src->fRMS / in->fRMS;
+
+                            for (size_t i=0; i<nChannels; ++i)
+                            {
+                                // Compute new profile value
+                                dsp::clamp_kk2(vBuffer, in_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+
+                                // Apply reactivity to the changes or perform immediate match
+                                if (match_immediate)
+                                {
+                                    dsp::clamp_kk2(match->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                    dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                                }
+                                else
+                                {
+                                    dsp::clamp_kk2(tmp->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                                    dsp::fmdiv_k3(tmp->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                                    dsp::pmix_v1(match->vData[i], tmp->vData[i], pReactivity->vData[i], fft_csize);
+                                }
+                            }
+                            break;
                         }
                     }
                 }
             }
             else if (need_sync)
             {
-                const float norm = src->fRMS / in->fRMS;
-
                 // Compute new static profile value
-                for (size_t i=0; i<nChannels; ++i)
+                switch (nMatching)
                 {
-                    dsp::clamp_kk2(vBuffer, in_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::clamp_kk2(match->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
-                    dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                    case MATCH_AMPLIFY:
+                    {
+                        const float norm_in     = 1.0f / in->fRMS;
+                        const float norm_src    = fMatchThresh / src->fRMS;
+                        for (size_t i=0; i<nChannels; ++i)
+                        {
+                            // Normalize values first
+                            dsp::mul_k3(vBuffer, in_data[i], norm_in, fft_csize);
+                            dsp::clamp_kk1(vBuffer, GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::mul_k3(match->vData[i], src_data[i], norm_src, fft_csize);
+                            dsp::clamp_kk1(match->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            // Limit the value
+                            dsp::pmin2(vBuffer, match->vData[i], fft_csize);
+                            // Apply
+                            dsp::div2(match->vData[i], vBuffer, fft_csize);
+                        }
+                        break;
+                    }
+                    case MATCH_REDUCE:
+                    {
+                        const float norm_in     = 1.0f / in->fRMS;
+                        const float norm_src    = fMatchThresh / src->fRMS;
+                        for (size_t i=0; i<nChannels; ++i)
+                        {
+                            // Normalize values first
+                            dsp::mul_k3(vBuffer, in_data[i], norm_in, fft_csize);
+                            dsp::clamp_kk1(vBuffer, GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::mul_k3(match->vData[i], src_data[i], norm_src, fft_csize);
+                            dsp::clamp_kk1(match->vData[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            // Limit the value
+                            dsp::pmax2(vBuffer, match->vData[i], fft_csize);
+                            // Apply
+                            dsp::div2(match->vData[i], vBuffer, fft_csize);
+                        }
+                        break;
+                    }
+
+                    case MATCH_EXACT:
+                    default:
+                    {
+                        const float norm = src->fRMS / in->fRMS;
+                        for (size_t i=0; i<nChannels; ++i)
+                        {
+                            dsp::clamp_kk2(vBuffer, in_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::clamp_kk2(match->vData[i], src_data[i], GAIN_AMP_M_72_DB, GAIN_AMP_P_72_DB, fft_csize);
+                            dsp::fmdiv_k3(match->vData[i], vBuffer, norm, fft_csize); // src / (in * norm)
+                        }
+                        break;
+                    }
                 }
             }
 
@@ -3755,7 +3878,9 @@ namespace lsp
             v->write("nRawCapSource", nRawCapSource);
             v->write("nCapSource", nCapSource);
             v->write("nRank", nRank);
+            v->write("nMatching", nMatching);
 
+            v->write("fMatchThresh", fMatchThresh);
             v->write("fGainIn", fGainIn);
             v->write("fGainOut", fGainOut);
             v->write("fFftTau", fFftTau);
@@ -3884,6 +4009,8 @@ namespace lsp
             v->write("pFftSize", pFftSize);
             v->write("pInReactivity", pInReactivity);
             v->write("pRefReactivity", pRefReactivity);
+            v->write("pMatching", pMatching);
+            v->write("pMatchThresh", pMatchThresh);
             v->write("pInSource", pInSource);
             v->write("pRefSource", pRefSource);
             v->write("pCapSource", pCapSource);

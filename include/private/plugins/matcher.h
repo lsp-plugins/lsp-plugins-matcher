@@ -150,6 +150,13 @@ namespace lsp
                     EQP_TOTAL
                 };
 
+                enum match_mode_t
+                {
+                    MATCH_EXACT,                                // Exact match
+                    MATCH_REDUCE,                               // Reduction only
+                    MATCH_AMPLIFY,                              // Amplification only
+                };
+
                 typedef struct profile_data_t
                 {
                     uint32_t                nSampleRate;        // Sample rate of the profile
@@ -352,6 +359,8 @@ namespace lsp
                 uint32_t            nRawCapSource;      // Raw capture source
                 uint32_t            nCapSource;         // Capture source
                 uint32_t            nRank;              // FFT rank
+                uint32_t            nMatching;          // Matching mode
+                float               fMatchThresh;       // Matching threshold
                 float               fGainIn;            // Input gain
                 float               fGainOut;           // Output gain
                 float               fFftTau;            // FFT time constant
@@ -414,6 +423,8 @@ namespace lsp
                 plug::IPort        *pFftSize;           // FFT size
                 plug::IPort        *pInReactivity;      // Input profile reactivity
                 plug::IPort        *pRefReactivity;     // Reference profile reactivity
+                plug::IPort        *pMatching;          // Matching mode
+                plug::IPort        *pMatchThresh;       // Matching threshold
                 plug::IPort        *pInSource;          // Input source
                 plug::IPort        *pRefSource;         // Reference source
                 plug::IPort        *pCapSource;         // Capture source
