@@ -7,6 +7,7 @@
 * Implemented additional matching algorithms: Reduce and Amplify. 
 * Fixed regression in sliders that set-up the matching profile limits.
 * Some UI improvements.
+* Updated build scripts and dependencies.
 
 === 1.0.6 ===
 * Updated build scripts and dependencies.
