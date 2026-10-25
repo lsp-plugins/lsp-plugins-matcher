@@ -26,7 +26,7 @@
 	<grid rows="2" cols="4" spacing="4">
 		<!-- Left Column -->
 		<group text="groups.controls" hexpand="false" hfill="false" ipadding="0">
-			<grid rows="22" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
+			<grid rows="23" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
 				<!-- Input Profile -->
 				<ui:with activity=":in_src ieq 1 or :sprdy">
 					<cell cols="2">
@@ -166,18 +166,18 @@
 				<cell cols="2">
 					<void vexpand="true"/>
 				</cell>
-
+<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
 				<cell cols="2">
 					<label text="labels.matching" pad.h="6" pad.v="4" />
 				</cell>
 				<cell cols="2">
-					<combo id="mmatch" pad.h="6" pad.v="4" />
+					<combo id="mmatch" pad.h="6"/>
 				</cell>
-				<hbox pad.v="4">
-					<knob id="mthresh" size="20" pad.h="4" pad.l="6" activity=":mmatch ine 0" />
+				<hbox pad.v="4" hfill="true">
+					<knob id="mthresh" size="20" pad.t="4" pad.l="6" activity=":mmatch ine 0" inactive.bg.brightness="1.0"/>
 					<vbox vfill="false" pad.r="6">
-						<label text="labels.threshold" halign="0" activity=":mmatch ine 0"/>
-						<value id="mthresh" width.min="50" sline="true" halign="0" activity=":mmatch ine 0"/>
+						<label text="labels.threshold" halign="0" activity=":mmatch ine 0" inactive.bg.brightness="1.0"/>
+						<value id="mthresh" width.min="50" sline="true" halign="0" activity=":mmatch ine 0" inactive.bg.brightness="1.0"/>
 					</vbox>
 				</hbox>
 			</grid>
@@ -291,7 +291,7 @@
 					<ui:set id="envelope_r_vis" value="(:showpro and :pefe_r) or :showenv" />
 					<ui:set id="external_l_vis" value=":showpro and :prfe_l and (:track and :ref_src ige 4 and not ${hide_cond})" />
 					<ui:set id="external_r_vis" value=":showpro and :prfe_r and (:track and :ref_src ige 4 and not ${hide_cond})" />
-				
+
 					<!-- Input -->
 					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife_l"/>
 					<mesh id="fft" xi="0" yi="5" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":showfft and :ife_r"/>
@@ -606,7 +606,7 @@
 				<led id="ref_rdy" size="10" ui:inject="Led_violet_magenta" visibility=":ref_src igt 3"/>
 				<combo id="ref_src"/>
 				<void hexpand="true"/>
-				
+
 				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
 					<hbox pad.h="2">
 						<label text="labels.smooth"/>
@@ -615,7 +615,7 @@
 					</hbox>
 					<fader id="smooth" angle="0" hfill="true"/>
 				</vbox>
-				
+
 				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
 					<hbox pad.h="2">
 						<label text="labels.blend"/>
