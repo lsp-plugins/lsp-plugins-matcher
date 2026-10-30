@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-matcher
  * Created on: 02 ноя 2025 г.
@@ -132,11 +132,12 @@ namespace lsp
                     PFLAGS_READY            = 1 << 1,           // Profile is ready for processing
                     PFLAGS_DIRTY            = 1 << 2,           // Profile is dirty and has not been saved
                     PFLAGS_CHANGED          = 1 << 3,           // Profile has been changed
-                    PFLAGS_SYNC             = 1 << 4,           // Profile needs to be synchronized with UI
-                    PFLAGS_NORMAL           = 1 << 5,           // Profile is filled with 0 dB amplification
-                    PFLAGS_DYNAMIC          = 1 << 6,           // Profile is dynamically changing
-                    PFLAGS_EMPTY            = 1 << 7,           // Profile is empty (level below the threshold)
-                    PFLAGS_STATE            = 1 << 8,           // Profile is loaded from plugin state
+                    PFLAGS_SMOOTHED         = 1 << 4,           // Profile data has been smoothed
+                    PFLAGS_SYNC             = 1 << 5,           // Profile needs to be synchronized with UI
+                    PFLAGS_NORMAL           = 1 << 6,           // Profile is filled with 0 dB amplification
+                    PFLAGS_DYNAMIC          = 1 << 7,           // Profile is dynamically changing
+                    PFLAGS_EMPTY            = 1 << 8,           // Profile is empty (level below the threshold)
+                    PFLAGS_STATE            = 1 << 9,           // Profile is loaded from plugin state
                 };
 
                 enum eq_param_t
@@ -149,6 +150,13 @@ namespace lsp
                     EQP_TOTAL
                 };
 
+                enum match_mode_t
+                {
+                    MATCH_EXACT,                                // Exact match
+                    MATCH_REDUCE,                               // Reduction only
+                    MATCH_AMPLIFY,                              // Amplification only
+                };
+
                 typedef struct profile_data_t
                 {
                     uint32_t                nSampleRate;        // Sample rate of the profile
@@ -156,8 +164,10 @@ namespace lsp
                     uint32_t                nRank;              // FFT rank of the profile
                     uint32_t                nFlags;             // Profile data flags
                     uint32_t                nFrames;            // Number of frames collected
+                    float                   fSmooth;            // Transient: smoothing coefficient
                     float                   fRMS;               // Profile loudness
                     float                 **vData;              // Sample data
+                    float                 **vSmoothed;          // Transient: smoothed sample data
                 } profile_data_t;
 
                 typedef struct af_descriptor_t
@@ -349,6 +359,8 @@ namespace lsp
                 uint32_t            nRawCapSource;      // Raw capture source
                 uint32_t            nCapSource;         // Capture source
                 uint32_t            nRank;              // FFT rank
+                uint32_t            nMatching;          // Matching mode
+                float               fMatchThresh;       // Matching threshold
                 float               fGainIn;            // Input gain
                 float               fGainOut;           // Output gain
                 float               fFftTau;            // FFT time constant
@@ -357,6 +369,7 @@ namespace lsp
                 float               fRefTau;            // Reference profile reactivity
                 float               fStereoLink;        // Stereo linking
                 float               fBlend;             // Blend signal
+                float               fSmooth;            // Smooth signal
                 float               fHpfFreq;           // HPF frequency
                 float               fHpfSlope;          // HPF slope
                 float               fLpfFreq;           // LPF frequency
@@ -398,6 +411,9 @@ namespace lsp
                 float              *vFilterCurve;       // Filter curve
                 float              *vEnvelope;          // FFT envelope
                 float              *vRevEnvelope;       // FFT reverse envelope
+                float              *vSmoothEnvelope;    // Profile smoothing envelope
+                float              *vRevSmoothEnvelope; // Reverse profile smoothingenvelope
+                float              *vSmoothFreqs;       // Smooth frequency coefficients
                 float              *vBuffer;            // Temporary buffer
                 float              *vEmptyBuf;          // Empty
 
@@ -407,10 +423,13 @@ namespace lsp
                 plug::IPort        *pFftSize;           // FFT size
                 plug::IPort        *pInReactivity;      // Input profile reactivity
                 plug::IPort        *pRefReactivity;     // Reference profile reactivity
+                plug::IPort        *pMatching;          // Matching mode
+                plug::IPort        *pMatchThresh;       // Matching threshold
                 plug::IPort        *pInSource;          // Input source
                 plug::IPort        *pRefSource;         // Reference source
                 plug::IPort        *pCapSource;         // Capture source
                 plug::IPort        *pBlend;             // Blend signal
+                plug::IPort        *pSmooth;            // Smooth signal
                 plug::IPort        *pProfile;           // Start profiling
                 plug::IPort        *pCapture;           // Enable capturing
                 plug::IPort        *pListen;            // Listen capture
@@ -457,12 +476,13 @@ namespace lsp
                 static void         destroy_sample(dspu::Sample * &s);
                 static void         destroy_samples(dspu::Sample *gc_list);
                 static bool         profile_is_relative(size_t profile);
+                static bool         profile_needs_smoothing(size_t type);
 
             protected:
                 void                do_destroy();
                 inline void         set_profile_ready(plug::IPort *port, ssize_t id);
-                profile_data_t     *allocate_profile_data(size_t channels = 0);
-                profile_data_t     *create_default_profile(size_t channels = 0);
+                profile_data_t     *allocate_profile_data(size_t channels, bool smooth);
+                profile_data_t     *create_default_profile(size_t channels, bool smooth);
                 void                init_buffers();
                 void                bind_buffers(size_t samples);
                 void                advance_buffers(size_t samples);
@@ -507,6 +527,7 @@ namespace lsp
                 void                init_level_meters();
                 void                output_level_meters();
                 void                output_profile_status();
+                void                smooth_profile(profile_data_t *profile, float smooth);
 
             public:
                 explicit matcher(const meta::plugin_t *meta);

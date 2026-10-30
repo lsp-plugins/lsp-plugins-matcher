@@ -66,7 +66,14 @@
 	<li><b>Enable</b> - the button that enables the limits for matching profile.</li>
 	<li><b>Morphing</b> - the button that shows the overlay with dynamic profile morphing timings.</li>
 	<li><b>Match</b> - perform immediate matching between input and reference profile without morphing stage.</li>
-	<li><b>Filters</b> - the button that shows the overlay with additional post-processing filters.</li>	
+	<li><b>Filters</b> - the button that shows the overlay with additional post-processing filters.</li>
+	<li><b>Matching</b> - the matching algorithm and it's settings.</li>
+	<ul>
+		<li><b>Exact</b> - perform exact matching: frequencies louder than reference get reduced, other frequencies get amplified to match reference.</li>
+		<li><b>Reduce</b> - reduce gain: frequencies louder than reference get reduced to match reference.</li>
+		<li><b>Amplify</b> - amplify gain: frequencies not louder than reference get amplified to match reference.</li>
+	</ul>
+	<li><b>Threshold</b> - additional gain added to the reference profile before appplying matching algorithm.</li>
 </ul>
 
 <p><b>'Signal' section:</b></p>
@@ -128,11 +135,13 @@
 	<?php } ?>
 	<li><b>Link</b> - the dynamic external profile is used based on the input of the shared memory link.</li>
 
+	<li><b>Smooth</b> - applies smoothing to profiles to reduce extra peaks and sparks in the spectrum.</li>
 	<li><b>Blend</b> - the mix proportion between the reference profile and the input profile before the matching profile
 	is computed.</li>
 	<?php if ($m == 's') { ?>
 	<li><b>Stereo link</b> - the stereo link between the left channel and right channel of the matching profile.</li>
 	<?php } ?>
+	<li><b>Track</b> - enable tracking of dynamic profiles in the UI.</li>
 	
 	<li><b>Save</b> - the button that allows to save the impulse response of the matching profile to the separate audio file.</li>
 </ul>

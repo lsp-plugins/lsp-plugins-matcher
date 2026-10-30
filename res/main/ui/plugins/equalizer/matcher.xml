@@ -26,7 +26,7 @@
 	<grid rows="2" cols="4" spacing="4">
 		<!-- Left Column -->
 		<group text="groups.controls" hexpand="false" hfill="false" ipadding="0">
-			<grid rows="19" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
+			<grid rows="23" cols="2" hexpand="false" hfill="false" bg.color="bg_schema">
 				<!-- Input Profile -->
 				<ui:with activity=":in_src ieq 1 or :sprdy">
 					<cell cols="2">
@@ -166,6 +166,20 @@
 				<cell cols="2">
 					<void vexpand="true"/>
 				</cell>
+<cell cols="2"><hsep bg.color="bg" pad.v="2" vreduce="true"/></cell>
+				<cell cols="2">
+					<label text="labels.matching" pad.h="6" pad.v="4" />
+				</cell>
+				<cell cols="2">
+					<combo id="mmatch" pad.h="6"/>
+				</cell>
+				<hbox pad.v="4" hfill="true">
+					<knob id="mthresh" size="20" pad.t="4" pad.l="6" activity=":mmatch ine 0" inactive.bg.brightness="1.0"/>
+					<vbox vfill="false" pad.r="6">
+						<label text="labels.threshold" halign="0" activity=":mmatch ine 0" inactive.bg.brightness="1.0"/>
+						<value id="mthresh" width.min="50" sline="true" halign="0" activity=":mmatch ine 0" inactive.bg.brightness="1.0"/>
+					</vbox>
+				</hbox>
 			</grid>
 		</group>
 
@@ -225,27 +239,42 @@
 				<ui:set id="hide_cond_soft" value="(:showfil or :showenv)"/>
 				<!-- Meshes -->
 				<ui:if test="!ex :out_r">
+					<ui:set id="capture_in_vis" value="(:showpro and :pcfe) or ((:ref_src ilt 4) and :capture and not ${hide_cond})" />
+					<ui:set id="file_vis" value="(:showpro and :pffe) or :showfil" />
+					<ui:set id="envelope_vis" value="(:showpro and :pefe) or :showenv" />
+					<ui:set id="external_vis" value=":showpro and :prfe and (:track and :ref_src ige 4 and not ${hide_cond})" />
+
 					<!-- Input -->
 					<mesh id="fft" xi="0" yi="1" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife"/>
 					<!-- Source -->
 					<mesh id="fft" xi="0" yi="3" width="2" color="blue_violet" color.a="0.5" visibility=":showfft and :cfe"/>
 					<!-- Reference -->
-					<mesh id="fft" xi="0" yi="4" width="2" color="cyan_blue" color.a="0.5" visibility=":showfft and :rfe and :ref_src ige 1 and (:ref_src ieq 2 and :fprdy)"/>
+					<mesh
+						id="fft" xi="0" yi="4"
+						width="2" color="cyan_blue" color.a="0.5"
+						visibility="
+							:showfft and :rfe and (
+								((:ref_src ieq 1) and not (${capture_in_vis})) or
+								((:ref_src ieq 2) and not (${file_vis})) or
+								((:ref_src ieq 3) and not (${envelope_vis})) or
+								((:ref_src ige 4) and :track and not (${external_vis}))
+							)"
+					/>
 					<!-- Output -->
 					<mesh id="fft" xi="0" yi="2" width="2" color="mono" color.a="0.5" visibility=":showfft and :ofe"/>
 
 					<!-- Dynamic input profile -->
 					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility=":showpro and :pife and (:track and :in_src ieq 1 and not ${hide_cond})"/>
-					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility=":showpro and :prfe and (:track and :ref_src ige 4 and not ${hide_cond})"/>
+					<!-- External input profile -->
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility="${external_vis}"/>
 					<!-- Static input profile -->
 					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="(:showpro and :pcfe) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="${capture_in_vis}"/>
 					<!-- File profile -->
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="(:showpro and :pffe) or :showfil"/>
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="${file_vis}"/>
 					<!-- Envelope -->
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe) or :showenv"/>
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="${envelope_vis}"/>
 					<!-- Envelope maximum bounds -->
 					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
 					<!-- Envelope minimum bounds -->
@@ -254,6 +283,15 @@
 					<mesh id="pmesh" xi="0" yi="1" width="2" color="mono" visibility=":pmfe and not ${hide_cond_soft}"/>
 				</ui:if>
 				<ui:if test="ex :out_r">
+					<ui:set id="capture_in_l_vis" value="(:showpro and :pcfe_l) or ((:ref_src ilt 4) and :capture and not ${hide_cond})" />
+					<ui:set id="capture_in_r_vis" value="(:showpro and :pcfe_r) or ((:ref_src ilt 4) and :capture and not ${hide_cond})" />
+					<ui:set id="file_l_vis" value="(:showpro and :pffe_l) or :showfil" />
+					<ui:set id="file_r_vis" value="(:showpro and :pffe_r) or :showfil" />
+					<ui:set id="envelope_l_vis" value="(:showpro and :pefe_l) or :showenv" />
+					<ui:set id="envelope_r_vis" value="(:showpro and :pefe_r) or :showenv" />
+					<ui:set id="external_l_vis" value=":showpro and :prfe_l and (:track and :ref_src ige 4 and not ${hide_cond})" />
+					<ui:set id="external_r_vis" value=":showpro and :prfe_r and (:track and :ref_src ige 4 and not ${hide_cond})" />
+
 					<!-- Input -->
 					<mesh id="fft" xi="0" yi="1" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":showfft and :ife_l"/>
 					<mesh id="fft" xi="0" yi="5" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":showfft and :ife_r"/>
@@ -261,8 +299,28 @@
 					<mesh id="fft" xi="0" yi="3" width="2" color="blue_violet" color.a="0.5" visibility=":showfft and :cfe_l"/>
 					<mesh id="fft" xi="0" yi="7" width="2" color="bright_blue_violet" color.a="0.5" visibility=":showfft and :cfe_r"/>
 					<!-- Reference -->
-					<mesh id="fft" xi="0" yi="4" width="2" color="cyan_blue" color.a="0.5" visibility=":showfft and :rfe_l and :ref_src ige 1 and (:ref_src ieq 2 and :fprdy)"/>
-					<mesh id="fft" xi="0" yi="8" width="2" color="bright_cyan_blue" color.a="0.5" visibility=":showfft and :rfe_r and :ref_src ige 1 and (:ref_src ieq 2 and :fprdy)"/>
+					<mesh
+						id="fft" xi="0" yi="4"
+						width="2" color="cyan_blue" color.a="0.5"
+						visibility="
+							:showfft and :rfe_l and (
+								((:ref_src ieq 1) and not (${capture_in_l_vis})) or
+								((:ref_src ieq 2) and not (${file_l_vis})) or
+								((:ref_src ieq 3) and not (${envelope_l_vis})) or
+								((:ref_src ige 4) and :track and not (${external_l_vis}))
+							)"
+					/>
+					<mesh
+						id="fft" xi="0" yi="8"
+						width="2" color="bright_cyan_blue" color.a="0.5"
+						visibility="
+							:showfft and :rfe_r and (
+								((:ref_src ieq 1) and not (${capture_in_r_vis})) or
+								((:ref_src ieq 2) and not (${file_r_vis})) or
+								((:ref_src ieq 3) and not (${envelope_r_vis})) or
+								((:ref_src ige 4) and :track and not (${external_r_vis}))
+							)"
+					/>
 					<!-- Output -->
 					<mesh id="fft" xi="0" yi="2" width="2" color="left_in" color.a="0.5" visibility=":showfft and :ofe_l"/>
 					<mesh id="fft" xi="0" yi="6" width="2" color="right_in" color.a="0.5" visibility=":showfft and :ofe_r"/>
@@ -270,21 +328,21 @@
 					<!-- Dynamic input profile -->
 					<mesh id="pmesh" xi="0" yi="2" width="2" color="magenta" color.a="0.5" visibility=":showpro and :pife_l and (:track and :in_src ieq 1 and not ${hide_cond})"/>
 					<mesh id="pmesh" xi="0" yi="11" width="2" color="bright_magenta" color.a="0.5" visibility=":showpro and :pife_r and (:track and :in_src ieq 1 and not ${hide_cond})"/>
-					<!-- Reference profile -->
-					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility=":showpro and :prfe_l and (:track and :ref_src ige 4 and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="12" width="2" color="bright_violet_magenta" color.a="0.5" visibility=":showpro and :prfe_r and (:track and :ref_src ige 4 and not ${hide_cond})"/>
+					<!-- External input profile -->
+					<mesh id="pmesh" xi="0" yi="3" width="2" color="violet_magenta" color.a="0.5" visibility="${external_l_vis}"/>
+					<mesh id="pmesh" xi="0" yi="12" width="2" color="bright_violet_magenta" color.a="0.5" visibility="${external_r_vis}"/>
 					<!-- Static input profile -->
 					<mesh id="pmesh" xi="0" yi="4" width="2" color="green_cyan" color.a="0.5" visibility="(:showpro and :psfe_l) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
 					<mesh id="pmesh" xi="0" yi="13" width="2" color="bright_green_cyan" color.a="0.5" visibility="(:showpro and :psfe_r) or ((:in_src ieq 0) and :profile and not ${hide_cond})"/>
 					<!-- Capture input profile -->
-					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="(:showpro and :pcfe_l) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
-					<mesh id="pmesh" xi="0" yi="14" width="2" color="bright_yellow_green" color.a="0.5" visibility="(:showpro and :pcfe_r) or ((:ref_src ilt 4) and :capture and not ${hide_cond})"/>
+					<mesh id="pmesh" xi="0" yi="5" width="2" color="yellow_green" color.a="0.5" visibility="${capture_in_l_vis}"/>
+					<mesh id="pmesh" xi="0" yi="14" width="2" color="bright_yellow_green" color.a="0.5" visibility="${capture_in_r_vis}"/>
 					<!-- File profile -->
-					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="(:showpro and :pffe_l) or :showfil"/>
-					<mesh id="pmesh" xi="0" yi="15" width="2" color="bright_orange_yellow" color.a="0.5" visibility="(:showpro and :pffe_r) or :showfil"/>
+					<mesh id="pmesh" xi="0" yi="6" width="2" color="orange_yellow" color.a="0.5" visibility="${file_l_vis}"/>
+					<mesh id="pmesh" xi="0" yi="15" width="2" color="bright_orange_yellow" color.a="0.5" visibility="${file_r_vis}"/>
 					<!-- Envelope -->
-					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="(:showpro and :pefe_l) or :showenv"/>
-					<mesh id="pmesh" xi="0" yi="16" width="2" color="bright_red_orange" color.a="0.5" visibility="(:showpro and :pefe_r) or :showenv"/>
+					<mesh id="pmesh" xi="0" yi="7" width="2" color="red_orange" color.a="0.5" visibility="${envelope_l_vis}"/>
+					<mesh id="pmesh" xi="0" yi="16" width="2" color="bright_red_orange" color.a="0.5" visibility="${envelope_r_vis}"/>
 					<!-- Envelope maximum bounds -->
 					<mesh id="pmesh" xi="0" yi="8" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
 					<mesh id="pmesh" xi="0" yi="17" width="2" color="threshold" visibility="(:blimit and :limit) or :showlim" color.a=":blimit ? 0.0 : 0.7"/>
@@ -548,6 +606,16 @@
 				<led id="ref_rdy" size="10" ui:inject="Led_violet_magenta" visibility=":ref_src igt 3"/>
 				<combo id="ref_src"/>
 				<void hexpand="true"/>
+
+				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
+					<hbox pad.h="2">
+						<label text="labels.smooth"/>
+						<void hexpand="true"/>
+						<value id="smooth" sline="true"/>
+					</hbox>
+					<fader id="smooth" angle="0" hfill="true"/>
+				</vbox>
+
 				<vbox vreduce="true" pad.b="2" width="120" pad.r="8">
 					<hbox pad.h="2">
 						<label text="labels.blend"/>
@@ -625,13 +693,13 @@
 				<label text="labels.flt.x_k" text:value="16"/>
 
 				<ui:for id="i" first="1" count="10">
-					<range end.id="amp_${i}" start.id="red_${i}" min="-36" max="36" angle="1" scolor="threshold"/>
+					<range start.id="red_${i}" end.id="amp_${i}" angle="1" scolor="threshold"/>
 				</ui:for>
 				<ui:for id="i" first="1" count="10">
-					<value id="red_${i}" detailed="false"/>
+					<value id="amp_${i}" detailed="false"/>
 				</ui:for>
 				<ui:for id="i" first="1" count="10">
-					<value id="amp_${i}"/>
+					<value id="red_${i}"/>
 				</ui:for>
 			</grid>
 		</group>

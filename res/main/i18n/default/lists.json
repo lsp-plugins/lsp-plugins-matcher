@@ -5,6 +5,11 @@
 			"link": "Link",
 			"sidechain": "Sidechain"
 		},
+		"matching": {
+			"amplify": "Amplify",
+			"exact": "Exact",
+			"reduce": "Reduce"
+		},
 		"mode": {
 			"dynamic": "Dynamic",
 			"static": "Static"

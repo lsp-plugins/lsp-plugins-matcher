@@ -105,6 +105,11 @@ namespace lsp
             static constexpr float          FLT_SLOPE_DFL               = 36.0f;
             static constexpr float          FLT_SLOPE_STEP              = 0.05f;
 
+            static constexpr float          MATCH_THRESH_MIN            = -36.0f;
+            static constexpr float          MATCH_THRESH_MAX            = 36.0f;
+            static constexpr float          MATCH_THRESH_DFL            = 0.0f;
+            static constexpr float          MATCH_THRESH_STEP           = 0.05f;
+
             static const float              eq_frequencies[];
         } matcher;
 
