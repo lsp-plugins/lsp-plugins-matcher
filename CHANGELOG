@@ -2,6 +2,9 @@
 * RECENT CHANGES
 *******************************************************************************
 
+=== 1.0.8 ===
+
+
 === 1.0.7 ===
 * Implemented profile smoothing to reduce extra peaks and sparks in the spectrum.
 * Implemented additional matching algorithms: Reduce and Amplify. 
